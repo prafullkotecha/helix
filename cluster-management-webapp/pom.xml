@@ -10,7 +10,7 @@
 	<groupId>com.linkedin.clustermanager.webapp</groupId>
 	<artifactId>cluster-management-webapp</artifactId>
 	<packaging>jar</packaging>
-	<version>${applicationVersion}</version>
+	<version>0.0.4</version>
 	<name>cluster-management-webapp</name>
 	<url>http://maven.apache.org</url>
 	<repositories>
@@ -31,7 +31,7 @@
 		<dependency>
 			<groupId>com.linkedin.clustermanager</groupId>
 			<artifactId>cluster-manager-core</artifactId>
-			<version>${applicationVersion}</version>
+			<version>0.0.4</version>
 		</dependency>
 		<dependency>
 			<groupId>org.restlet</groupId>
