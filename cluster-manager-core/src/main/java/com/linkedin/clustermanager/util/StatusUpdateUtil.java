@@ -3,6 +3,7 @@ package com.linkedin.clustermanager.util;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 import com.linkedin.clustermanager.ClusterDataAccessor;
 import com.linkedin.clustermanager.ClusterDataAccessor.InstancePropertyType;
@@ -66,7 +67,7 @@ public class StatusUpdateUtil
         + message.getStateUnitKey() + " Trans:"
         + message.getFromState().charAt(0) + "->"
         + message.getToState().charAt(0) + "  "
-        + message.getMsgId();
+        + UUID.randomUUID().toString();
     result.setId(id);
 
     result.setSimpleField("AdditionalInfo", additionalInfo);
