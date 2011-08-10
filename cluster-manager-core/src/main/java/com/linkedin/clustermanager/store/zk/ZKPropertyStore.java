@@ -25,7 +25,7 @@ import com.linkedin.clustermanager.store.PropertyStore;
 import com.linkedin.clustermanager.store.PropertyStoreException;
 
 
-// test checkin branch  
+// test checkin branch
 public class ZKPropertyStore<T> implements PropertyStore<T>
 {
   private final String _ROOT = "";
