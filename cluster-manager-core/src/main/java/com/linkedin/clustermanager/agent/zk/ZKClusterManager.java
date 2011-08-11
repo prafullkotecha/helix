@@ -38,7 +38,7 @@ public class ZKClusterManager implements ClusterManager
   private final String _clusterName;
   private final String _instanceName;
   private final String _zkConnectString;
-  private static int SESSIONTIMEOUT = 3000;
+  private static int SESSIONTIMEOUT = 30000;
   private ZKDataAccessor _accessor;
   private ZkClient _zkClient;
   private List<CallbackHandler> _handlers;
