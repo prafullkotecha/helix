@@ -1,6 +1,5 @@
 package com.linkedin.clustermanager;
 
-import java.util.Comparator;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -8,7 +7,8 @@ import junit.framework.Assert;
 import org.testng.annotations.Test;
 
 import com.linkedin.clustermanager.store.PropertyChangeListener;
-import com.linkedin.clustermanager.store.StringPropertySerializer;
+import com.linkedin.clustermanager.store.PropertyJsonComparator;
+import com.linkedin.clustermanager.store.PropertyJsonSerializer;
 import com.linkedin.clustermanager.store.file.FilePropertyStore;
 
 public class TestFilePropertyStore
@@ -28,36 +28,12 @@ public class TestFilePropertyStore
     
   }
   
-  public class MyComparator implements Comparator<String>
-  {
-
-    @Override
-    public int compare(String o1, String o2)
-    {
-      if (o1 == null && o2 == null)
-      {
-        return 0;
-      }
-      else if (o1 == null && o2 != null)
-      {
-        return -1;
-      }
-      else if (o1 != null && o2 == null)
-      {
-        return 1;
-      }
-      else
-      {
-        return o1.compareTo(o2);
-      }
-    }
-    
-  }
-
   @Test
   public void testInvocation() throws Exception
   {
-    StringPropertySerializer serializer = new StringPropertySerializer();
+    final int SLEEP_TIME = 2000;
+    // StringPropertySerializer serializer = new StringPropertySerializer();
+    PropertyJsonSerializer<String> serializer = new PropertyJsonSerializer<String>(String.class);
     String rootNamespace = "/tmp/testFilePropertyStore";
     
     FilePropertyStore<String> store = new FilePropertyStore<String>(serializer, rootNamespace);
@@ -81,7 +57,7 @@ public class TestFilePropertyStore
     Assert.assertEquals(value, null);
     value = store.getProperty("testPath1/testPath2");
     Assert.assertEquals(value, "testValue2-I\n");
-    Thread.sleep(1000);
+    Thread.sleep(SLEEP_TIME);
     
     // test subscribe
     MyPropertyChangeListener listener = new MyPropertyChangeListener();
@@ -92,7 +68,7 @@ public class TestFilePropertyStore
     store.subscribeForPropertyChange("testPath1", listener2);
     
     store.setProperty("testPath1/testPath3", "testValue3-II\n");
-    Thread.sleep(1000);
+    Thread.sleep(SLEEP_TIME);
     Assert.assertEquals(listener._propertyChangeReceived, true);
     Assert.assertEquals(listener2._propertyChangeReceived, true);
     
@@ -102,7 +78,7 @@ public class TestFilePropertyStore
     // test unsubscribe
     store.unsubscribeForPropertyChange("testPath1", listener);
     store.setProperty("testPath1/testPath4", "testValue4-I\n");
-    Thread.sleep(1000);
+    Thread.sleep(SLEEP_TIME);
     
     Assert.assertEquals(listener._propertyChangeReceived, false);
     Assert.assertEquals(listener2._propertyChangeReceived, true);
@@ -113,15 +89,21 @@ public class TestFilePropertyStore
     store.removeProperty("testPath1/testPath3");
     value = store.getProperty("testPath1/testPath3");
     Assert.assertEquals(value, null);
-    Thread.sleep(1000);
+    Thread.sleep(SLEEP_TIME);
     Assert.assertEquals(listener2._propertyChangeReceived, true);
     listener2._propertyChangeReceived = false;
     
     // test compare and set
-    boolean success = store.compareAndSet("testPath1/testPath4", "testValue4-II\n", "testValue4-II\n", new MyComparator());
+    boolean success = store.compareAndSet("testPath1/testPath4", 
+                                          "testValue4-II\n", 
+                                          "testValue4-II\n", 
+                                          new PropertyJsonComparator<String>(String.class));
     Assert.assertEquals(success, false);
     
-    success = store.compareAndSet("testPath1/testPath4", "testValue4-I\n", "testValue4-II\n", new MyComparator());
+    success = store.compareAndSet("testPath1/testPath4", 
+                                  "testValue4-I\n", 
+                                  "testValue4-II\n", 
+                                  new PropertyJsonComparator<String>(String.class));
     Assert.assertEquals(success, true);
     
     store.unsubscribeForPropertyChange("testPath1", listener2);
