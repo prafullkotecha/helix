@@ -47,7 +47,8 @@ public class StorageStateModelDefinition extends StateModelDefinition
     if (nextState == null)
     {
       System.err.println("Unable to compute nextState to go from:" + fromState
-          + " to:" + toState);
+          + " to:" + toState + " Returning toState as the next state");
+      return toState;
     }
     return nextState;
   }
