@@ -17,7 +17,8 @@ public class Message extends ZNRecord
 
   public enum Attributes
   {
-    MSG_ID, TGT_SESSION_ID, SRC_NAME, TGT_NAME, MSG_STATE, STATE_UNIT_KEY, STATE_UNIT_GROUP, FROM_STATE, TO_STATE;
+    MSG_ID, TGT_SESSION_ID, SRC_NAME, TGT_NAME, MSG_STATE, STATE_UNIT_KEY, STATE_UNIT_GROUP, 
+    FROM_STATE, TO_STATE, READ_TIMESTAMP, EXECUTE_START_TIMESTAMP;
   }
 
   public Message()
@@ -138,5 +139,48 @@ public class Message extends ZNRecord
   public String getStateUnitGroup()
   {
     return getSimpleFieldAsString(Attributes.STATE_UNIT_GROUP.toString());
+  }
+
+  public void setReadTimeStamp(long time)
+  {
+    setSimpleField(Attributes.READ_TIMESTAMP.toString(), ""+time);
+  }
+  
+  public void setExecuteStartTimeStamp(long time)
+  {
+    setSimpleField(Attributes.EXECUTE_START_TIMESTAMP.toString(), ""+time);
+  }
+  
+  public long getReadTimeStamp()
+  {
+    if(getSimpleField(Attributes.READ_TIMESTAMP.toString()) == null)
+    {
+      return 0;
+    }
+    try
+    {
+      return Long.parseLong(getSimpleField(Attributes.READ_TIMESTAMP.toString()));
+    }
+    catch(Exception e)
+    {
+      return 0;
+    }
+    
+  }
+  
+  public long getExecuteStartTimeStamp()
+  {
+    if(getSimpleField(Attributes.EXECUTE_START_TIMESTAMP.toString()) == null)
+    {
+      return 0;
+    }
+    try
+    {
+      return Long.parseLong(getSimpleField(Attributes.EXECUTE_START_TIMESTAMP.toString()));
+    }
+    catch(Exception e)
+    {
+      return 0;
+    }
   }
 }

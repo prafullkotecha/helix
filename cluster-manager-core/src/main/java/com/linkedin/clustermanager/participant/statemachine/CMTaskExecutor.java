@@ -1,5 +1,6 @@
 package com.linkedin.clustermanager.participant.statemachine;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -14,6 +15,7 @@ import org.apache.log4j.Logger;
 import com.linkedin.clustermanager.NotificationContext;
 import com.linkedin.clustermanager.ZNRecord;
 import com.linkedin.clustermanager.model.Message;
+import com.linkedin.clustermanager.monitoring.ParticipantMonitor;
 import com.linkedin.clustermanager.util.StatusUpdateUtil;
 
 public class CMTaskExecutor
@@ -23,6 +25,7 @@ public class CMTaskExecutor
   protected final Map<String, Future<CMTaskResult>> _taskMap;
   private final Object _lock;
   StatusUpdateUtil _statusUpdateUtil;
+  ParticipantMonitor _monitor;
 
   private static Logger logger = Logger.getLogger(CMTaskExecutor.class);
 
@@ -32,15 +35,21 @@ public class CMTaskExecutor
     _lock = new Object();
     _statusUpdateUtil = new StatusUpdateUtil();
     _pool = Executors.newFixedThreadPool(MAX_PARALLEL_TASKS);
+    _monitor = new ParticipantMonitor();
     startMonitorThread();
 
   }
-
+ 
+  ParticipantMonitor getStatMonitor()
+  {
+     return _monitor;
+  }
+  
   private void startMonitorThread()
   {
     // start a thread which monitors the completions of task
   }
-
+  
   public void executeTask(Message message, StateModel stateModel,
       NotificationContext notificationContext)
   {
@@ -54,7 +63,7 @@ public class CMTaskExecutor
             "Message handling task scheduled", notificationContext.getManager()
                 .getDataAccessor());
         CMTaskHandler task = new CMTaskHandler(notificationContext, message,
-            stateModel);
+            stateModel, this);
         if (!_taskMap.containsKey(message.getMsgId()))
         {
           Future<CMTaskResult> future = _pool.submit(task);
@@ -100,7 +109,7 @@ public class CMTaskExecutor
       }
 
     });
-    future = pool.submit(new CMTaskHandler(null, null, null));
+    future = pool.submit(new CMTaskHandler(null, null, null, null));
     Thread.currentThread().join();
     System.out.println(future.isDone());
   }

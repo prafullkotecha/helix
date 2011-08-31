@@ -28,7 +28,7 @@ public class TestCMTaskHandler
 
     context = new NotificationContext(new MockManager());
     CMTaskHandler handler;
-    handler = new CMTaskHandler(context, message, stateModel);
+    handler = new CMTaskHandler(context, message, stateModel, null);
     handler.call();
     AssertJUnit.assertTrue(stateModel.stateModelInvoked);
   }
@@ -48,7 +48,7 @@ public class TestCMTaskHandler
 
     context = new NotificationContext(new MockManager());
     CMTaskHandler handler;
-    handler = new CMTaskHandler(context, message, stateModel);
+    handler = new CMTaskHandler(context, message, stateModel, null);
     handler.call();
     AssertJUnit.assertTrue(stateModel.stateModelInvoked);
   }

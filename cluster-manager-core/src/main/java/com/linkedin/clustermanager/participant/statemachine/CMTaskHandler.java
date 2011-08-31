@@ -5,6 +5,7 @@ import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -20,6 +21,8 @@ import com.linkedin.clustermanager.CMConstants.ZNAttribute;
 import com.linkedin.clustermanager.ClusterDataAccessor.ClusterPropertyType;
 import com.linkedin.clustermanager.ClusterDataAccessor.InstancePropertyType;
 import com.linkedin.clustermanager.model.Message;
+import com.linkedin.clustermanager.monitoring.StateTransitionContext;
+import com.linkedin.clustermanager.monitoring.StateTransitionDataPoint;
 import com.linkedin.clustermanager.util.StatusUpdateUtil;
 
 public class CMTaskHandler implements Callable<CMTaskResult>
@@ -31,9 +34,10 @@ public class CMTaskHandler implements Callable<CMTaskResult>
   private final ClusterManager _manager;
   StatusUpdateUtil _statusUpdateUtil;
   private TransitionMethodFinder _transitionMethodFinder;
+  CMTaskExecutor _executor;
 
   public CMTaskHandler(NotificationContext notificationContext,
-      Message message, StateModel stateModel) throws Exception
+      Message message, StateModel stateModel, CMTaskExecutor executor) throws Exception
   {
     this._notificationContext = notificationContext;
     this._message = message;
@@ -41,6 +45,7 @@ public class CMTaskHandler implements Callable<CMTaskResult>
     this._manager = notificationContext.getManager();
     _statusUpdateUtil = new StatusUpdateUtil();
     _transitionMethodFinder = new TransitionMethodFinder();
+    _executor = executor;
     if (!validateTask())
     {
       String errorMessage = "Invalid Message, ensure that message: " + message
@@ -85,6 +90,7 @@ public class CMTaskHandler implements Callable<CMTaskResult>
       CMTaskResult taskResult = new CMTaskResult();
       String fromState = _message.getFromState();
       String toState = _message.getToState();
+      _message.setExecuteStartTimeStamp(new Date().getTime());
       if (fromState == null
           || !fromState.equalsIgnoreCase(_stateModel.getCurrentState()))
       {
@@ -162,6 +168,7 @@ public class CMTaskHandler implements Callable<CMTaskResult>
         accessor.removeInstanceProperty(instanceName,
             InstancePropertyType.MESSAGES, _message.getId());
         // based on task result update the current state of the node.
+        reportMessgeStat(taskResult);
 
       } catch (Exception e)
       {
@@ -174,6 +181,43 @@ public class CMTaskHandler implements Callable<CMTaskResult>
     }
   }
 
+  private void reportMessgeStat(CMTaskResult taskResult) throws Exception
+  {
+    // report stat
+    long now = new Date().getTime();
+    long msgReadTime = _message.getReadTimeStamp();
+    long msgExecutionStartTime = _message.getReadTimeStamp();
+    if(msgReadTime != 0 && msgExecutionStartTime != 0)
+    {
+      long totalDelay = now - msgReadTime;
+      long executionDelay = now - msgExecutionStartTime;
+      if(totalDelay > 0 && executionDelay > 0)
+      {
+        String fromState = _message.getFromState();
+        String toState = _message.getToState();
+        String transition = fromState + "--" + toState;
+        
+        StateTransitionContext cxt = new StateTransitionContext(
+          _manager.getClusterName(),
+          _manager.getInstanceName(),
+          _message.getStateUnitGroup(),
+          transition
+          );
+        
+        StateTransitionDataPoint data = new StateTransitionDataPoint(totalDelay, executionDelay, taskResult.isSucess());
+        if(_executor != null)
+        {
+          _executor.getStatMonitor().reportTransitionStat(cxt, data);
+        }
+      }
+    }
+    else
+    {
+      logger.warn("message read time and start execution time not recorded.");
+      throw new Exception();
+    }
+  }
+  
   private void invoke(ClusterDataAccessor accessor, CMTaskResult taskResult,
       Message message) throws IllegalAccessException, InvocationTargetException
   {
