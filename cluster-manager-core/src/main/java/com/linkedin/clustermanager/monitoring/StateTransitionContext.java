@@ -52,7 +52,7 @@ public class StateTransitionContext
     return
       _clusterName.equals(otherCxt.getClusterName()) &&
       _instanceName.equals(otherCxt.getInstanceName()) &&
-      _stateUnitGroup.equals(otherCxt.getStateUnitGroup()) &&
+      //_stateUnitGroup.equals(otherCxt.getStateUnitGroup()) &&
       _transition.equals(otherCxt.getTransition()) ;
   }
     
@@ -63,11 +63,12 @@ public class StateTransitionContext
     return toString().hashCode();
   }
   
+  //In the report, we will gather per transition time statistics
   public String toString()
   {
-     return "type=test,Cluster=" + _clusterName + "," + 
+     return "Cluster=" + _clusterName + "," + 
            "instance=" + _instanceName + "," +
-           "ResourceGroup=" + _stateUnitGroup +"," + 
+           //"ResourceGroup=" + _stateUnitGroup +"," + 
            "Transition=" + _transition;    
   }
   

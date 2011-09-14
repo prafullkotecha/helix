@@ -30,7 +30,18 @@ public class StateTransitionStatMonitor implements StateTransitionStatMonitorMBe
     _monitorMap.put(LATENCY_TYPE.EXECUTION, new StatCollector());
     reset();
   }
-  
+
+  public StateTransitionContext getContext()
+  {
+    return _context;
+  }
+
+  public String getBeanName()
+  {
+    return _context.getClusterName() + " " + _context.getInstanceName() + " "
+        + _context.getTransition();
+  }
+
   public void addDataPoint(StateTransitionDataPoint data)
   {
     _numDataPoints++;
