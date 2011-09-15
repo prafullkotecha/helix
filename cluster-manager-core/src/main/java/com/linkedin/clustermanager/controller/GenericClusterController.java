@@ -82,7 +82,7 @@ public class GenericClusterController implements ConfigChangeListener,
 
 	private static PipelineRegistry createDefaultRegistry()
 	{
-
+	  logger.info("createDefaultRegistry");
 		synchronized (GenericClusterController.class)
 		{
 			PipelineRegistry registry = new PipelineRegistry();
@@ -292,6 +292,7 @@ public class GenericClusterController implements ConfigChangeListener,
               "Exception adding current state and message listener for instance:"
                   + instanceName, e);
         }
+        logger.info("Observing client session id: "+ clientSessionId);
         _instanceCurrentStateChangeSubscriptionList.add(clientSessionId);
       }
       // TODO shi call removeListener
