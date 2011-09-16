@@ -380,8 +380,7 @@ public class ZKClusterManager implements ClusterManager
 		if (_instanceType == InstanceType.PARTICIPANT)
 		{
       // Check if liveInstancePath for the instance already exists. If yes, throw exception
-      String liveInstancePath = CMUtil.getClusterPropertyPath(_clusterName, ClusterPropertyType.LIVEINSTANCES);
-      if(_zkClient.exists(liveInstancePath + "/" + _instanceName))
+      if(_accessor.getClusterProperty(ClusterPropertyType.LIVEINSTANCES, _instanceName) != null)
       {
          String errorMessage = "instance " + _instanceName + " already has a liveinstance in cluster " + _clusterName;
          logger.error(errorMessage);
