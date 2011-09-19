@@ -2,6 +2,8 @@ package com.linkedin.clustermanager.controller.stages;
 
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import com.linkedin.clustermanager.ClusterDataAccessor;
 import com.linkedin.clustermanager.ClusterManager;
 import com.linkedin.clustermanager.ZNRecord;
@@ -13,13 +15,14 @@ import com.linkedin.clustermanager.pipeline.AbstractBaseStage;
 import com.linkedin.clustermanager.pipeline.StageException;
 
 public class ExternalViewComputeStage extends AbstractBaseStage {
+  private static Logger logger = Logger.getLogger(ExternalViewComputeStage.class);
 	@Override
 	public void process(ClusterEvent event) throws Exception {
 		ClusterManager manager = event.getAttribute("clustermanager");
 		if (manager == null) {
 			throw new StageException("ClusterManager attribute value is null");
 		}
-		System.out.println("ExternalViewComputeStage.process()");
+		logger.info("START ExternalViewComputeStage.process()");
 		ClusterDataAccessor dataAccessor = manager.getDataAccessor();
 		Map<String, ResourceGroup> resourceGroupMap = event
 				.getAttribute(AttributeName.RESOURCE_GROUPS.toString());
@@ -42,6 +45,7 @@ public class ExternalViewComputeStage extends AbstractBaseStage {
 			dataAccessor.setClusterProperty(ClusterPropertyType.EXTERNALVIEW,
 					resourceGroupName, view.getRecord());
 		}
+    logger.info("END ExternalViewComputeStage.process()");
 	}
 
 }
