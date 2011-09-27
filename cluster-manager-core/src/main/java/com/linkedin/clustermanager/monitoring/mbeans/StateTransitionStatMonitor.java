@@ -13,7 +13,7 @@ public class StateTransitionStatMonitor implements StateTransitionStatMonitorMBe
 {
   public enum LATENCY_TYPE {TOTAL, EXECUTION};
   
-  private static final int DEFAULT_WINDOW_SIZE = 4000;
+  private static final int DEFAULT_WINDOW_SIZE = 100;
   private long _numDataPoints;
   private long _successCount;
   private TimeUnit _unit;
