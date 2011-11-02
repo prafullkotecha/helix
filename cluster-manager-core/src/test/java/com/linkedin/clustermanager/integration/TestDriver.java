@@ -41,7 +41,7 @@ public class TestDriver
   // private static final ZkClient _zkClient = new ZkClient(ZK_ADDR, DEFAULT_SESSION_TIMEOUT,
   //    DEFAULT_CONNECTION_TIMEOUT, new ZNRecordSerializer());
 
-  private static final String CLUSTER_PREFIX = "TestDriver";
+  private static final String CLUSTER_PREFIX = "TestDriver"; 
   private static final String STATE_MODEL = "MasterSlave";
   private static final String TEST_DB_PREFIX = "TestDB";
   private static final int START_PORT = 12918;
