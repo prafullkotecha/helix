@@ -83,6 +83,7 @@ public class DynamicFileClusterManager implements ClusterManager
   public void disconnect()
   {
     _store.stop();
+    _messagingService.getExecutor().shutDown();
     _isConnected = false;
   }
 
@@ -201,7 +202,7 @@ public class DynamicFileClusterManager implements ClusterManager
     return options;
 
   }
-  
+
   public static CommandLine processCommandLineArgs(String[] cliArgs)
       throws Exception
   {
@@ -223,7 +224,7 @@ public class DynamicFileClusterManager implements ClusterManager
     return null;
   }
   */
-  
+
   @Override
   public boolean isConnected()
   {
