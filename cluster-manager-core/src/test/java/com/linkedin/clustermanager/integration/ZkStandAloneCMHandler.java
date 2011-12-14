@@ -58,12 +58,17 @@ public class ZkStandAloneCMHandler extends ZkIntegrationTestBase
     // setup storage cluster
     _setupTool.addCluster(CLUSTER_NAME, true);
     _setupTool.addResourceGroupToCluster(CLUSTER_NAME, TEST_DB, 20, STATE_MODEL);
+    _setupTool.addResourceGroupToCluster(CLUSTER_NAME, "LeaderStandbyResourceGroup", 40, "LeaderStandby");
+    _setupTool.addResourceGroupToCluster(CLUSTER_NAME, "OnlineOfflineResourceGroup", 10, "OnlineOffline");
+    
     for (int i = 0; i < NODE_NR; i++)
     {
       String storageNodeName = "localhost:" + (START_PORT + i);
       _setupTool.addInstanceToCluster(CLUSTER_NAME, storageNodeName);
     }
     _setupTool.rebalanceStorageCluster(CLUSTER_NAME, TEST_DB, 3);
+    _setupTool.rebalanceStorageCluster(CLUSTER_NAME, "LeaderStandbyResourceGroup", 3);
+    _setupTool.rebalanceStorageCluster(CLUSTER_NAME, "OnlineOfflineResourceGroup", 2);
 
     // start dummy participants
     Thread thread;

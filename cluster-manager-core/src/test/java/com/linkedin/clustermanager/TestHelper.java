@@ -13,6 +13,8 @@ import org.apache.log4j.Logger;
 
 import com.linkedin.clustermanager.agent.zk.ZkClient;
 import com.linkedin.clustermanager.controller.ClusterManagerMain;
+import com.linkedin.clustermanager.mock.storage.DummyProcess.DummyLeaderStandbyStateModelFactory;
+import com.linkedin.clustermanager.mock.storage.DummyProcess.DummyOnlineOfflineStateModelFactory;
 import com.linkedin.clustermanager.mock.storage.DummyProcess.DummyStateModel;
 import com.linkedin.clustermanager.mock.storage.DummyProcess.DummyStateModelFactory;
 import com.linkedin.clustermanager.model.Message.MessageType;
@@ -207,8 +209,14 @@ public class TestHelper
       {
         _manager.connect();
         DummyStateModelFactory stateModelFactory = new DummyStateModelFactory(0);
-        StateMachineEngine<DummyStateModel> genericStateMachineHandler =
-            new StateMachineEngine<DummyStateModel>(stateModelFactory);
+        StateMachineEngine genericStateMachineHandler =
+            new StateMachineEngine();
+        genericStateMachineHandler.registerStateModelFactory("MasterSlave", stateModelFactory);
+
+        DummyLeaderStandbyStateModelFactory stateModelFactory1 = new DummyLeaderStandbyStateModelFactory(10);
+        DummyOnlineOfflineStateModelFactory stateModelFactory2 = new DummyOnlineOfflineStateModelFactory(10);
+        genericStateMachineHandler.registerStateModelFactory("LeaderStandby", stateModelFactory1);
+        genericStateMachineHandler.registerStateModelFactory("OnlineOffline", stateModelFactory2);
         _manager.getMessagingService()
                 .registerMessageHandlerFactory(MessageType.STATE_TRANSITION.toString(),
                                                genericStateMachineHandler);
