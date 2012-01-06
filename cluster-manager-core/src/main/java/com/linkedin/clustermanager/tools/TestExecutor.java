@@ -51,11 +51,13 @@ public class TestExecutor
    * SIMPLE: simple field change LIST: list field change MAP: map field change
    * ZNODE: entire znode change
    */
-  public enum ZnodePropertyType {
+  public enum ZnodePropertyType
+  {
     SIMPLE, LIST, MAP, ZNODE
   }
 
-  private enum ZnodeModValueType {
+  private enum ZnodeModValueType
+  {
     INVALID, SINGLE_VALUE, LIST_VALUE, MAP_VALUE, ZNODE_VALUE
   }
 
@@ -67,7 +69,8 @@ public class TestExecutor
   private final static PropertyJsonSerializer<ZNRecord> ZNRECORD_SERIALIZER = new PropertyJsonSerializer<ZNRecord>(
       ZNRecord.class);
 
-  private static ZnodeModValueType getValueType(ZnodePropertyType type, String key)
+  private static ZnodeModValueType getValueType(ZnodePropertyType type,
+      String key)
   {
     ZnodeModValueType valueType = ZnodeModValueType.INVALID;
     switch (type)
@@ -81,7 +84,8 @@ public class TestExecutor
         String keyParts[] = key.split("/");
         if (keyParts.length != 1)
         {
-          logger.warn("invalid key for simple field: " + key + ", expect 1 part: key1 (no slash)");
+          logger.warn("invalid key for simple field: " + key
+              + ", expect 1 part: key1 (no slash)");
         } else
         {
           valueType = ZnodeModValueType.SINGLE_VALUE;
@@ -116,7 +120,8 @@ public class TestExecutor
             }
           } catch (NumberFormatException e)
           {
-            logger.warn("invalid key for list field: " + key + ", part-2 is NOT an integer");
+            logger.warn("invalid key for list field: " + key
+                + ", part-2 is NOT an integer");
           }
         }
       }
@@ -149,7 +154,8 @@ public class TestExecutor
     return valueType;
   }
 
-  private static String getSingleValue(ZNRecord record, ZnodePropertyType type, String key)
+  private static String getSingleValue(ZNRecord record, ZnodePropertyType type,
+      String key)
   {
     if (record == null || key == null)
     {
@@ -168,7 +174,8 @@ public class TestExecutor
       List<String> list = record.getListField(keyParts[0]);
       if (list == null)
       {
-        logger.warn("invalid key for list field: " + key + ", map for key part-1 doesn't exist");
+        logger.warn("invalid key for list field: " + key
+            + ", map for key part-1 doesn't exist");
         return null;
       }
       int idx = Integer.parseInt(keyParts[1]);
@@ -178,7 +185,8 @@ public class TestExecutor
       Map<String, String> map = record.getMapField(keyParts[0]);
       if (map == null)
       {
-        logger.warn("invalid key for map field: " + key + ", map for key part-1 doesn't exist");
+        logger.warn("invalid key for map field: " + key
+            + ", map for key part-1 doesn't exist");
         return null;
       }
       value = map.get(keyParts[1]);
@@ -206,7 +214,8 @@ public class TestExecutor
     return STRING_COMPARATOR.compare(value, expect) == 0;
   }
 
-  private static boolean compareListValue(List<String> valueList, List<String> expectList)
+  private static boolean compareListValue(List<String> valueList,
+      List<String> expectList)
   {
     if (valueList == null && expectList == null)
     {
@@ -240,7 +249,8 @@ public class TestExecutor
     }
   }
 
-  private static boolean compareMapValue(Map<String, String> valueMap, Map<String, String> expectMap)
+  private static boolean compareMapValue(Map<String, String> valueMap,
+      Map<String, String> expectMap)
   {
     if (valueMap == null && expectMap == null)
     {
@@ -297,7 +307,8 @@ public class TestExecutor
       {
         return false;
       }
-      for (Map.Entry<String, Map<String, String>> entry : value.getMapFields().entrySet())
+      for (Map.Entry<String, Map<String, String>> entry : value.getMapFields()
+          .entrySet())
       {
         String key = entry.getKey();
         Map<String, String> mapValue = entry.getValue();
@@ -315,8 +326,8 @@ public class TestExecutor
     }
   }
 
-  private static boolean isValueExpected(ZNRecord current, ZnodePropertyType type, String key,
-      ZnodeValue expect)
+  private static boolean isValueExpected(ZNRecord current,
+      ZnodePropertyType type, String key, ZnodeValue expect)
   {
     // expect value = null means not expect any value
     if (expect == null)
@@ -351,8 +362,8 @@ public class TestExecutor
     return result;
   }
 
-  private static void setSingleValue(ZNRecord record, ZnodePropertyType type, String key,
-      String value)
+  private static void setSingleValue(ZNRecord record, ZnodePropertyType type,
+      String key, String value)
   {
     String keyParts[] = key.split("/");
 
@@ -365,7 +376,8 @@ public class TestExecutor
       List<String> list = record.getListField(keyParts[0]);
       if (list == null)
       {
-        logger.warn("invalid key for list field: " + key + ", value for key part-1 doesn't exist");
+        logger.warn("invalid key for list field: " + key
+            + ", value for key part-1 doesn't exist");
         return;
       }
       int idx = Integer.parseInt(keyParts[1]);
@@ -376,7 +388,8 @@ public class TestExecutor
       Map<String, String> map = record.getMapField(keyParts[0]);
       if (map == null)
       {
-        logger.warn("invalid key for map field: " + key + ", value for key part-1 doesn't exist");
+        logger.warn("invalid key for map field: " + key
+            + ", value for key part-1 doesn't exist");
         return;
       }
       map.put(keyParts[1], value);
@@ -386,17 +399,20 @@ public class TestExecutor
     }
   }
 
-  private static void setListValue(ZNRecord record, String key, List<String> value)
+  private static void setListValue(ZNRecord record, String key,
+      List<String> value)
   {
     record.setListField(key, value);
   }
 
-  private static void setMapValue(ZNRecord record, String key, Map<String, String> value)
+  private static void setMapValue(ZNRecord record, String key,
+      Map<String, String> value)
   {
     record.setMapField(key, value);
   }
 
-  private static void removeSingleValue(ZNRecord record, ZnodePropertyType type, String key)
+  private static void removeSingleValue(ZNRecord record,
+      ZnodePropertyType type, String key)
   {
     if (record == null)
     {
@@ -413,7 +429,8 @@ public class TestExecutor
       List<String> list = record.getListField(keyParts[0]);
       if (list == null)
       {
-        logger.warn("invalid key for list field: " + key + ", value for key part-1 doesn't exist");
+        logger.warn("invalid key for list field: " + key
+            + ", value for key part-1 doesn't exist");
         return;
       }
       int idx = Integer.parseInt(keyParts[1]);
@@ -423,7 +440,8 @@ public class TestExecutor
       Map<String, String> map = record.getMapField(keyParts[0]);
       if (map == null)
       {
-        logger.warn("invalid key for map field: " + key + ", value for key part-1 doesn't exist");
+        logger.warn("invalid key for map field: " + key
+            + ", value for key part-1 doesn't exist");
         return;
       }
       map.remove(keyParts[1]);
@@ -451,21 +469,24 @@ public class TestExecutor
     final ZnodeOpArg arg = command._znodeOpArg;
     final ZnodeValue expectValue = command._trigger._expectValue;
 
-    boolean result = isValueExpected(record, arg._propertyType, arg._key, expectValue);
+    boolean result = isValueExpected(record, arg._propertyType, arg._key,
+        expectValue);
     String operation = arg._operation;
     if (operation.equals("!="))
     {
       result = !result;
     } else if (!operation.equals("=="))
     {
-      logger.warn("fail to execute (unsupport operation=" + operation + "):" + operation);
+      logger.warn("fail to execute (unsupport operation=" + operation + "):"
+          + operation);
       result = false;
     }
 
     return result;
   }
 
-  private static boolean compareAndSetZnode(ZnodeValue expect, ZnodeOpArg arg, ZkClient zkClient)
+  private static boolean compareAndSetZnode(ZnodeValue expect, ZnodeOpArg arg,
+      ZkClient zkClient)
   {
     String path = arg._znodePath;
     ZnodePropertyType type = arg._propertyType;
@@ -501,11 +522,13 @@ public class TestExecutor
           {
             record = new ZNRecord("default");
           }
-          ZnodeModValueType valueType = getValueType(arg._propertyType, arg._key);
+          ZnodeModValueType valueType = getValueType(arg._propertyType,
+              arg._key);
           switch (valueType)
           {
           case SINGLE_VALUE:
-            setSingleValue(record, arg._propertyType, arg._key, arg._updateValue._singleValue);
+            setSingleValue(record, arg._propertyType, arg._key,
+                arg._updateValue._singleValue);
             break;
           case LIST_VALUE:
             setListValue(record, arg._key, arg._updateValue._listValue);
@@ -525,7 +548,8 @@ public class TestExecutor
           }
         } else if (arg._operation.compareTo("-") == 0)
         {
-          ZnodeModValueType valueType = getValueType(arg._propertyType, arg._key);
+          ZnodeModValueType valueType = getValueType(arg._propertyType,
+              arg._key);
           switch (valueType)
           {
           case SINGLE_VALUE:
@@ -548,7 +572,8 @@ public class TestExecutor
           }
         } else
         {
-          logger.warn("fail to execute (unsupport operation): " + arg._operation);
+          logger.warn("fail to execute (unsupport operation): "
+              + arg._operation);
           success = false;
         }
 
@@ -587,8 +612,8 @@ public class TestExecutor
     private final CountDownLatch _countDown;
     private final Map<String, Boolean> _testResults;
 
-    public DataChangeListener(TestCommand command, CountDownLatch countDown, ZkClient zkClient,
-        Map<String, Boolean> testResults)
+    public DataChangeListener(TestCommand command, CountDownLatch countDown,
+        ZkClient zkClient, Map<String, Boolean> testResults)
     {
       _command = command;
       _zkClient = zkClient;
@@ -618,7 +643,7 @@ public class TestExecutor
 
         if (compareAndSetZnode(expectValue, arg, _zkClient) == true)
         {
-          logger.info("result:" + true + ", " + _command.toString());
+          logger.error("DataChangeListener result:" + true + ", " + _command.toString());
           _testResults.put(_command.toString(), true);
 
           _zkClient.unsubscribeDataChanges(dataPath, this);
@@ -637,9 +662,10 @@ public class TestExecutor
       {
         ZNRecord record = (ZNRecord) data;
         boolean result = executeVerifier(record, _command);
+        logger.error("DataChangeListener result:" + result + ", " + _command.toString());
         if (result == true)
         {
-          logger.info("result:" + true + ", " + _command.toString());
+          
           _testResults.put(_command.toString(), true);
 
           _zkClient.unsubscribeDataChanges(dataPath, this);
@@ -658,8 +684,8 @@ public class TestExecutor
       } else
       // if (_command._commandType == CommandType.START)
       {
-        throw new UnsupportedOperationException("command type:" + _command._commandType
-            + " for data trigger not supported");
+        throw new UnsupportedOperationException("command type:"
+            + _command._commandType + " for data trigger not supported");
       }
 
     }
@@ -682,14 +708,15 @@ public class TestExecutor
     private final CountDownLatch _countDown;
     private final Map<String, Boolean> _testResults;
 
-    public ExecuteCommand(TestCommand command, CountDownLatch countDown, ZkClient zkClient,
-        Map<String, Boolean> testResults)
+    public ExecuteCommand(TestCommand command, CountDownLatch countDown,
+        ZkClient zkClient, Map<String, Boolean> testResults)
     {
       this(command, countDown, zkClient, testResults, null);
     }
 
-    public ExecuteCommand(TestCommand command, CountDownLatch countDown, ZkClient zkClient,
-        Map<String, Boolean> testResults, DataChangeListener listener)
+    public ExecuteCommand(TestCommand command, CountDownLatch countDown,
+        ZkClient zkClient, Map<String, Boolean> testResults,
+        DataChangeListener listener)
     {
       _command = command;
       _countDown = countDown;
@@ -718,7 +745,7 @@ public class TestExecutor
         result = compareAndSetZnode(expectValue, arg, _zkClient);
         if (result == true)
         {
-          logger.info("result:" + result + ", " + _command.toString());
+          logger.error("ExecuteCommand result:" + result + ", " + _command.toString());
           _testResults.put(_command.toString(), true);
 
           if (expectValue != null && _listener != null)
@@ -734,7 +761,8 @@ public class TestExecutor
         {
           if (dataTriggerTimeout == 0)
           {
-            logger.warn("fail to execute command (timeout=0):" + _command.toString());
+            logger.error("fail to execute command (timeout=0):"
+                + _command.toString());
             _countDown.countDown();
           }
         }
@@ -750,7 +778,7 @@ public class TestExecutor
         result = executeVerifier(record, _command);
         if (result == true)
         {
-          logger.info("result:" + result + ", " + _command.toString());
+          logger.error("ExecuteCommand result:" + result + ", " + _command.toString() +" "+ znodePath);
           _testResults.put(_command.toString(), true);
           if (_listener != null)
           {
@@ -765,6 +793,7 @@ public class TestExecutor
           _countDown.countDown();
         } else
         {
+          logger.error("ExecuteCommand result:" + result + ", " + _command.toString() +" "+ znodePath);
           if (dataTriggerTimeout == 0)
           {
             logger.warn("fail to verify (timeout=0):" + _command.toString());
@@ -788,7 +817,8 @@ public class TestExecutor
         Thread thread = _command._nodeOpArg._thread;
         thread.interrupt();
 
-        // System.err.println("stop " + _command._nodeOpArg._manager.getInstanceName());
+        // System.err.println("stop " +
+        // _command._nodeOpArg._manager.getInstanceName());
         logger.info("result:" + result + ", " + _command.toString());
         _testResults.put(_command.toString(), true);
         _countDown.countDown();
@@ -827,16 +857,17 @@ public class TestExecutor
       _task.cancel(true);
       _countDown.countDown();
       ZNRecord record = _zkClient.readData(znodePath, true);
-      logger.error("Actual znrecord in "+ znodePath +" : " + record);
-      logger.warn("fail to execute command (timeout):" + _command.toString());
+      logger.error("Actual znrecord in " + znodePath + " : " + record);
+      logger.error("CancelExecuteCommand fail to execute command (timeout):" + _command.toString());
     }
   };
 
-  private static Map<String, Boolean> executeTestHelper(List<TestCommand> commandList, 
-      String zkAddr, CountDownLatch countDown)
+  private static Map<String, Boolean> executeTestHelper(
+      List<TestCommand> commandList, String zkAddr, CountDownLatch countDown)
   {
     final Map<String, Boolean> testResults = new ConcurrentHashMap<String, Boolean>();
-    final ScheduledExecutorService executor = Executors.newScheduledThreadPool(MAX_PARALLEL_TASKS);
+    final ScheduledExecutorService executor = Executors
+        .newScheduledThreadPool(MAX_PARALLEL_TASKS);
     final ScheduledExecutorService timeoutExecutor = Executors
         .newScheduledThreadPool(MAX_PARALLEL_TASKS);
 
@@ -844,7 +875,8 @@ public class TestExecutor
     zkClient.setZkSerializer(new ZNRecordSerializer());
 
     // sort on trigger's start time, stable sort
-    Collections.sort(commandList, new Comparator<TestCommand>() {
+    Collections.sort(commandList, new Comparator<TestCommand>()
+    {
       @Override
       public int compare(TestCommand o1, TestCommand o2)
       {
@@ -857,49 +889,52 @@ public class TestExecutor
       testResults.put(command.toString(), new Boolean(false));
 
       TestTrigger trigger = command._trigger;
-      if (trigger._expectValue == null || (trigger._expectValue != null && trigger._timeout == 0))
+      if (trigger._expectValue == null
+          || (trigger._expectValue != null && trigger._timeout == 0))
       {
-        executor.schedule(new ExecuteCommand(command, countDown, zkClient, testResults),
-            trigger._startTime, TimeUnit.MILLISECONDS);
+        executor.schedule(new ExecuteCommand(command, countDown, zkClient,
+            testResults), trigger._startTime, TimeUnit.MILLISECONDS);
         // no timeout task for command without data-trigger
       } else if (trigger._expectValue != null && trigger._timeout > 0)
       {
         // set watcher before test the value so we can't miss any data change
-        DataChangeListener listener = new DataChangeListener(command, countDown, zkClient,
-            testResults);
+        DataChangeListener listener = new DataChangeListener(command,
+            countDown, zkClient, testResults);
         String znodePath = command._znodeOpArg._znodePath;
         zkClient.subscribeDataChanges(znodePath, listener);
 
         // TODO possible that listener callback happens and succeeds before task
         // is scheduled
-        ExecuteCommand cmdExecutor = new ExecuteCommand(command, countDown, zkClient, testResults,
-            listener);
-        Future task = executor.schedule(cmdExecutor, trigger._startTime, TimeUnit.MILLISECONDS);
+        ExecuteCommand cmdExecutor = new ExecuteCommand(command, countDown,
+            zkClient, testResults, listener);
+        Future task = executor.schedule(cmdExecutor, trigger._startTime,
+            TimeUnit.MILLISECONDS);
         listener.setTask(task);
 
-        Future timeoutTask = timeoutExecutor
-            .schedule(new CancelExecuteCommand(command, countDown, listener, task, zkClient),
-                trigger._startTime + trigger._timeout, TimeUnit.MILLISECONDS);
+        Future timeoutTask = timeoutExecutor.schedule(new CancelExecuteCommand(
+            command, countDown, listener, task, zkClient), trigger._startTime
+            + trigger._timeout, TimeUnit.MILLISECONDS);
         listener.setTimeoutTask(timeoutTask);
         cmdExecutor.setTimeoutTask(timeoutTask);
       }
     }
-    
+
     return testResults;
   }
 
-  public static void executeTestAsync(List<TestCommand> commandList, String zkAddr)
-      throws InterruptedException
+  public static void executeTestAsync(List<TestCommand> commandList,
+      String zkAddr) throws InterruptedException
   {
     CountDownLatch countDown = new CountDownLatch(commandList.size());
     executeTestHelper(commandList, zkAddr, countDown);
   }
 
-  public static Map<String, Boolean> executeTest(List<TestCommand> commandList, String zkAddr)
-      throws InterruptedException
+  public static Map<String, Boolean> executeTest(List<TestCommand> commandList,
+      String zkAddr) throws InterruptedException
   {
     final CountDownLatch countDown = new CountDownLatch(commandList.size());
-    Map<String, Boolean> testResults = executeTestHelper(commandList, zkAddr, countDown);
+    Map<String, Boolean> testResults = executeTestHelper(commandList, zkAddr,
+        countDown);
 
     // TODO add timeout
     countDown.await();
