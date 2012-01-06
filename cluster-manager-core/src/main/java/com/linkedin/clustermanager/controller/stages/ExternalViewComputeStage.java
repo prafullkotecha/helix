@@ -65,7 +65,7 @@ public class ExternalViewComputeStage extends AbstractBaseStage
           String stateModelName = idealState.getStateModelDefRef();
           StateModelDefinition stateModelDef = cache.getStateModelDef(stateModelName); 
           String initialState = stateModelDef.getInitialState();
-          for(String instanceName : idealState.getPreferenceList(resourceKey.getResourceKeyName(), stateModelDef))
+          for(String instanceName : idealState.getInstanceStateMap(resourceKey.getResourceKeyName()).keySet())
           {
             resourceKeyExternalViewStateMap.put(instanceName, initialState);
           }
