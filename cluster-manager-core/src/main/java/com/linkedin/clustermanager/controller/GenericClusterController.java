@@ -95,9 +95,13 @@ public class GenericClusterController implements ConfigChangeListener,
 
 			// rebalance pipeline
 			Pipeline rebalancePipeline = new Pipeline();
+			
 			rebalancePipeline.addStage(new ResourceComputationStage());
 			rebalancePipeline.addStage(new CurrentStateComputationStage());
 			rebalancePipeline.addStage(new BestPossibleStateCalcStage());
+			// Since the participant may need the external view while processing messages, 
+			// we need to refresh external view before sending any messages
+			rebalancePipeline.addStage(new ExternalViewComputeStage());
 			rebalancePipeline.addStage(new MessageGenerationPhase());
 			rebalancePipeline.addStage(new MessageSelectionStage());
 			rebalancePipeline.addStage(new TaskAssignmentStage());
@@ -106,17 +110,36 @@ public class GenericClusterController implements ConfigChangeListener,
 			Pipeline externalViewPipeline = new Pipeline();
 			externalViewPipeline.addStage(new ExternalViewComputeStage());
 
-			registry.register("idealStateChange", dataRefresh, rebalancePipeline);
-			registry.register("currentStateChange", dataRefresh, rebalancePipeline,
-			    externalViewPipeline);
-			registry.register("configChange", dataRefresh, rebalancePipeline);
-			registry.register("liveInstanceChange", dataRefresh, rebalancePipeline,
-			    externalViewPipeline);
+			registry.register("idealStateChange", 
+			                   dataRefresh, 
+			                   rebalancePipeline, 
+			                   externalViewPipeline
+			                   );
+			registry.register("currentStateChange", 
+			                   dataRefresh, 
+			                   rebalancePipeline,
+			                   externalViewPipeline
+			                   );
+			registry.register("configChange", 
+			                   dataRefresh, 
+			                   rebalancePipeline
+			                   );
+			registry.register("liveInstanceChange", 
+			                   dataRefresh, 
+			                   rebalancePipeline,
+			                   externalViewPipeline
+			                   );
 
-			registry.register("messageChange", dataRefresh);
-			registry.register("externalView", dataRefresh);
-			registry.register("resume", dataRefresh, rebalancePipeline,
-			    externalViewPipeline);
+			registry.register("messageChange", 
+			                  dataRefresh
+			                  );
+			registry.register("externalView", 
+			                  dataRefresh
+			                  );
+			registry.register("resume", 
+			                  dataRefresh, 
+			                  rebalancePipeline,
+			                  externalViewPipeline);
 
 			return registry;
 		}

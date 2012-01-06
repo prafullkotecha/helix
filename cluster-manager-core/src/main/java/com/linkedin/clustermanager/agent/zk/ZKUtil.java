@@ -52,8 +52,10 @@ public final class ZKUtil
   public static void createChildren(ZkClient client, String parentPath,
       ZNRecord nodeRecord)
   {
-    client.createPersistent(parentPath, true);
-
+    if(!client.exists(parentPath))
+    {
+      client.createPersistent(parentPath, true);
+    }
     String id = nodeRecord.getId();
     String temp = parentPath + "/" + id;
     client.createPersistent(temp, nodeRecord);
