@@ -826,7 +826,8 @@ public class TestExecutor
       _zkClient.unsubscribeDataChanges(znodePath, _listener);
       _task.cancel(true);
       _countDown.countDown();
-
+      ZNRecord record = _zkClient.readData(znodePath, true);
+      logger.error("Actual znrecord in "+ znodePath +" : " + record);
       logger.warn("fail to execute command (timeout):" + _command.toString());
     }
   };
