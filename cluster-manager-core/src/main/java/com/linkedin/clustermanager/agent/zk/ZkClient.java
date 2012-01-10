@@ -15,9 +15,9 @@ import org.apache.zookeeper.data.Stat;
  * ZKClient does not provide some functionalities, this will be used for quick
  * fixes if any bug found in ZKClient or if we need additional features but cant
  * wait for the new ZkClient jar
- * Ideally we should commit the changes we do here to ZKClient. 
+ * Ideally we should commit the changes we do here to ZKClient.
  * @author kgopalak
- * 
+ *
  */
 public class ZkClient extends org.I0Itec.zkclient.ZkClient
 {
@@ -25,7 +25,7 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
   public static String sessionPassword;
   // TODO need to remove when connection expired
   private static final Set<IZkConnection> zkConnections = new CopyOnWriteArraySet<IZkConnection>();
-  
+
   public ZkClient(IZkConnection connection, int connectionTimeout,
       ZkSerializer zkSerializer)
   {
@@ -77,17 +77,17 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
   }
 
   @Override
-  public void close() throws ZkInterruptedException 
+  public void close() throws ZkInterruptedException
   {
     zkConnections.remove(_connection);
     super.close();
   }
-  
+
   public static int getNumberOfConnections()
   {
     return zkConnections.size();
   }
-  
+
   public Stat getStat(final String path)
   {
     Stat stat = retryUntilConnected(new Callable<Stat>()
@@ -104,9 +104,9 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
 
     return stat;
   }
-  
+
   @Override
-  public <T extends Object> T readData(String path, boolean returnNullIfPathNotExists) 
+  public <T extends Object> T readData(String path, boolean returnNullIfPathNotExists)
   {
     T data = null;
     try {
@@ -115,6 +115,24 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
         if (!returnNullIfPathNotExists) {
             throw e;
         }
+    }
+    return data;
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T extends Object> T readDataAndStat(String path, Stat stat, boolean returnNullIfPathNotExists)
+  {
+    T data = null;
+    try
+    {
+      data = (T) super.readData(path, stat);
+    }
+    catch (ZkNoNodeException e)
+    {
+      if (!returnNullIfPathNotExists)
+      {
+        throw e;
+      }
     }
     return data;
   }
