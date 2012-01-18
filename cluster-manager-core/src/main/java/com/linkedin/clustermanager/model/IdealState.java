@@ -17,6 +17,8 @@ import com.linkedin.clustermanager.ZNRecordDecorator;
  */
 public class IdealState extends ZNRecordDecorator
 {
+  private static final String CUSTOM_PREFIX = "CUSTOM_";
+
   public enum IdealStateProperty
   {
     RESOURCES,
@@ -161,6 +163,23 @@ public class IdealState extends ZNRecordDecorator
     catch(Exception e)
     {}
     return -1;
+  }
+
+  public String getCustomField(final String fieldName) {
+      if (null == fieldName) {
+          throw new IllegalArgumentException("fieldName must not be null");
+      }
+      return _record.getSimpleField(CUSTOM_PREFIX + fieldName);
+  }
+
+  public void setCustomField(final String fieldName, final String fieldValue) {
+      if (null == fieldName) {
+          throw new IllegalArgumentException("fieldName must not be null");
+      }
+      if (null == fieldValue) {
+          throw new IllegalArgumentException("fieldValue must not be null");
+      }
+      _record.setSimpleField(CUSTOM_PREFIX + fieldName, fieldValue);
   }
 
   @Override
