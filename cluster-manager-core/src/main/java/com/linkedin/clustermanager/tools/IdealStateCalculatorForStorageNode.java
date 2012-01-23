@@ -57,7 +57,30 @@ public class IdealStateCalculatorForStorageNode
     }
     else if(partitions < instanceNames.size())
     {
-      throw new ClusterManagerException("partitions must be more than number of instances");
+      ZNRecord idealState = IdealStateCalculatorByShuffling.calculateIdealState(instanceNames, partitions, replicas, stateUnitGroup, new Random().nextLong(), masterStateValue, slaveStateValue);
+
+      for(String partitionId : idealState.getMapFields().keySet())
+      {
+        Map<String, String> partitionAssignmentMap = idealState.getMapField(partitionId);
+        List<String> partitionAssignmentPriorityList = new ArrayList<String>();
+        String masterInstance = "";
+        for(String instanceName : partitionAssignmentMap.keySet())
+        {
+          if(partitionAssignmentMap.get(instanceName).equalsIgnoreCase(masterStateValue)
+              && masterInstance.equals(""))
+          {
+            masterInstance = instanceName;
+          }
+          else
+          {
+            partitionAssignmentPriorityList.add(instanceName);
+          }
+        }
+        Collections.shuffle(partitionAssignmentPriorityList);
+        partitionAssignmentPriorityList.add(0, masterInstance);
+        idealState.setListField(partitionId, partitionAssignmentPriorityList);
+      }
+      return idealState;
     }
       
     Map<String, Object> result = calculateInitialIdealState(instanceNames, partitions, replicas);
