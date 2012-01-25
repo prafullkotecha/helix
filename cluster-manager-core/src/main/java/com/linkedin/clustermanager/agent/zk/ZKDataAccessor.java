@@ -8,7 +8,6 @@ import org.I0Itec.zkclient.ZkConnection;
 import org.apache.log4j.Logger;
 
 import com.linkedin.clustermanager.ClusterDataAccessor;
-import com.linkedin.clustermanager.ClusterView;
 import com.linkedin.clustermanager.PropertyPathConfig;
 import com.linkedin.clustermanager.PropertyType;
 import com.linkedin.clustermanager.ZNRecord;
@@ -16,17 +15,16 @@ import com.linkedin.clustermanager.store.PropertyJsonSerializer;
 import com.linkedin.clustermanager.store.PropertySerializer;
 import com.linkedin.clustermanager.store.PropertyStore;
 import com.linkedin.clustermanager.store.zk.ZKPropertyStore;
+import com.linkedin.clustermanager.agent.zk.ZkClient;
 
 public class ZKDataAccessor implements ClusterDataAccessor {
 	private static Logger logger = Logger.getLogger(ZKDataAccessor.class);
 	private final String _clusterName;
-	private final ClusterView _clusterView;
 	private final ZkClient _zkClient;
 
 	public ZKDataAccessor(String clusterName, ZkClient zkClient) {
 		this._clusterName = clusterName;
 		this._zkClient = zkClient;
-		this._clusterView = new ClusterView();
 	}
 
 	@Override
@@ -116,11 +114,15 @@ public class ZKDataAccessor implements ClusterDataAccessor {
 			_zkClient.createPersistent(path);
 		}
 
-		String zkAddr = _zkClient.getConnection().getServers();
+//		String zkAddr = _zkClient.getConnection().getServers();
+//    String zkAddr = _zkClient.getServers();
 		PropertySerializer<ZNRecord> serializer = new PropertyJsonSerializer<ZNRecord>(
 				ZNRecord.class);
-		return new ZKPropertyStore<ZNRecord>(new ZkConnection(zkAddr), serializer,
-				path);
+    return new ZKPropertyStore<ZNRecord>(_zkClient, serializer,
+          path);
+
+//		return new ZKPropertyStore<ZNRecord>(new ZkConnection(zkAddr), serializer,
+//				path);
 
 	}
 }

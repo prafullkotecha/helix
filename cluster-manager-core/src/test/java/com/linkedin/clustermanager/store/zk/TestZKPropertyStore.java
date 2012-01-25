@@ -81,7 +81,7 @@ public class TestZKPropertyStore extends ZkUnitTestBase
       
       PropertyJsonSerializer<String> serializer = new PropertyJsonSerializer<String>(String.class);
       
-      ZkConnection zkConn = new ZkConnection(ZK_ADDR);
+//      ZkConnection zkConn = new ZkConnection(ZK_ADDR);
 
       final String propertyStoreRoot = "/" + getShortClassName();
       if (_zkClient.exists(propertyStoreRoot))
@@ -89,7 +89,8 @@ public class TestZKPropertyStore extends ZkUnitTestBase
         _zkClient.deleteRecursive(propertyStoreRoot);
       }
 
-      ZKPropertyStore<String> zkPropertyStore = new ZKPropertyStore<String>(zkConn, serializer, propertyStoreRoot);
+      ZKPropertyStore<String> zkPropertyStore 
+        = new ZKPropertyStore<String>(new ZkClient(ZK_ADDR), serializer, propertyStoreRoot);
       
       // test remove recursive and get non exist property
       zkPropertyStore.removeRootNamespace();

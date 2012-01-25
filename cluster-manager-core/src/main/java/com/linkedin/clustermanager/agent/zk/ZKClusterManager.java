@@ -47,6 +47,7 @@ import com.linkedin.clustermanager.monitoring.ZKPathDataDumpTask;
 import com.linkedin.clustermanager.participant.DistClusterControllerElection;
 import com.linkedin.clustermanager.store.PropertyStore;
 import com.linkedin.clustermanager.util.CMUtil;
+import com.linkedin.clustermanager.agent.zk.ZkClient;
 
 public class ZKClusterManager implements ClusterManager
 {

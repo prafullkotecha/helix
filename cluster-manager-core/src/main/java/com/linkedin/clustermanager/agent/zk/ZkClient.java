@@ -73,7 +73,12 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
 
   public IZkConnection getConnection()
   {
-  	return _connection;
+  	return this._connection;
+  }
+  
+  public String getServers()
+  {
+    return this._connection.getServers();
   }
 
   @Override
