@@ -149,4 +149,10 @@ public class IdealState
     }
 
   }
+  
+  @Override
+  public String toString()
+  {
+    return _record.toString();
+  }
 }

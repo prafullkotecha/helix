@@ -82,4 +82,10 @@ public class CurrentState
   {
     return record;
   }
+  
+  @Override
+  public String toString()
+  {
+    return record.toString();
+  }
 }

@@ -189,7 +189,7 @@ public class CMStateTransitionHandler implements MessageHandler
       } else
       {
         logger
-            .warn("currentState is null. Storage node should be working with file based clm.");
+            .warn("currentState is null. participant should be working with file based clm.");
       }
       map.put(Message.Attributes.STATE_UNIT_GROUP.toString(),
           message.getStateUnitGroup());

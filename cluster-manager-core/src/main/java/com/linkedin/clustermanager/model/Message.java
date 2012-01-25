@@ -342,4 +342,10 @@ public class Message
     
     return replyMessage;
   }
+  
+  @Override
+  public String toString()
+  {
+    return _record.toString();
+  }
 }

@@ -15,7 +15,7 @@ public class StateModelDefinition
    * State Names in priority order. Indicates the order in which states are
    * fulfilled
    */
-  private List<String> _statesPriorityList;
+  private final List<String> _statesPriorityList;
 
   /**
    * Specifies the number of instances for a given state <br>
@@ -26,15 +26,15 @@ public class StateModelDefinition
    * N all instances in the cluster will be put in this state.PreferenceList
    * must be denoted as '*'
    */
-  private Map<String, String> _statesCountMap;
+  private final Map<String, String> _statesCountMap;
 
-  private List<String> _stateTransitionPriorityList;
+  private final List<String> _stateTransitionPriorityList;
 
   /**
    * StateTransition which is used to find the nextState given StartState and
    * FinalState
    */
-  private Map<String, Map<String, String>> _stateTransitionTable;
+  private final Map<String, Map<String, String>> _stateTransitionTable;
 
   public StateModelDefinition(ZNRecord record)
   {
@@ -95,5 +95,11 @@ public class StateModelDefinition
   public String getId()
   {
     return _record.getId();
+  }
+  
+  @Override
+  public String toString()
+  {
+    return _record.toString();
   }
 }

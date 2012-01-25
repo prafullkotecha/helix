@@ -26,4 +26,9 @@ public class LiveInstance
     return _record.getId();
   }
 
+  @Override
+  public String toString()
+  {
+    return _record.toString();
+  }
 }

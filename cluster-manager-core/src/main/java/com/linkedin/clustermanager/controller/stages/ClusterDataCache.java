@@ -150,4 +150,17 @@ public class ClusterDataCache
     return _idealStateMap.get(resourceGroupName);
   }
 
+  @Override
+  public String toString()
+  {
+    StringBuilder sb = new StringBuilder();
+    sb.append("liveInstanceMap:" + _liveInstanceMap).append("\n");
+    sb.append("idealStateMap:" + _idealStateMap).append("\n");
+    sb.append("stateModelDefMap:" + _stateModelDefMap).append("\n");
+    sb.append("instanceConfigMap:" + _instanceConfigMap).append("\n");
+    sb.append("currentStateMap:" + _currentStateMap).append("\n");
+    sb.append("messageMap:" + _messageMap).append("\n");
+    
+    return sb.toString();
+  }
 }
