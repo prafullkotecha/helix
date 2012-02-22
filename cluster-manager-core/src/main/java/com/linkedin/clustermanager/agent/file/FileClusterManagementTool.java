@@ -383,4 +383,19 @@ public class FileClusterManagementTool implements ClusterManagementService
         "getResourceGroupExternalView() is NOT supported by FileClusterManagementTool");
   }
 
+  @Override
+  public void dropCluster(String clusterName) 
+  { 
+    throw new UnsupportedOperationException(
+        "dropCluster() is NOT supported by FileClusterManagementTool");
+  }
+
+  @Override
+  public void addCluster(String clusterName, boolean overwritePrevRecord,
+      String grandCluster)
+  {
+    throw new UnsupportedOperationException(
+        "addCluster(clusterName, overwritePrevRecord, grandCluster) is NOT supported by FileClusterManagementTool");
+  }
+
 }

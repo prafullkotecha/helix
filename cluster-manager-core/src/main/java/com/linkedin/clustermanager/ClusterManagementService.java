@@ -39,4 +39,9 @@ public interface ClusterManagementService
   ZNRecord getStateModelDef(String clusterName, String stateModelName);
   
   ZNRecord getResourceGroupExternalView(String clusterName, String resourceGroup);
+
+  void dropCluster(String clusterName);
+
+  void addCluster(String clusterName, boolean overwritePrevRecord,
+      String grandCluster);
 }

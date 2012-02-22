@@ -1,6 +1,7 @@
 package com.linkedin.clustermanager.agent.zk;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -13,6 +14,7 @@ import com.linkedin.clustermanager.ClusterManagerException;
 import com.linkedin.clustermanager.PropertyPathConfig;
 import com.linkedin.clustermanager.PropertyType;
 import com.linkedin.clustermanager.ZNRecord;
+import com.linkedin.clustermanager.model.IdealState;
 import com.linkedin.clustermanager.util.CMUtil;
 
 public class ZKClusterManagementTool implements ClusterManagementService
@@ -120,6 +122,36 @@ public class ZKClusterManagementTool implements ClusterManagementService
   }
 
   @Override
+  public void addCluster(String clusterName, boolean overwritePrevRecord, String grandCluster)
+  {
+    if (!ZKUtil.isClusterSetup(grandCluster, _zkClient))
+    {
+      throw new ClusterManagerException("Grand cluster " + grandCluster + " is not setup yet");
+    }
+    
+    addCluster(clusterName, overwritePrevRecord);
+    IdealState idealState = new IdealState(clusterName);
+    
+    idealState.setNumPartitions(1);
+    idealState.setStateModelDefRef("LeaderStandby");
+    
+    
+    List<String> controllers = getInstancesInCluster(grandCluster);
+    if(controllers.size() == 0)
+    {
+      throw new ClusterManagerException("Grand cluster " + grandCluster + " has no instances");
+    }
+    Collections.shuffle(controllers);
+    idealState.getRecord().setListField(clusterName, controllers);
+    idealState.set(clusterName, controllers.get(0), "LEADER");
+    for(int i = 1; i<controllers.size();i++)
+    {
+      idealState.set(clusterName, controllers.get(i), "STANDBY");
+    }
+    new ZKDataAccessor(grandCluster, _zkClient).setProperty(
+        PropertyType.IDEALSTATES, idealState.getRecord(), idealState.getResourceGroup());
+  }
+
   public void addCluster(String clusterName, boolean overwritePrevRecord)
   {
     // TODO Auto-generated method stub
@@ -174,7 +206,6 @@ public class ZKClusterManagementTool implements ClusterManagementService
     path = PropertyPathConfig.getPath(PropertyType.ERRORS_CONTROLLER,
         clusterName);
     _zkClient.createPersistent(path);
-
   }
 
   @Override
@@ -300,5 +331,14 @@ public class ZKClusterManagementTool implements ClusterManagementService
   {
     return new ZKDataAccessor(clusterName, _zkClient).getProperty(
         PropertyType.STATEMODELDEFS, stateModelName);
+  }
+  
+
+  @Override
+  public void dropCluster(String clusterName)
+  {
+    logger.info("Deleting cluster " + clusterName);
+    String root = "/" + clusterName;
+    _zkClient.deleteRecursive(root);
   }
 }

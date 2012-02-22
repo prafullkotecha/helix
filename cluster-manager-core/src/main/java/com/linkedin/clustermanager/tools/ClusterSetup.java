@@ -45,6 +45,8 @@ public class ClusterSetup
 
   // Add, drop, and rebalance
   public static final String addCluster            = "addCluster";
+  public static final String addCluster2            = "addCluster2";
+  public static final String dropCluster           = "dropCluster";
   public static final String addInstance           = "addNode";
   public static final String addResourceGroup      = "addResourceGroup";
   public static final String addStateModelDef      = "addStateModelDef";
@@ -69,7 +71,7 @@ public class ClusterSetup
   ZkClient _zkClient;
   ClusterManagementService _managementService;
 
-  public ClusterSetup(String zkServerAddress)
+  public ClusterSetup(String zkServerAddress) 
   {
     _zkServerAddress = zkServerAddress;
     _zkClient  = ZKClientPool.getZkClient(_zkServerAddress);
@@ -86,14 +88,21 @@ public class ClusterSetup
     addStateModelDef(clusterName, "StorageSchemata", generator.generateConfigForStorageSchemata());
     addStateModelDef(clusterName, "OnlineOffline", generator.generateConfigForOnlineOffline());
   }
-
-  public void addCluster(String clusterName,
-                         boolean overwritePrevious,
-                         String stateModDefName,
-                         ZNRecord stateModDef)
+  
+  public void addCluster(String clusterName, boolean overwritePrevious, String grandCluster)
   {
-    _managementService.addCluster(clusterName, overwritePrevious);
-    addStateModelDef(clusterName, stateModDefName, stateModDef);
+    _managementService.addCluster(clusterName, overwritePrevious, grandCluster);
+
+    StateModelConfigGenerator generator = new StateModelConfigGenerator();
+    addStateModelDef(clusterName, "MasterSlave", generator.generateConfigForMasterSlave());
+    addStateModelDef(clusterName, "LeaderStandby", generator.generateConfigForLeaderStandby());
+    addStateModelDef(clusterName, "StorageSchemata", generator.generateConfigForStorageSchemata());
+    addStateModelDef(clusterName, "OnlineOffline", generator.generateConfigForOnlineOffline());
+  }
+  
+  public void deleteCluster(String clusterName)
+  {
+    _managementService.dropCluster(clusterName);
   }
 
   public void addInstancesToCluster(String clusterName, String[] InstanceInfoArray)
@@ -380,7 +389,19 @@ public class ClusterSetup
     addClusterOption.setArgs(1);
     addClusterOption.setRequired(false);
     addClusterOption.setArgName("clusterName");
+    
+    Option addClusterOption2 =
+        OptionBuilder.withLongOpt(addCluster2).withDescription("Add a new cluster").create();
+    addClusterOption2.setArgs(2);
+    addClusterOption2.setRequired(false);
+    addClusterOption2.setArgName("clusterName grandCluster");
 
+    Option deleteClusterOption = OptionBuilder.withLongOpt(dropCluster)
+        .withDescription("Delete a cluster").create();
+    deleteClusterOption.setArgs(1);
+    deleteClusterOption.setRequired(false);
+    deleteClusterOption.setArgName("clusterName");
+    
     Option addInstanceOption =
         OptionBuilder.withLongOpt(addInstance)
                      .withDescription("Add a new Instance to a cluster")
@@ -491,6 +512,7 @@ public class ClusterSetup
     group.addOption(rebalanceOption);
     group.addOption(addResourceGroupOption);
     group.addOption(addClusterOption);
+    group.addOption(addClusterOption2);
     group.addOption(addInstanceOption);
     group.addOption(listInstancesOption);
     group.addOption(listResourceGroupOption);
@@ -556,7 +578,23 @@ public class ClusterSetup
       setupTool.addCluster(clusterName, false);
       return 0;
     }
+    
 
+    if (cmd.hasOption(addCluster2))
+    {
+      String clusterName = cmd.getOptionValues(addCluster2)[0];
+      String grandCluster = cmd.getOptionValues(addCluster2)[1];
+      setupTool.addCluster(clusterName, false, grandCluster);
+      return 0;
+    }
+
+    if (cmd.hasOption(dropCluster))
+    {
+      String clusterName = cmd.getOptionValue(dropCluster);
+      setupTool.deleteCluster(clusterName);
+      return 0;
+    }
+    
     if (cmd.hasOption(addInstance))
     {
       String clusterName = cmd.getOptionValues(addInstance)[0];
