@@ -520,6 +520,7 @@ public class ClusterSetup
     group.addOption(addIdealStateOption);
     group.addOption(rebalanceOption);
     group.addOption(dropInstanceOption);
+    group.addOption(deleteClusterOption);
     group.addOption(InstanceInfoOption);
     group.addOption(clusterInfoOption);
     group.addOption(resourceGroupInfoOption);
