@@ -338,7 +338,18 @@ public class ZKClusterManagementTool implements ClusterManagementService
   public void dropCluster(String clusterName)
   {
     logger.info("Deleting cluster " + clusterName);
+    ZKDataAccessor accessor = new ZKDataAccessor(clusterName, _zkClient);
     String root = "/" + clusterName;
+    if(accessor.getChildNames(PropertyType.LIVEINSTANCES).size() > 0)
+    {
+      throw new ClusterManagerException("There are still live instances in the cluster, shut them down first.");
+    }
+    
+    if(accessor.getProperty(PropertyType.LEADER) != null)
+    {
+      throw new ClusterManagerException("There are still LEADER in the cluster, shut them down first.");
+    }
+    
     _zkClient.deleteRecursive(root);
   }
 }
