@@ -53,6 +53,7 @@ public class ClusterSetup
   public static final String addIdealState         = "addIdealState";
   public static final String disableInstance       = "disableNode";
   public static final String dropInstance		   = "dropNode";
+  public static final String dropResource      = "dropResource";
   public static final String rebalance             = "rebalance";
 
   // Query info (TBD in V2)
@@ -441,6 +442,14 @@ public class ClusterSetup
     dropInstanceOption.setArgs(2);
     dropInstanceOption.setRequired(false);
     dropInstanceOption.setArgName("clusterName InstanceAddress(host:port)");
+    
+    Option dropResourceOption =
+        OptionBuilder.withLongOpt(dropResource)
+                     .withDescription("Drop an existing resource from a cluster")
+                     .create();
+    dropResourceOption.setArgs(2);
+    dropResourceOption.setRequired(false);
+    dropResourceOption.setArgName("clusterName resourceName");
 
     
     Option rebalanceOption =
@@ -520,6 +529,7 @@ public class ClusterSetup
     group.addOption(addIdealStateOption);
     group.addOption(rebalanceOption);
     group.addOption(dropInstanceOption);
+    group.addOption(dropResourceOption);
     group.addOption(deleteClusterOption);
     group.addOption(InstanceInfoOption);
     group.addOption(clusterInfoOption);
@@ -794,6 +804,13 @@ public class ClusterSetup
                                                                       resourceGroupName,
                                                                       idealStateRecord);
       return 0;
+    }
+    else if (cmd.hasOption(dropResource))
+    {
+      String clusterName = cmd.getOptionValues(dropResource)[0];
+      String resourceName = cmd.getOptionValues(dropResource)[1];
+
+      setupTool.getClusterManagementTool().dropResourceGroup(clusterName, resourceName);
     }
     else if (cmd.hasOption(help))
     {
