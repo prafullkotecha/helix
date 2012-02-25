@@ -1,10 +1,8 @@
 package com.linkedin.clustermanager.controller.stages;
 
-import org.testng.annotations.Test;
-import org.testng.AssertJUnit;
 import java.util.Map;
 
-import org.testng.Assert;
+import org.testng.AssertJUnit;
 import org.testng.annotations.Test;
 
 import com.linkedin.clustermanager.PropertyType;
@@ -39,6 +37,7 @@ public class TestCurrentStateComputationStage extends BaseStageTest
   public void testSimpleCS()
   {
     // setup resource group
+    setupStateModel();
     Map<String, ResourceGroup> resourceGroupMap = getResourceGroupMap();
 
     setupLiveInstances(5);

@@ -10,6 +10,7 @@ import com.linkedin.clustermanager.model.Message;
 import com.linkedin.clustermanager.model.Message.MessageType;
 import com.linkedin.clustermanager.model.ResourceGroup;
 import com.linkedin.clustermanager.model.ResourceKey;
+import com.linkedin.clustermanager.model.StateModelDefinition;
 import com.linkedin.clustermanager.pipeline.AbstractBaseStage;
 import com.linkedin.clustermanager.pipeline.StageException;
 
@@ -17,9 +18,9 @@ import com.linkedin.clustermanager.pipeline.StageException;
  * For each LiveInstances select currentState and message whose sessionId
  * matches sessionId from LiveInstance Get ResourceKey,State for all the
  * resources computed in previous State [ResourceComputationStage]
- * 
+ *
  * @author kgopalak
- * 
+ *
  */
 public class CurrentStateComputationStage extends AbstractBaseStage
 {
@@ -33,17 +34,14 @@ public class CurrentStateComputationStage extends AbstractBaseStage
     }
     ClusterDataCache cache = event.getAttribute("ClusterDataCache");
 
-    // List<ZNRecord> liveInstances;
     Map<String, LiveInstance> liveInstances = cache.getLiveInstances();
     CurrentStateOutput currentStateOutput = new CurrentStateOutput();
     Map<String, ResourceGroup> resourceGroupMap = event
         .getAttribute(AttributeName.RESOURCE_GROUPS.toString());
 
-    // for (ZNRecord record : liveInstances)
     for (LiveInstance instance : liveInstances.values())
     {
-      // LiveInstance instance = new LiveInstance(record);
-      String instanceName = instance.getInstanceName(); // record.getId();
+      String instanceName = instance.getInstanceName();
       List<Message> instanceMessages;
       instanceMessages = cache.getMessages(instanceName);
       for (Message message  : instanceMessages)
@@ -65,22 +63,34 @@ public class CurrentStateComputationStage extends AbstractBaseStage
         }
         ResourceKey resourceKey = resourceGroup.getResourceKey(message
             .getResourceKey());
-        if (resourceKey != null)
+        if (resourceKey == null)
+        {
+          // log
+          continue;
+        }
+
+        CurrentState curStates =
+            cache.getCurrentState(instanceName, instance.getSessionId())
+                 .get(resourceGroupName);
+        String curState = curStates == null? null : curStates.getState(resourceKey.getResourceKeyName());
+        if (curState == null)
+        {
+          StateModelDefinition stateModelDef =
+              cache.getStateModelDef(resourceGroup.getStateModelDefRef());
+          curState = stateModelDef.getInitialState();
+        }
+
+        if (curState.equalsIgnoreCase(message.getFromState()))
         {
           currentStateOutput.setPendingState(resourceGroupName, resourceKey,
               instanceName, message.getToState());
-        } else
-        {
-          // log
         }
       }
     }
-    // for (ZNRecord record : liveInstances)
     for (LiveInstance instance : liveInstances.values())
     {
-      // LiveInstance instance = new LiveInstance(record);
       String instanceName = instance.getInstanceName();	// record.getId();
-      
+
       String clientSessionId = instance.getSessionId();
       Map<String, CurrentState> currentStateMap = cache.getCurrentState(instanceName, clientSessionId);
       for (CurrentState currentState : currentStateMap.values())

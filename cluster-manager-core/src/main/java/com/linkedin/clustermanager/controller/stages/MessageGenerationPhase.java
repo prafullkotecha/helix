@@ -47,10 +47,8 @@ public class MessageGenerationPhase extends AbstractBaseStage
     Map<String, LiveInstance> liveInstances = cache.getLiveInstances();
 
     Map<String, String> sessionIdMap = new HashMap<String, String>();
-    // for (ZNRecord record : liveInstances)
     for (LiveInstance liveInstance : liveInstances.values())
     {
-      // LiveInstance liveInstance = new LiveInstance(record);
       sessionIdMap.put(liveInstance.getInstanceName(),
           liveInstance.getSessionId());
     }
