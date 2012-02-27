@@ -32,19 +32,4 @@ public class ReadClusterDataStage extends AbstractBaseStage
  
     event.addAttribute("ClusterDataCache", _cache);
   }
-
-  /*
-  private <T extends Object> Map<String, T> retrieve(String instanceName,
-      ClusterDataAccessor dataAccessor, PropertyType type,
-      Class<T> clazz)
-  {
-    List<ZNRecord> instancePropertyList = dataAccessor.getChildValues(type,
-        instanceName);
-    Map<String, T> map = ZNRecordUtil.convertListToTypedMap(
-        instancePropertyList, clazz);
-    return map;
-  }
-  */
-  
-
 }
