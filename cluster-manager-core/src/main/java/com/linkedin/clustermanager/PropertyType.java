@@ -9,7 +9,7 @@ public enum PropertyType
   CONFIGS(Type.CLUSTER, true, false), 
   LIVEINSTANCES(Type.CLUSTER, false,false),
   INSTANCES(Type.CLUSTER, true, false),
-  IDEALSTATES(Type.CLUSTER,false, false), 
+  IDEALSTATES(Type.CLUSTER,true, false), 
   EXTERNALVIEW(Type.CLUSTER, true, false), 
   STATEMODELDEFS(Type.CLUSTER, true, false), 
   CONTROLLER(Type.CLUSTER, true, false),
