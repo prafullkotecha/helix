@@ -1,6 +1,7 @@
 package com.linkedin.clustermanager.model;
 
-import static com.linkedin.clustermanager.CMConstants.ZNAttribute.*;
+import static com.linkedin.clustermanager.CMConstants.ZNAttribute.SESSION_ID;
+
 import com.linkedin.clustermanager.ZNRecord;
 
 public class LiveInstance
@@ -30,5 +31,10 @@ public class LiveInstance
   public String toString()
   {
     return _record.toString();
+  }
+
+  public ZNRecord getRecord()
+  {
+    return _record;
   }
 }

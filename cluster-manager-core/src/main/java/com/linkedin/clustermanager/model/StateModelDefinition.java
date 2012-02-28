@@ -91,15 +91,20 @@ public class StateModelDefinition
   {
     return _statesCountMap.get(state);
   }
-  
+
   public String getId()
   {
     return _record.getId();
   }
-  
+
   @Override
   public String toString()
   {
     return _record.toString();
+  }
+
+  public ZNRecord getRecord()
+  {
+    return _record;
   }
 }

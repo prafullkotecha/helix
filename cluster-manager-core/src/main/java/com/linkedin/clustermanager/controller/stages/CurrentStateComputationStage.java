@@ -10,7 +10,6 @@ import com.linkedin.clustermanager.model.Message;
 import com.linkedin.clustermanager.model.Message.MessageType;
 import com.linkedin.clustermanager.model.ResourceGroup;
 import com.linkedin.clustermanager.model.ResourceKey;
-import com.linkedin.clustermanager.model.StateModelDefinition;
 import com.linkedin.clustermanager.pipeline.AbstractBaseStage;
 import com.linkedin.clustermanager.pipeline.StageException;
 
@@ -69,22 +68,10 @@ public class CurrentStateComputationStage extends AbstractBaseStage
           continue;
         }
 
-        CurrentState curStates =
-            cache.getCurrentState(instanceName, instance.getSessionId())
-                 .get(resourceGroupName);
-        String curState = curStates == null? null : curStates.getState(resourceKey.getResourceKeyName());
-        if (curState == null)
-        {
-          StateModelDefinition stateModelDef =
-              cache.getStateModelDef(resourceGroup.getStateModelDefRef());
-          curState = stateModelDef.getInitialState();
-        }
-
-        if (curState.equalsIgnoreCase(message.getFromState()))
-        {
-          currentStateOutput.setPendingState(resourceGroupName, resourceKey,
-              instanceName, message.getToState());
-        }
+        currentStateOutput.setPendingState(resourceGroupName,
+                                           resourceKey,
+                                           instanceName,
+                                           message.getToState());
       }
     }
     for (LiveInstance instance : liveInstances.values())

@@ -53,7 +53,7 @@ public class MessageGenerationPhase extends AbstractBaseStage
           liveInstance.getSessionId());
     }
     MessageGenerationOutput output = new MessageGenerationOutput();
-    
+
     for (String resourceGroupName : resourceGroupMap.keySet())
     {
       ResourceGroup resourceGroup = resourceGroupMap.get(resourceGroupName);
@@ -62,21 +62,21 @@ public class MessageGenerationPhase extends AbstractBaseStage
       {
         Map<String, String> instanceStateMap = bestPossibleStateOutput
             .getInstanceStateMap(resourceGroupName, resource);
-        
+
         for (String instanceName : instanceStateMap.keySet())
         {
           String desiredState = instanceStateMap.get(instanceName);
-             
+
           String currentState = currentStateOutput.getCurrentState(
               resourceGroupName, resource, instanceName);
           if (currentState == null)
           {
             currentState = stateModelDef.getInitialState();
           }
-          
+
           String pendingState = currentStateOutput.getPendingState(
               resourceGroupName, resource, instanceName);
-          
+
           String nextState;
             nextState = stateModelDef.getNextStateForTransition(currentState,
                 desiredState);
@@ -90,15 +90,24 @@ public class MessageGenerationPhase extends AbstractBaseStage
               {
                 if (logger.isDebugEnabled())
                 {
-                  logger.debug("Message already exists at" + instanceName + " to transition"+ resource.getResourceKeyName() +" from "
-                      + currentState + " to " + nextState );
+                  logger.debug("Message already exists at" + instanceName
+                      + " to transit " + resource.getResourceKeyName() + " from "
+                      + currentState + " to " + nextState);
                 }
-              } else
+              }
+              else if (pendingState != null
+                  && currentState.equalsIgnoreCase(pendingState))
+              {
+                logger.debug("Message hasn't been removed for " + instanceName
+                    + " to transit" + resource.getResourceKeyName() + " from "
+                    + currentState + " to " + nextState);
+              }
+              else
               {
                 Message message = createMessage(manager,resourceGroupName,
                     resource.getResourceKeyName(), instanceName, currentState,
                     nextState, sessionIdMap.get(instanceName), stateModelDef.getId());
-                
+
                 output.addMessage(resourceGroupName, resource, message);
               }
             } else
@@ -110,7 +119,7 @@ public class MessageGenerationPhase extends AbstractBaseStage
             }
           }
         }
-        
+
       }
     }
     event.addAttribute(AttributeName.MESSAGES_ALL.toString(), output);

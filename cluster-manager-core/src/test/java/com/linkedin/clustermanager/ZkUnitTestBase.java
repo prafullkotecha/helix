@@ -21,6 +21,7 @@ import org.testng.annotations.BeforeSuite;
 
 import com.linkedin.clustermanager.ClusterDataAccessor.InstanceConfigProperty;
 import com.linkedin.clustermanager.agent.zk.ZKDataAccessor;
+import com.linkedin.clustermanager.agent.zk.ZNRecordSerializer;
 import com.linkedin.clustermanager.agent.zk.ZkClient;
 import com.linkedin.clustermanager.tools.ClusterStateVerifier;
 import com.linkedin.clustermanager.util.CMUtil;
@@ -31,13 +32,13 @@ public class ZkUnitTestBase
   private static Logger LOG = Logger.getLogger(ZkUnitTestBase.class);
 
   protected static ZkServer _zkServer = null;
-  // protected static ZkClient _zkClient = null;
+  protected static ZkClient _gZkClient;
 
   public static final String ZK_ADDR = "localhost:2185";
   protected static final String CLUSTER_PREFIX = "CLUSTER";
   protected static final String CONTROLLER_CLUSTER_PREFIX = "CONTROLLER_CLUSTER";
 
-  
+
   @BeforeSuite (alwaysRun = true)
   public void beforeSuite() throws Exception
   {
@@ -46,8 +47,8 @@ public class ZkUnitTestBase
     AssertJUnit.assertTrue(_zkServer != null);
     // ZKClientPool.reset();
 
-    // _zkClient = ZKClientPool.getZkClient(ZK_ADDR);
-    // AssertJUnit.assertTrue(_zkClient != null);
+    _gZkClient = new ZkClient(ZK_ADDR);
+    _gZkClient.setZkSerializer(new ZNRecordSerializer());
   }
 
   @AfterSuite (alwaysRun = true)
@@ -60,9 +61,10 @@ public class ZkUnitTestBase
   	// System.err.println("shutting down zkserver at " + _zkServer.getPort());
     TestHelper.stopZkServer(_zkServer);
     _zkServer = null;
+    _gZkClient.close();
   }
-	
-  
+
+
   protected String getShortClassName()
   {
     String className = this.getClass().getName();
@@ -254,13 +256,13 @@ public class ZkUnitTestBase
 	    AssertJUnit.assertEquals(wantExists, zkClient.exists(instanceConfigPath));
 	    AssertJUnit.assertEquals(wantExists, zkClient.exists(instancePath));
 	}
-	
-	public void verifyResource(ZkClient zkClient, String clusterName, String resource, boolean wantExists) 
+
+	public void verifyResource(ZkClient zkClient, String clusterName, String resource, boolean wantExists)
 	{
 		String resourcePath = CMUtil.getIdealStatePath(clusterName)+"/"+resource;
 		AssertJUnit.assertEquals(wantExists, zkClient.exists(resourcePath));
 	}
-	
+
 	public void verifyEnabled(ZkClient zkClient, String clusterName, String instance, boolean wantEnabled) {
 	    ClusterDataAccessor accessor = new ZKDataAccessor(clusterName, zkClient);
 	    ZNRecord nodeConfig = accessor.getProperty(PropertyType.CONFIGS, instance);
@@ -268,8 +270,8 @@ public class ZkUnitTestBase
 	    		InstanceConfigProperty.ENABLED.toString()));
 	    AssertJUnit.assertEquals(wantEnabled, isEnabled);
 	}
-	
-	
+
+
 	public void verifyReplication(ZkClient zkClient, String clusterName, String resource, int repl) {
 		//String resourcePath = CMUtil.getIdealStatePath(CLUSTER_NAME)+"/"+TEST_DB;
 		 ClusterDataAccessor accessor = new ZKDataAccessor(clusterName, zkClient);
@@ -282,7 +284,7 @@ public class ZkUnitTestBase
 			 AssertJUnit.assertEquals(repl, partitionLocs.size());
 		 }
 	}
-  
+
   protected void simulateSessionExpiry(ZkConnection zkConnection)
       throws IOException, InterruptedException
   {
