@@ -101,7 +101,11 @@ public class BestPossibleStateCalcStage extends AbstractBaseStage
         if (idealState.getIdealStateMode() == IdealStateConfigProperty.CUSTOMIZED)
         {
           // TODO add computerBestStateForResourceInCustomizedMode()
-          bestStateForResource = idealState.getInstanceStateMap(resource.getResourceKeyName());
+          // bestStateForResource = idealState.getInstanceStateMap(resource.getResourceKeyName());
+          Map<String, String> idealStateMap = idealState.getInstanceStateMap(resource.getResourceKeyName());
+          bestStateForResource = computeCustomizedBestStateForPartition(cache, stateModelDef,
+                                                                       idealStateMap,
+                                                                       currentStateMap);
         }
         else
         {
@@ -220,6 +224,47 @@ public class BestPossibleStateCalcStage extends AbstractBaseStage
 
     }
     return listField;
+  }
+
+  
+  private Map<String, String> computeCustomizedBestStateForPartition(ClusterDataCache cache,
+      StateModelDefinition stateModelDef, Map<String, String> idealStateMap,
+      Map<String, String> currentStateMap)
+  {
+    Map<String, String> instanceStateMap = new HashMap<String, String>();
+
+    // if the ideal state is deleted, idealStateMap will be null/empty and
+    // we should drop all resources.
+    if (currentStateMap != null)
+    {
+      for (String instance : currentStateMap.keySet())
+      {
+        if (idealStateMap == null || !idealStateMap.containsKey(instance))
+        {
+          instanceStateMap.put(instance, "DROPPED");
+        }
+      }
+    }
+
+    // ideal state is deleted
+    if (idealStateMap == null)
+    {
+      return instanceStateMap;
+    }
+
+    Map<String, LiveInstance> liveInstancesMap = cache.getLiveInstances();
+    for (String instance : idealStateMap.keySet())
+    {
+      boolean notInErrorState = currentStateMap == null
+          || !"ERROR".equals(currentStateMap.get(instance));
+
+      if (liveInstancesMap.containsKey(instance) && notInErrorState)
+      {
+        instanceStateMap.put(instance, idealStateMap.get(instance));
+      }
+    }
+
+    return instanceStateMap;
   }
 
 }
