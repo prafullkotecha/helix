@@ -1,7 +1,6 @@
 package com.linkedin.clustermanager;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,14 +10,15 @@ import org.I0Itec.zkclient.ZkServer;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
+import com.linkedin.clustermanager.agent.zk.ZNRecordSerializer;
 import com.linkedin.clustermanager.agent.zk.ZkClient;
 import com.linkedin.clustermanager.controller.ClusterManagerMain;
 import com.linkedin.clustermanager.mock.storage.DummyProcess.DummyLeaderStandbyStateModelFactory;
 import com.linkedin.clustermanager.mock.storage.DummyProcess.DummyOnlineOfflineStateModelFactory;
-import com.linkedin.clustermanager.mock.storage.DummyProcess.DummyStateModel;
 import com.linkedin.clustermanager.mock.storage.DummyProcess.DummyStateModelFactory;
 import com.linkedin.clustermanager.model.Message.MessageType;
 import com.linkedin.clustermanager.participant.StateMachineEngine;
+import com.linkedin.clustermanager.tools.ClusterSetup;
 import com.linkedin.clustermanager.util.ZKClientPool;
 
 public class TestHelper
@@ -84,6 +84,46 @@ public class TestHelper
                          + " in thread " + Thread.currentThread().getName());
     }
   }
+  
+  public static void setupCluster(String clusterName, String ZkAddr, int startPort,
+      String participantNamePrefix, String resourceNamePrefix, int resourceNb, int partitionNb,
+      int nodesNb, int replica, String stateModelDef, boolean doRebalance) throws Exception
+  {
+    ZkClient zkClient = new ZkClient(ZkAddr);
+    zkClient.setZkSerializer(new ZNRecordSerializer());
+
+    try
+    {
+      if (zkClient.exists("/" + clusterName))
+      {
+        logger.warn("Cluster already exists:" + clusterName + ". Deleting it");
+        zkClient.deleteRecursive("/" + clusterName);
+      }
+  
+      ClusterSetup setupTool = new ClusterSetup(ZkAddr);
+      setupTool.addCluster(clusterName, true);
+  
+      for (int i = 0; i < nodesNb; i++)
+      {
+        int port = startPort + i;
+        setupTool.addInstanceToCluster(clusterName, participantNamePrefix + ":" + port);
+      }
+  
+      for (int i = 0; i < resourceNb; i++)
+      {
+        String dbName = resourceNamePrefix + i;
+        setupTool.addResourceGroupToCluster(clusterName, dbName, partitionNb, stateModelDef);
+        if (doRebalance)
+        {
+          setupTool.rebalanceStorageCluster(clusterName, dbName, replica);
+        }
+      }
+    } finally
+    {
+      zkClient.close();
+    }
+  }
+
 
   /**
    * start dummy cluster participant with a pre-created zkClient for testing session

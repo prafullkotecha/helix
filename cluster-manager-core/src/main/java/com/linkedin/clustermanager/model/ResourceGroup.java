@@ -2,9 +2,7 @@ package com.linkedin.clustermanager.model;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class ResourceGroup
 {
@@ -53,4 +51,9 @@ public class ResourceGroup
     return _resourceKeyMap.get(resourceKeyStr);
   }
 
+  @Override
+  public String toString()
+  {
+    return _resourceKeyMap.toString();
+  }
 }
