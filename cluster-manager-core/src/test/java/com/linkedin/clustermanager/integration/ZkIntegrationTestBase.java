@@ -141,10 +141,10 @@ public class ZkIntegrationTestBase
     {
       System.out
           .println("START:ZkIntegrationTestBase.verifyIdealAndCurrentStateTimeout():"+ new Date());
-      
+
       boolean result = false;
       int i = 0;
-      for (; i < 3; i++)
+      for (; i < 10; i++)
       {
         Thread.sleep(2000);
         result = verifyIdealAndCurrentState(clusterNames);
@@ -166,7 +166,7 @@ public class ZkIntegrationTestBase
             + Arrays.toString(clusterNames.toArray()));
       }
       AssertJUnit.assertTrue(result);
-     
+
     } catch (InterruptedException e)
     {
       // TODO Auto-generated catch block
