@@ -79,6 +79,7 @@ public class CMTask implements Callable<CMTaskResult>
       logger.info("Message " + _message.getMsgId() + " is interrupted");
     } finally
     {
+      logger.info("Message " + _message.getId() +" final execution steps");
       reportMessgeStat(_manager, _message, taskResult);
 
       removeMessage(accessor, _message);
@@ -95,6 +96,7 @@ public class CMTask implements Callable<CMTaskResult>
 
   private void removeMessage(ClusterDataAccessor accessor, Message message)
   {
+    logger.info("Message " + message.getId() +" is removed");
     if (message.getTgtName().equalsIgnoreCase("controller"))
     {
       accessor
