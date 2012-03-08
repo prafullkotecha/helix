@@ -38,8 +38,8 @@ import com.linkedin.clustermanager.pipeline.PipelineRegistry;
  * possible to Ideal State. It does this by listening to changes in cluster
  * state and scheduling new tasks to get cluster state to best possible ideal
  * state. Every instance of this class can control can control only one cluster
- * 
- * 
+ *
+ *
  * Get all the resourceKeys use IdealState, CurrentState and Messages <br>
  * foreach resourceKey <br>
  * 1. get the (instance,state) from IdealState, CurrentState and PendingMessages <br>
@@ -59,17 +59,17 @@ public class GenericClusterController implements ConfigChangeListener,
 	    .getLogger(GenericClusterController.class.getName());
 	volatile boolean init = false;
 	private final PipelineRegistry _registry;
-	
-	/** 
-	 * Since instance current state is per-session-id, we need to track the session-ids of 
+
+	/**
+	 * Since instance current state is per-session-id, we need to track the session-ids of
 	 * the current states that the ClusterController is observing.
 	 */
 	private final Set<String> _instanceCurrentStateChangeSubscriptionList;
 	private final ExternalViewGenerator _externalViewGenerator;
-	
+
 	/**
 	 * The _paused flag is checked by function handleEvent(), while if the flag is set handleEvent()
-	 * will be no-op. Other event handling logic keeps the same when the flag is set. 
+	 * will be no-op. Other event handling logic keeps the same when the flag is set.
 	 */
 	private boolean _paused;
 
@@ -95,11 +95,11 @@ public class GenericClusterController implements ConfigChangeListener,
 
 			// rebalance pipeline
 			Pipeline rebalancePipeline = new Pipeline();
-			
+
 			rebalancePipeline.addStage(new ResourceComputationStage());
 			rebalancePipeline.addStage(new CurrentStateComputationStage());
 			rebalancePipeline.addStage(new BestPossibleStateCalcStage());
-			// Since the participant may need the external view while processing messages, 
+			// Since the participant may need the external view while processing messages,
 			// we need to refresh external view before sending any messages
 			rebalancePipeline.addStage(new ExternalViewComputeStage());
 			rebalancePipeline.addStage(new MessageGenerationPhase());
@@ -110,34 +110,35 @@ public class GenericClusterController implements ConfigChangeListener,
 			Pipeline externalViewPipeline = new Pipeline();
 			externalViewPipeline.addStage(new ExternalViewComputeStage());
 
-			registry.register("idealStateChange", 
-			                   dataRefresh, 
-			                   rebalancePipeline, 
-			                   externalViewPipeline
-			                   );
-			registry.register("currentStateChange", 
-			                   dataRefresh, 
+			registry.register("idealStateChange",
+			                   dataRefresh,
 			                   rebalancePipeline,
 			                   externalViewPipeline
 			                   );
-			registry.register("configChange", 
-			                   dataRefresh, 
+			registry.register("currentStateChange",
+			                   dataRefresh,
+			                   rebalancePipeline,
+			                   externalViewPipeline
+			                   );
+			registry.register("configChange",
+			                   dataRefresh,
 			                   rebalancePipeline
 			                   );
-			registry.register("liveInstanceChange", 
-			                   dataRefresh, 
+			registry.register("liveInstanceChange",
+			                   dataRefresh,
 			                   rebalancePipeline,
 			                   externalViewPipeline
 			                   );
-
-			registry.register("messageChange", 
+			registry.register("messageChange",
+			                  dataRefresh,
+			                  rebalancePipeline,
+                        externalViewPipeline
+			                  );
+			registry.register("externalView",
 			                  dataRefresh
 			                  );
-			registry.register("externalView", 
-			                  dataRefresh
-			                  );
-			registry.register("resume", 
-			                  dataRefresh, 
+			registry.register("resume",
+			                  dataRefresh,
 			                  rebalancePipeline,
 			                  externalViewPipeline);
 
@@ -166,7 +167,7 @@ public class GenericClusterController implements ConfigChangeListener,
 			logger.info("No pipeline to run for event:" + event.getName());
 			return;
 		}
-		
+
 		for (Pipeline pipeline : pipelines)
 		{
 		  try
@@ -243,7 +244,7 @@ public class GenericClusterController implements ConfigChangeListener,
 		// Go though the live instance list and make sure that we are observing them
 		// accordingly. The action is done regardless of the paused flag.
 		checkLiveInstancesObservation(liveInstances, changeContext);
-		
+
 		ClusterEvent event = new ClusterEvent("liveInstanceChange");
 		event.addAttribute("clustermanager", changeContext.getManager());
 		event.addAttribute("changeContext", changeContext);
@@ -284,13 +285,13 @@ public class GenericClusterController implements ConfigChangeListener,
 	    logger.info("START: GenericClusterController.onControllerChange()");
 		ClusterDataAccessor dataAccessor = changeContext.getManager()
 		    .getDataAccessor();
-		
+
 		// double check if this controller is the leader
 		ZNRecord leaderRecord = dataAccessor
 		    .getProperty(PropertyType.LEADER);
 		if (leaderRecord == null)
 		{
-		  logger.warn("No controller exists for cluster:" + 
+		  logger.warn("No controller exists for cluster:" +
 		      changeContext.getManager().getClusterName());
 		  return;
 		}
@@ -301,19 +302,19 @@ public class GenericClusterController implements ConfigChangeListener,
   		  String name = changeContext.getManager().getInstanceName();
   		  if (leader == null || !leader.equals(name))
   		  {
-  		    logger.warn("leader name does NOT match, my name:" + name + 
+  		    logger.warn("leader name does NOT match, my name:" + name +
 		                ", leader:" + leader);
   		    return;
   		  }
 		}
-		
+
 		ZNRecord pauseSignal = dataAccessor
 		    .getProperty(PropertyType.PAUSE);
 		if (pauseSignal != null)
 		{
 			_paused = true;
 		  logger.info("controller is now paused");
-		} 
+		}
 		else
 		{
 			if (_paused)
@@ -333,10 +334,10 @@ public class GenericClusterController implements ConfigChangeListener,
 		}
 		logger.info("END: GenericClusterController.onControllerChange()");
 	}
-	
+
 	/**
 	 * Go through the list of liveinstances in the cluster, and add currentstateChange listener
-	 * and Message listeners to them if they are newly added. For current state change, the 
+	 * and Message listeners to them if they are newly added. For current state change, the
 	 * observation is tied to the session id of each live instance.
 	 *
 	 */
@@ -348,7 +349,7 @@ public class GenericClusterController implements ConfigChangeListener,
         String instanceName = instance.getId();
         String clientSessionId = instance
             .getSimpleField(CMConstants.ZNAttribute.SESSION_ID.toString());
-  
+
         if (!_instanceCurrentStateChangeSubscriptionList.contains(clientSessionId))
         {
           try

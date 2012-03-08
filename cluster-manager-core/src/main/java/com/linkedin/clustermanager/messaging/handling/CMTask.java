@@ -90,8 +90,8 @@ public class CMTask implements Callable<CMTaskResult>
       }
 
       sendReply(accessor, _message, taskResult);
-      return taskResult;
     }
+    return taskResult;
   }
 
   private void removeMessage(ClusterDataAccessor accessor, Message message)
