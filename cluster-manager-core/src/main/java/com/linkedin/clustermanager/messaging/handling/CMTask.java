@@ -79,7 +79,6 @@ public class CMTask implements Callable<CMTaskResult>
       logger.info("Message " + _message.getMsgId() + " is interrupted");
     } finally
     {
-      logger.info("Message " + _message.getId() +" final execution steps");
       reportMessgeStat(_manager, _message, taskResult);
 
       removeMessage(accessor, _message);
@@ -96,16 +95,17 @@ public class CMTask implements Callable<CMTaskResult>
 
   private void removeMessage(ClusterDataAccessor accessor, Message message)
   {
-    logger.info("Message " + message.getId() +" is removed");
+    boolean succeed;
     if (message.getTgtName().equalsIgnoreCase("controller"))
     {
-      accessor
+      succeed = accessor
           .removeProperty(PropertyType.MESSAGES_CONTROLLER, message.getId());
     } else
     {
-      accessor.removeProperty(PropertyType.MESSAGES,
+      succeed = accessor.removeProperty(PropertyType.MESSAGES,
           _manager.getInstanceName(), message.getId());
     }
+    logger.info("Remove message: " + message.getId() + ", result: " + succeed);
   }
 
   private void sendReply(ClusterDataAccessor accessor, Message message,
@@ -155,7 +155,7 @@ public class CMTask implements Callable<CMTaskResult>
     {
       long totalDelay = now - msgReadTime;
       long executionDelay = now - msgExecutionStartTime;
-      logger.info("Message " + message.getId() +" execution: " + totalDelay);
+      logger.info("Message " + message.getId() + " reporting execution delay: " + totalDelay);
       if (totalDelay > 0 && executionDelay > 0)
       {
         String fromState = message.getFromState();
@@ -168,10 +168,8 @@ public class CMTask implements Callable<CMTaskResult>
 
         StateTransitionDataPoint data = new StateTransitionDataPoint(
             totalDelay, executionDelay, taskResult.isSucess());
-        logger.info("Message " + message.getId() +" reporting delay.");
         
         _executor.getParticipantMonitor().reportTransitionStat(cxt, data);
-        logger.info("Message " + message.getId() +" delay reported.");
       }
     } else
     {

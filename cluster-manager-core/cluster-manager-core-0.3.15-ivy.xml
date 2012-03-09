@@ -2,7 +2,7 @@
 <ivy-module version="1.0" xmlns:m="http://ant.apache.org/ivy/maven">
 	<info organisation="com.linkedin.clustermanager"
 		module="cluster-manager-core"
-		revision="0.3.14"
+		revision="0.3.15"
 		status="release"
 		publication="2012020305113547"
 	>
@@ -32,6 +32,7 @@
         <dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.8.5" conf="compile->compile(default);runtime->runtime(default);default->default"/>
         <dependency org="commons-io" name="commons-io" rev="1.4" conf="compile->compile(default);runtime->runtime(default);default->default"/>
         <dependency org="commons-cli" name="commons-cli" rev="1.2" conf="compile->compile(default);runtime->runtime(default);default->default"/>
+        <dependency org="commons-math" name="commons-math" rev="2.1" conf="compile->compile(default);runtime->runtime(default);default->default"/>
         <dependency org="zkclient" name="zkclient" rev="0.1.0" conf="compile->compile(default);runtime->runtime(default);default->default"/>
 	</dependencies>
 </ivy-module>

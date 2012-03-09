@@ -19,13 +19,13 @@ public class ParticipantMonitor
 {
   private static final ParticipantMonitor _instance = new ParticipantMonitor();
   
-  private ConcurrentHashMap<StateTransitionContext, StateTransitionStatMonitor> _monitorMap
+  private final ConcurrentHashMap<StateTransitionContext, StateTransitionStatMonitor> _monitorMap
    = new ConcurrentHashMap<StateTransitionContext, StateTransitionStatMonitor>();
   private static final Logger LOG = Logger.getLogger(ParticipantMonitor.class);
 
   private MBeanServer _beanServer;
   
-  private List<TransStatMonitorChangedListener> _listeners = new ArrayList<TransStatMonitorChangedListener>() ;
+  private final List<TransStatMonitorChangedListener> _listeners = new ArrayList<TransStatMonitorChangedListener>() ;
   
   public void addTransStatMonitorChangedListener(TransStatMonitorChangedListener listener)
   {
@@ -80,7 +80,6 @@ public class ParticipantMonitor
       LOG.warn("bean server is null, skip reporting");
       return;
     }
-    LOG.info("Reporting");
     try
     {
       if(!_monitorMap.containsKey(cxt))
@@ -104,7 +103,6 @@ public class ParticipantMonitor
       LOG.warn(e);
       e.printStackTrace();
     }
-    LOG.info("Reporting finished");
   }
   
 
