@@ -80,6 +80,7 @@ public class ParticipantMonitor
       LOG.warn("bean server is null, skip reporting");
       return;
     }
+    LOG.info("Reporting");
     try
     {
       if(!_monitorMap.containsKey(cxt))
@@ -103,6 +104,7 @@ public class ParticipantMonitor
       LOG.warn(e);
       e.printStackTrace();
     }
+    LOG.info("Reporting finished");
   }
   
 
