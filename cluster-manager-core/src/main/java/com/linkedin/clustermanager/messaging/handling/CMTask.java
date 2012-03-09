@@ -155,6 +155,7 @@ public class CMTask implements Callable<CMTaskResult>
     {
       long totalDelay = now - msgReadTime;
       long executionDelay = now - msgExecutionStartTime;
+      logger.info("Message " + message.getId() +" execution: " + totalDelay);
       if (totalDelay > 0 && executionDelay > 0)
       {
         String fromState = message.getFromState();
@@ -167,7 +168,10 @@ public class CMTask implements Callable<CMTaskResult>
 
         StateTransitionDataPoint data = new StateTransitionDataPoint(
             totalDelay, executionDelay, taskResult.isSucess());
+        logger.info("Message " + message.getId() +" reporting delay.");
+        
         _executor.getParticipantMonitor().reportTransitionStat(cxt, data);
+        logger.info("Message " + message.getId() +" delay reported.");
       }
     } else
     {
