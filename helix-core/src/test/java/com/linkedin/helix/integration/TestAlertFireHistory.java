@@ -140,7 +140,7 @@ public class TestAlertFireHistory extends ZkStandAloneCMTestBase
     Assert.assertTrue(lastRecord.get("(localhost_12919.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("OFF"));
     
     // Size of the history should be 30
-    for(int i = 0;i < 26; i++)
+    for(int i = 0;i < 27; i++)
     {
       int x = i % 2;
       int y = (i+1) % 2;
@@ -197,6 +197,53 @@ public class TestAlertFireHistory extends ZkStandAloneCMTestBase
         }
       }
     }
+    // size limit is 30
+    for(int i = 0;i < 10; i++)
+    {
+      int x = i % 2;
+      int y = (i+1) % 2;
+      int[] metricsx = {19 + 3*x, 19 + 3*y, 19 + 4*x, 18+4*y, 17+5*y};
+      int[] metricsy = {99 + 3*x, 99 + 3*y, 98 + 4*x, 98+4*y, 97+5*y};
+      
+      setHealthData(metricsx, metricsy);
+      task.run();
+      Thread.sleep(100);
+      history = manager.getDataAccessor().getProperty(PropertyType.ALERT_HISTORY);
+      
+      Assert.assertEquals(history.getMapFields().size(), 30);
+      recordMap = new TreeMap<String, Map<String, String>>();
+      recordMap.putAll( history.getMapFields());
+      lastRecord = recordMap.lastEntry().getValue();
+      
+      Assert.assertEquals(lastRecord.size() , 10);
+      if(x == 0)
+      {
+        Assert.assertTrue(lastRecord.get("(localhost_12922.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("ON"));
+        Assert.assertTrue(lastRecord.get("(localhost_12922.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("ON"));
+        Assert.assertTrue(lastRecord.get("(localhost_12920.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("OFF"));
+        Assert.assertTrue(lastRecord.get("(localhost_12918.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("OFF"));
+        Assert.assertTrue(lastRecord.get("(localhost_12919.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("ON"));
+        Assert.assertTrue(lastRecord.get("(localhost_12921.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("ON"));
+        Assert.assertTrue(lastRecord.get("(localhost_12920.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("OFF"));
+        Assert.assertTrue(lastRecord.get("(localhost_12921.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("ON"));
+        Assert.assertTrue(lastRecord.get("(localhost_12918.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("OFF"));
+        Assert.assertTrue(lastRecord.get("(localhost_12919.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("ON"));
+      }
+      else
+      {
+        Assert.assertTrue(lastRecord.get("(localhost_12922.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("OFF"));
+        Assert.assertTrue(lastRecord.get("(localhost_12922.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("OFF"));
+        Assert.assertTrue(lastRecord.get("(localhost_12920.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("ON"));
+        Assert.assertTrue(lastRecord.get("(localhost_12918.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("ON"));
+        Assert.assertTrue(lastRecord.get("(localhost_12919.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("OFF"));
+        Assert.assertTrue(lastRecord.get("(localhost_12921.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("OFF"));
+        Assert.assertTrue(lastRecord.get("(localhost_12920.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("ON"));
+        Assert.assertTrue(lastRecord.get("(localhost_12921.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("OFF"));
+        Assert.assertTrue(lastRecord.get("(localhost_12918.TestStat@DB#db1.TestMetric2)GREATER(100)").equals("ON"));
+        Assert.assertTrue(lastRecord.get("(localhost_12919.TestStat@DB#db1.TestMetric1)GREATER(20)").equals("OFF"));
+      }
+    }
+    
   }
 
 }

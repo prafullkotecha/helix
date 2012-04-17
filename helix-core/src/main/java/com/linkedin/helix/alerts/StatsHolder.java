@@ -5,6 +5,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
@@ -18,6 +20,8 @@ import com.linkedin.helix.model.PersistentStats;
 
 public class StatsHolder
 {
+  enum MatchResult {WILDCARDMATCH, EXACTMATCH, NOMATCH};
+  
   private static final Logger logger = Logger.getLogger(StatsHolder.class
       .getName());
 
@@ -28,42 +32,22 @@ public class StatsHolder
   HealthDataCache _cache;
 
   Map<String, Map<String, String>> _statMap;
+  Map<String, Map<String, MatchResult>> _statAlertMatchResult;
   // PersistentStats _persistentStats;
 
   public StatsHolder(HelixManager manager, HealthDataCache cache)
   {
     _accessor = manager.getDataAccessor();
     _cache = cache;
-    // _statMap = new HashMap<String,PersistentStat>();
-//    _cache = new ClusterDataCache();
-    refreshStats();
-    //_statMap = new HashMap<String, Map<String, String>>(); //!!!
-
+    updateCache(_cache);
+    _statAlertMatchResult = new HashMap<String, Map<String, MatchResult>>();
   }
 
   public void refreshStats()
   {
     logger.info("Refreshing cached stats");
     _cache.refresh(_accessor);
-    PersistentStats persistentStatRecord = _cache.getPersistentStats();
-    if (persistentStatRecord != null)
-    {
-      _statMap = persistentStatRecord.getMapFields();
-    }
-    else
-    {
-      _statMap = new HashMap<String, Map<String, String>>();
-    }
-    /*
-     * if (_cache.getPersistentStats() != null) {
-     *
-     * _statMap = _cache.getPersistentStats(); }
-     */
-    // TODO: confirm this a good place to init the _statMap when null
-    /*
-     * if (_statMap == null) { _statMap = new HashMap<String, Map<String,
-     * String>>(); }
-     */
+    updateCache(_cache);
   }
 
   public void persistStats()
@@ -96,16 +80,16 @@ public class StatsHolder
       _statMap = new HashMap<String,Map<String,String>>();
     }
     /*
-		if (_cache.getPersistentStats() != null) {
+    if (_cache.getPersistentStats() != null) {
 
-			_statMap = _cache.getPersistentStats();
-		}
+      _statMap = _cache.getPersistentStats();
+    }
      */
     //TODO: confirm this a good place to init the _statMap when null
     /*
-		if (_statMap == null) {
-			_statMap = new HashMap<String, Map<String, String>>();
-		}
+    if (_statMap == null) {
+      _statMap = new HashMap<String, Map<String, String>>();
+    }
      */
     System.out.println("Refresh stats done: "+(System.currentTimeMillis() - refreshStartTime));
   }
@@ -185,45 +169,82 @@ public class StatsHolder
     //refreshStats(); //will have refreshed by now during stage
 
     Map<String, Map<String, String>> pendingAdds = new HashMap<String, Map<String, String>>();
-
+    
+    if(!_statAlertMatchResult.containsKey(incomingStatName))
+    {
+      _statAlertMatchResult.put(incomingStatName, new HashMap<String, MatchResult>());
+    }
+    Map<String, MatchResult> resultMap = _statAlertMatchResult.get(incomingStatName);
     // traverse through all persistent stats
     for (String key : _statMap.keySet())
     {
+      if(resultMap.containsKey(key))
+      {
+        MatchResult cachedMatchResult = resultMap.get(key);
+        if(cachedMatchResult == MatchResult.EXACTMATCH)
+        {
+          processExactMatch(key, statFields);
+        }
+        else if(cachedMatchResult == MatchResult.WILDCARDMATCH)
+        {
+          processWildcardMatch(incomingStatName, key,statFields, pendingAdds);
+        }
+        // don't care about NOMATCH
+        continue;
+      }
       // exact match on stat and stat portion of persisted stat, just update
       if (ExpressionParser.isIncomingStatExactMatch(key, incomingStatName))
       {
-        Map<String, String> mergedStat = mergeStats(key, _statMap.get(key),
-            statFields);
-        // update in place, no problem with hash map
-        _statMap.put(key, mergedStat);
+        processExactMatch(key, statFields);
+        resultMap.put(key, MatchResult.EXACTMATCH);
       }
       // wildcard match
       else if (ExpressionParser.isIncomingStatWildcardMatch(key,
           incomingStatName))
       {
-        // make sure incoming stat doesn't already exist, either in previous
-        // round or this round
-        // form new key (incomingStatName with agg type from the wildcarded
-        // stat)
-        String statToAdd = ExpressionParser.getWildcardStatSubstitution(key,
-            incomingStatName);
-        // if the stat already existed in _statMap, we have/will apply it as an
-        // exact match
-        // if the stat was added this round to pendingAdds, no need to recreate
-        // (it would have same value)
-        if (!_statMap.containsKey(statToAdd)
-            && !pendingAdds.containsKey(statToAdd))
-        {
-          // add this stat to persisted stats
-          Map<String, String> mergedStat = mergeStats(statToAdd,
-              getEmptyStat(), statFields);
-          // add to pendingAdds so we don't mess up ongoing traversal of
-          // _statMap
-          pendingAdds.put(statToAdd, mergedStat);
-        }
+        processWildcardMatch(incomingStatName, key,statFields, pendingAdds);
+        resultMap.put(key, MatchResult.WILDCARDMATCH);
+      }
+      else
+      {
+        resultMap.put(key, MatchResult.NOMATCH);
       }
     }
     _statMap.putAll(pendingAdds);
+  } 
+  
+  void processExactMatch(String key, Map<String, String> statFields)
+  {
+    Map<String, String> mergedStat = mergeStats(key, _statMap.get(key),
+        statFields);
+    // update in place, no problem with hash map
+    _statMap.put(key, mergedStat);
+  }
+  
+  void processWildcardMatch(String incomingStatName, String key, 
+      Map<String, String> statFields,  Map<String, Map<String, String>> pendingAdds)
+  {
+
+    // make sure incoming stat doesn't already exist, either in previous
+    // round or this round
+    // form new key (incomingStatName with agg type from the wildcarded
+    // stat)
+    String statToAdd = ExpressionParser.getWildcardStatSubstitution(key,
+        incomingStatName);
+    // if the stat already existed in _statMap, we have/will apply it as an
+    // exact match
+    // if the stat was added this round to pendingAdds, no need to recreate
+    // (it would have same value)
+    if (!_statMap.containsKey(statToAdd)
+        && !pendingAdds.containsKey(statToAdd))
+    {
+      // add this stat to persisted stats
+      Map<String, String> mergedStat = mergeStats(statToAdd,
+          getEmptyStat(), statFields);
+      // add to pendingAdds so we don't mess up ongoing traversal of
+      // _statMap
+      pendingAdds.put(statToAdd, mergedStat);
+    }
   }
 
   // add parsing of stat (or is that in expression holder?) at least add
@@ -274,7 +295,6 @@ public class StatsHolder
 
   public List<Stat> getStatsList()
   {
-    //refreshStats(); //don't refresh, stage will have refreshed by this time
     List<Stat> stats = new LinkedList<Stat>();
     for (String stat : _statMap.keySet())
     {
@@ -299,5 +319,19 @@ public class StatsHolder
       stats.put(stat, valTup);
     }
     return stats;
+  }
+
+  public void updateCache(HealthDataCache cache)
+  {
+    _cache = cache;
+    PersistentStats persistentStatRecord = _cache.getPersistentStats();
+    if (persistentStatRecord != null)
+    {
+      _statMap = persistentStatRecord.getMapFields();
+    }
+    else
+    {
+      _statMap = new HashMap<String, Map<String, String>>();
+    }
   }
 }
