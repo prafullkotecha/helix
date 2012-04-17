@@ -159,7 +159,7 @@ public class HealthStatsAggregationTask extends HelixTimerTask
   private boolean isEnabled()
   {
     ConfigAccessor configAccessor = _manager.getConfigAccessor();
-    boolean enabled = false;
+    boolean enabled = true;
     if (configAccessor != null)
     {
       // zk-based cluster manager
