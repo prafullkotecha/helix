@@ -74,18 +74,18 @@ public class TestSimpleAlert extends ZkIntegrationTestBase
           && toState.equalsIgnoreCase("MASTER"))
       {
 
-    	//add a stat and report to ZK
-    	//perhaps should keep reporter per instance...
-    	ParticipantHealthReportCollectorImpl reporter =
-    			new ParticipantHealthReportCollectorImpl(manager, instance);
-    	MockEspressoHealthReportProvider provider = new
-    			MockEspressoHealthReportProvider();
-    	reporter.addHealthReportProvider(provider);
-    	String statName = "latency";
-    	provider.setStat(_dbName, statName,""+(0.1+_alertValue));
-    	reporter.transmitHealthReports();
+      //add a stat and report to ZK
+      //perhaps should keep reporter per instance...
+      ParticipantHealthReportCollectorImpl reporter =
+          new ParticipantHealthReportCollectorImpl(manager, instance);
+      MockEspressoHealthReportProvider provider = new
+          MockEspressoHealthReportProvider();
+      reporter.addHealthReportProvider(provider);
+      String statName = "latency";
+      provider.setStat(_dbName, statName,""+(0.1+_alertValue));
+      reporter.transmitHealthReports();
 
-    	/*
+      /*
         for (int i = 0; i < 5; i++)
         {
           accessor.setProperty(PropertyType.HEALTHREPORT,
@@ -130,12 +130,13 @@ public class TestSimpleAlert extends ZkIntegrationTestBase
 
     // enableHealthCheck(clusterName);
 
-    _setupTool.getClusterManagementTool().addAlert(clusterName, _alertStr);
 
     StartCMResult cmResult = TestHelper.startController(clusterName,
                                "controller_0",
                                ZK_ADDR,
                                HelixControllerMain.STANDALONE);
+    cmResult._manager.startTimerTasks();
+    _setupTool.getClusterManagementTool().addAlert(clusterName, _alertStr);
     // start participants
     for (int i = 0; i < 5; i++) //!!!change back to 5
     {
