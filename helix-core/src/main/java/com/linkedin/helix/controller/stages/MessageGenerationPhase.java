@@ -77,67 +77,60 @@ public class MessageGenerationPhase extends AbstractBaseStage
             currentState = stateModelDef.getInitialState();
           }
 
+          if (desiredState.equalsIgnoreCase(currentState))
+          {
+            continue;
+          }
+
           String pendingState =
               currentStateOutput.getPendingState(resourceName, partition, instanceName);
 
-          String nextState;
-          nextState = stateModelDef.getNextStateForTransition(currentState, desiredState);
+          String nextState =
+              stateModelDef.getNextStateForTransition(currentState, desiredState);
 
-          if (!desiredState.equalsIgnoreCase(currentState))
+          if (nextState == null)
           {
-            if (nextState != null)
-            {
-              if (pendingState != null)
-              {
-                if (logger.isDebugEnabled())
-                {
-                  if (nextState.equalsIgnoreCase(pendingState))
-                  {
-                    logger.debug("Message already exists at" + instanceName
-                        + " to transit " + partition.getPartitionName() + " from "
-                        + currentState + " to " + nextState);
-                  }
-                  else if (currentState.equalsIgnoreCase(pendingState))
-                  {
-                    logger.debug("Message hasn't been removed for " + instanceName
-                        + " to transit" + partition.getPartitionName() + " to "
-                        + pendingState);
-                  }
-                  else
-                  {
-                    logger.debug("IdealState changed before state transition completes for "
-                        + partition.getPartitionName()
-                        + " on "
-                        + instanceName
-                        + ", pendingState: "
-                        + pendingState
-                        + ", currentState: "
-                        + currentState + ", nextState: " + nextState);
-                  }
-                }
-              }
-              else
-              {
-                Message message =
-                    createMessage(manager,
-                                  resourceName,
-                                  partition.getPartitionName(),
-                                  instanceName,
-                                  currentState,
-                                  nextState,
-                                  sessionIdMap.get(instanceName),
-                                  stateModelDef.getId(),
-                                  resource.getStateModelFactoryname());
+            logger.error("Unable to find a next state from stateModelDefinition"
+                + stateModelDef.getClass() + " from:" + currentState + " to:"
+                + desiredState);
+            continue;
+          }
 
-                output.addMessage(resourceName, partition, message);
-              }
+          if (pendingState != null)
+          {
+            if (nextState.equalsIgnoreCase(pendingState))
+            {
+              logger.info("Message already exists at" + instanceName + " to transit "
+                  + partition.getPartitionName() + " from " + currentState + " to "
+                  + nextState);
+            }
+            else if (currentState.equalsIgnoreCase(pendingState))
+            {
+              logger.info("Message hasn't been removed for " + instanceName
+                  + " to transit" + partition.getPartitionName() + " to " + pendingState);
             }
             else
             {
-              logger.error("Unable to find a next state from stateModelDefinition"
-                  + stateModelDef.getClass() + " from:" + currentState + " to:"
-                  + desiredState);
+              logger.info("IdealState changed before state transition completes for "
+                  + partition.getPartitionName() + " on " + instanceName
+                  + ", pendingState: " + pendingState + ", currentState: " + currentState
+                  + ", nextState: " + nextState);
             }
+          }
+          else
+          {
+            Message message =
+                createMessage(manager,
+                              resourceName,
+                              partition.getPartitionName(),
+                              instanceName,
+                              currentState,
+                              nextState,
+                              sessionIdMap.get(instanceName),
+                              stateModelDef.getId(),
+                              resource.getStateModelFactoryname());
+
+            output.addMessage(resourceName, partition, message);
           }
         }
       }
