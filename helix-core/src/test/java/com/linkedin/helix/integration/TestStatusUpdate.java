@@ -32,7 +32,7 @@ import com.linkedin.helix.util.StatusUpdateUtil;
 
 public class TestStatusUpdate extends ZkStandAloneCMTestBase
 {
-  @Test
+  // @Test
   public void testParticipantStatusUpdates() throws Exception
   {
     ZkClient zkClient = new ZkClient(ZkIntegrationTestBase.ZK_ADDR);

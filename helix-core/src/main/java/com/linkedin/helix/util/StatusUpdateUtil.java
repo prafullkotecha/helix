@@ -51,10 +51,10 @@ public class StatusUpdateUtil
 
   public static class Transition implements Comparable<Transition>
   {
-    private String _msgID;
-    private long   _timeStamp;
-    private String _from;
-    private String _to;
+    private final String _msgID;
+    private final long   _timeStamp;
+    private final String _from;
+    private final String _to;
 
     public Transition(String msgID, long timeStamp, String from, String to)
     {
@@ -95,6 +95,7 @@ public class StatusUpdateUtil
       return _msgID;
     }
     
+    @Override
     public String toString() 
     {
       return _msgID + ":" + _timeStamp + ":" + _from + "->" + _to;
@@ -108,8 +109,8 @@ public class StatusUpdateUtil
 
   public static class StatusUpdateContents
   {
-    private List<Transition>  _transitions;
-    private Map<String, TaskStatus> _taskMessages;
+    private final List<Transition>  _transitions;
+    private final Map<String, TaskStatus> _taskMessages;
 
     private StatusUpdateContents(List<Transition> transitions,
                                  Map<String, TaskStatus> taskMessages)
@@ -428,6 +429,10 @@ public class StatusUpdateUtil
   void publishStatusUpdateRecord(ZNRecord record, Message message, Level level,
       DataAccessor accessor)
   {
+    // disable statusUpdates for perf test
+    if (true)
+      return;
+    
     String instanceName = message.getTgtName();
     String statusUpdateSubPath = getStatusUpdateSubPath(message);
     String statusUpdateKey = getStatusUpdateKey(message);

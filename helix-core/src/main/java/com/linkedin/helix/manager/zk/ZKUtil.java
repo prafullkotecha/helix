@@ -17,6 +17,7 @@ package com.linkedin.helix.manager.zk;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 import org.I0Itec.zkclient.DataUpdater;
@@ -34,6 +35,9 @@ public final class ZKUtil
   private static Logger logger = Logger.getLogger(ZKUtil.class);
   private static int RETRYLIMIT = 3;
 
+
+  private final static HashSet<String> namePool = new HashSet<String>();
+  
   private ZKUtil()
   {
   }
@@ -174,7 +178,23 @@ public final class ZKUtil
               return record;
             }
           };
+          
+          synchronized(namePool)
+          {
+            while(namePool.contains(path))    // already being locked
+            {
+              namePool.wait();                // wait for release
+            }
+            namePool.add(path);
+          }
+          
           client.updateDataSerialized(path, updater);
+          
+          synchronized(namePool)
+          {
+            namePool.remove(path);
+            namePool.notifyAll();
+          }
         } else
         {
           CreateMode mode = (persistent) ? CreateMode.PERSISTENT : CreateMode.EPHEMERAL;
@@ -192,12 +212,14 @@ public final class ZKUtil
       } catch (Exception e)
       {
         retryCount = retryCount + 1;
-        logger.warn("Exception trying to update " + path + " Exception:" + e.getMessage()
-            + ". Will retry.");
+        logger.warn("Exception trying to update " + path + ". Will retry.", e);
       }
     }
   }
 
+  /**
+   * Async zk create/write: used by STATUSUPDATES, MESSAGES
+   */
   public static void asyncCreateOrUpdate(ZkClient client, String path, final ZNRecord record,
       final boolean persistent, final boolean mergeOnUpdate)
   {
@@ -207,6 +229,8 @@ public final class ZKUtil
       {
         if (mergeOnUpdate)
         {
+          // no guarantee on atomic update
+          // since can't use ZkClient.updateDataSerialized(path, updater)
           ZNRecord curRecord = client.readData(path);
           if (curRecord != null)
           {
@@ -227,18 +251,15 @@ public final class ZKUtil
         {
           ZNRecord newRecord = new ZNRecord(record.getId());
           newRecord.merge(record);
-          client.create(path, null, mode);
-          client.asyncWriteData(path, newRecord);
+          client.asyncCreate(path, newRecord, mode);
         } else
         {
-          client.create(path, null, mode);
-          client.asyncWriteData(path, record);
+          client.asyncCreate(path, record, mode);
         }
       }
     } catch (Exception e)
     {
-      logger.error("Exception in async create or update " + path + ". Exception: " + e.getMessage()
-          + ". Give up.");
+      logger.error("Exception in async create or update " + path + ". Give up.", e);
     }
   }
 

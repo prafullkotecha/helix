@@ -31,7 +31,7 @@ public enum PropertyType
   PROPERTYSTORE(Type.CLUSTER, true, false),
   
   //INSTANCE PROPERTIES
-  MESSAGES(Type.INSTANCE, true, true, true),
+  MESSAGES(Type.INSTANCE, true, true, true, false, false, true),
   CURRENTSTATES(Type.INSTANCE, true,true, false, false, true),
   STATUSUPDATES(Type.INSTANCE, true, true, false, false, false, true),
   ERRORS(Type.INSTANCE, true, true),
@@ -66,7 +66,7 @@ public enum PropertyType
    */
   boolean isCached;
   
-  boolean isAsyncWrite;
+  boolean isAsync;
   
   private PropertyType(Type type, boolean isPersistent, boolean mergeOnUpdate)
   {
@@ -94,7 +94,7 @@ public enum PropertyType
 
 	 private PropertyType(Type type, boolean isPersistent,
 	                      boolean mergeOnUpdate, boolean updateOnlyOnExists, boolean createOnlyIfAbsent,
-	                      boolean isCached, boolean isAsyncWrite)
+	                      boolean isCached, boolean isAsync)
   {
     this.type = type;
     this.isPersistent = isPersistent;
@@ -102,7 +102,7 @@ public enum PropertyType
     this.updateOnlyOnExists = updateOnlyOnExists;
 	this.createOnlyIfAbsent = createOnlyIfAbsent;
 	this.isCached = isCached;
-	this.isAsyncWrite = isAsyncWrite;
+	this.isAsync = isAsync;
   }
 
   public boolean isCreateOnlyIfAbsent()
@@ -160,8 +160,8 @@ public enum PropertyType
     return isCached;
   }
   
-  public boolean isAsyncWrite()
+  public boolean isAsync()
   {
-    return isAsyncWrite;
+    return isAsync;
   }
 }

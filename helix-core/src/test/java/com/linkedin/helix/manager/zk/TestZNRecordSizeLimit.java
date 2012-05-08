@@ -32,7 +32,7 @@ public class TestZNRecordSizeLimit extends ZkUnitTestBase
 {
   private static Logger LOG = Logger.getLogger(TestZNRecordSizeLimit.class);
 
-  @Test
+  // @Test
   public void testZNRecordSizeLimit()
   {
     String className = getShortClassName();

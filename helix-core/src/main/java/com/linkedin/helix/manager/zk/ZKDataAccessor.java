@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 
 import com.linkedin.helix.DataAccessor;
@@ -88,12 +89,13 @@ public class ZKDataAccessor implements DataAccessor
     {
       try
       {
-        if (type.isPersistent())
+        CreateMode mode = (type.isPersistent()) ? CreateMode.PERSISTENT : CreateMode.EPHEMERAL;
+        if (!type.isAsync())
         {
-          _zkClient.createPersistent(path, value);
+          _zkClient.create(path, value, mode);
         } else
         {
-          _zkClient.createEphemeral(path, value);
+          ZKUtil.asyncCreateOrUpdate(_zkClient, path, value, type.isPersistent(), type.isMergeOnUpdate());
         }
       } catch (Exception e)
       {
@@ -127,7 +129,7 @@ public class ZKDataAccessor implements DataAccessor
         _zkClient.createPersistent(parent, true);
       }
       
-      if (!type.isAsyncWrite())
+      if (!type.isAsync())
       {
         ZKUtil.createOrUpdate(_zkClient, path, value, type.isPersistent(), type.isMergeOnUpdate());
       } else

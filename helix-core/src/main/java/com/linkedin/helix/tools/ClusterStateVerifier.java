@@ -103,6 +103,7 @@ public class ClusterStateVerifier
     @Override
     public void handleDataChange(String dataPath, Object data) throws Exception
     {
+      LOG.info("dataChange@" + dataPath);
       boolean result = _verifier.verify();
       if (result == true)
       {
@@ -120,6 +121,7 @@ public class ClusterStateVerifier
     @Override
     public void handleChildChange(String parentPath, List<String> currentChilds) throws Exception
     {
+      LOG.info("childChange@" + parentPath);
       for (String child : currentChilds)
       {
         String childPath =
@@ -312,17 +314,22 @@ public class ClusterStateVerifier
   static boolean verifyBestPossAndExtView(DataAccessor accessor,
                                           Map<String, Map<String, String>> errStates)
   {
+    LOG.info("START verifyBestPossAndExtView()");
+    boolean result = false;
     try
     {
       // read cluster once and do verification
       ClusterDataCache cache = new ClusterDataCache();
+      LOG.info("START cache.refresh()");
       cache.refresh(accessor);
+      LOG.info("END cache.refresh()");
 
       Map<String, IdealState> idealStates = cache.getIdealStates();
       if (idealStates == null || idealStates.isEmpty())
       {
         LOG.info("No resource idealState");
-        return true;
+        result = true;
+        return result;
       }
 
       Map<String, ExternalView> extViews =
@@ -403,7 +410,7 @@ public class ClusterStateVerifier
           Map<String, String> bpInstanceStateMap =
               bestPossOutput.getInstanceStateMap(resourceName, new Partition(partition));
 
-          boolean result =
+          result =
               ClusterStateVerifier.<String, String> compareMap(evInstanceStateMap,
                                                                bpInstanceStateMap);
           if (result == false)
@@ -421,58 +428,75 @@ public class ClusterStateVerifier
       LOG.error("exception in verification", e);
       return false;
     }
-
+    finally
+    {
+      LOG.info("END verifyBestPossAndExtView(), result: " + result);
+    }
   }
 
   static boolean verifyMasterNbInExtView(DataAccessor accessor)
   {
-    Map<String, IdealState> idealStates =
-        accessor.getChildValuesMap(IdealState.class, PropertyType.IDEALSTATES);
-    if (idealStates == null || idealStates.size() == 0)
-    {
-      LOG.info("No resource idealState");
-      return true;
-    }
+    boolean result = false;
+    int partitions = 0;
+    int masterCnt = 0;
+    LOG.info("START verifyMasterNbInExtView()");
 
-    Map<String, ExternalView> extViews =
-        accessor.getChildValuesMap(ExternalView.class, PropertyType.EXTERNALVIEW);
-    if (extViews == null || extViews.size() < idealStates.size())
+    try
     {
-      LOG.info("No externalViews | externalView.size() < idealState.size()");
-      return false;
-    }
-
-    for (String resource : extViews.keySet())
-    {
-      int partitions = idealStates.get(resource).getNumPartitions();
-      Map<String, Map<String, String>> instanceStateMap =
-          extViews.get(resource).getRecord().getMapFields();
-      if (instanceStateMap.size() < partitions)
+      Map<String, IdealState> idealStates =
+          accessor.getChildValuesMap(IdealState.class, PropertyType.IDEALSTATES);
+      if (idealStates == null || idealStates.size() == 0)
       {
-        LOG.info("Number of externalViews (" + instanceStateMap.size()
-            + ") < partitions (" + partitions + ")");
+        LOG.info("No resource idealState");
+        result = true;
+        return true;
+      }
+
+      Map<String, ExternalView> extViews =
+          accessor.getChildValuesMap(ExternalView.class, PropertyType.EXTERNALVIEW);
+      if (extViews == null || extViews.size() < idealStates.size())
+      {
+        LOG.info("No externalViews | externalView.size() < idealState.size()");
         return false;
       }
 
-      for (String partition : instanceStateMap.keySet())
+      for (String resource : extViews.keySet())
       {
-        boolean foundMaster = false;
-        for (String instance : instanceStateMap.get(partition).keySet())
+        partitions = idealStates.get(resource).getNumPartitions();
+        masterCnt = countStateNbInExtView(extViews.get(resource), "MASTER");
+        if (partitions != masterCnt)
         {
-          if (instanceStateMap.get(partition).get(instance).equalsIgnoreCase("MASTER"))
-          {
-            foundMaster = true;
-            break;
-          }
-        }
-        if (!foundMaster)
-        {
-          LOG.info("No MASTER for partition: " + partition);
           return false;
         }
       }
+      result = true;
+      return true;
     }
-    return true;
+    finally
+    {
+      LOG.info("END verifyMasterNbInExtView(), result: " + result + ", master/total: "
+          + masterCnt + "/" + partitions);
+    }
+  }
+
+  public static int countStateNbInExtView(ExternalView extView, String StateName)
+  {
+    int cnt = 0;
+    Map<String, Map<String, String>> instanceStateMap =
+        extView.getRecord().getMapFields();
+
+    for (String partition : instanceStateMap.keySet())
+    {
+      for (String instance : instanceStateMap.get(partition).keySet())
+      {
+        if (instanceStateMap.get(partition).get(instance).equalsIgnoreCase(StateName))
+        {
+          cnt++;
+        }
+      }
+    }
+
+    return cnt;
   }
 
   static void runStage(ClusterEvent event, Stage stage) throws Exception
@@ -611,6 +635,8 @@ public class ClusterStateVerifier
   public static boolean verifyByZkCallback(ZkVerifier verifier, long timeout)
   {
     long startTime = System.currentTimeMillis();
+    LOG.info("start verify. timeout: " + timeout);
+
     CountDownLatch countDown = new CountDownLatch(1);
     ZkClient zkClient = verifier.getZkClient();
     String clusterName = verifier.getClusterName();
@@ -656,12 +682,14 @@ public class ClusterStateVerifier
           extViewPath.equals("/") ? extViewPath + child : extViewPath + "/" + child;
       zkClient.unsubscribeDataChanges(childPath, listener);
     }
-    
+
     long endTime = System.currentTimeMillis();
 
     // debug
-    System.err.println(result + ": wait " + (endTime - startTime) + "ms, " + verifier);
+    System.err.println(endTime + ": " + result + ": wait " + (endTime - startTime)
+        + "ms, " + verifier);
 
+    LOG.info(result + ": wait " + (endTime - startTime) + "ms, " + verifier);
     return result;
   }
 
@@ -860,6 +888,9 @@ public class ClusterStateVerifier
 
     return verifyByZkCallback(new BestPossAndExtViewZkVerifier(zkServer, clusterName),
                               timeoutValue);
+
+    // return verifyByZkCallback(new MasterNbInExtViewVerifier(zkServer, clusterName),
+    // timeoutValue);
   }
 
   public static void main(String[] args)

@@ -143,6 +143,14 @@
               <mainClass>com.linkedin.helix.tools.LocalZKServer</mainClass>
               <name>start-standalone-zookeeper</name>
             </program>
+            <program>
+              <mainClass>com.linkedin.helix.tools.TransitionLatencyAnalyzor</mainClass>
+              <name>analyze-zk-log</name>
+            </program>
+            <program>
+              <mainClass>com.linkedin.helix.tools.ZkClientPerfTest</mainClass>
+              <name>zkclient-perf-test</name>
+            </program>
           </programs>
         </configuration>
       </plugin>

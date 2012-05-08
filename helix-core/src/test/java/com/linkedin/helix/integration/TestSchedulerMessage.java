@@ -102,7 +102,7 @@ public class TestSchedulerMessage extends ZkStandAloneCMTestBase
     }
   }
 
-  @Test()
+  // @Test()
   public void TestSchedulerMsg() throws Exception
   {
     TestMessagingHandlerFactory factory = new TestMessagingHandlerFactory();
@@ -163,7 +163,7 @@ public class TestSchedulerMessage extends ZkStandAloneCMTestBase
     Assert.assertEquals(count, _PARTITIONS *3);
   }
   
-  @Test()
+  // @Test()
   public void TestSchedulerZeroMsg() throws Exception
   {
     TestMessagingHandlerFactory factory = new TestMessagingHandlerFactory();
