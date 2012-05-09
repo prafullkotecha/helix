@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.I0Itec.zkclient.DataUpdater;
+import org.I0Itec.zkclient.IZkDataListener;
 import org.apache.log4j.Logger;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -86,6 +87,7 @@ public class TestZKPropertyStore extends ZkUnitTestBase
     return "/node_" + i;
   }
 
+  // TODO: separate into small tests
   @Test ()
   public void testZKPropertyStore() throws Exception
   {
@@ -102,6 +104,41 @@ public class TestZKPropertyStore extends ZkUnitTestBase
     ZKPropertyStore<ZNRecord> store = new ZKPropertyStore<ZNRecord>(new ZkClient(ZK_ADDR),
         new PropertyJsonSerializer<ZNRecord>(ZNRecord.class), propertyStoreRoot);
 
+    // test back to back add-delete-add
+    store.setProperty("child0", new ZNRecord("child0"));
+    ZNRecord record2 = store.getProperty("child0");	// will put the record in cache
+
+    String child0Path = propertyStoreRoot + "/child0";
+    _gZkClient.subscribeDataChanges(child0Path, new IZkDataListener()
+    {
+      
+      @Override
+      public void handleDataDeleted(String dataPath) throws Exception
+      {
+        // TODO Auto-generated method stub
+        System.out.println("TestZKPropertyStore.testZKPropertyStore().new IZkDataListener() {...}.handleDataDeleted()");
+      }
+      
+      @Override
+      public void handleDataChange(String dataPath, Object data) throws Exception
+      {
+        // TODO Auto-generated method stub
+        System.out.println("TestZKPropertyStore.testZKPropertyStore().new IZkDataListener() {...}.handleDataChange()");
+      }
+    });
+
+    for (int i = 0; i < 2; i++)
+    {
+      _gZkClient.delete(child0Path);
+      _gZkClient.createPersistent(child0Path, new ZNRecord("child0-new"));
+    }
+    record2 = store.getProperty("child0");
+    Assert.assertEquals(record2.getId(), "child0-new");
+    _gZkClient.delete(child0Path);
+    Thread.sleep(300);  // should wait for zk callback to remove "child0" from cache
+    record2 = store.getProperty("child0");
+    Assert.assertNull(record2);
+    
     // zookeeper has a default 1M limit on size
     char[] data = new char[bufSize];
     for (int i = 0; i < bufSize; i++)

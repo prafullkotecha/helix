@@ -9,6 +9,7 @@ import com.linkedin.helix.store.zk.ZKPropertyStore;
 public class PropertyStoreFactory
 {
   private static Logger LOG = Logger.getLogger(PropertyStoreFactory.class);
+  public static final int DEFAULT_CONNECTION_TIMEOUT = 10000;
 
   public static <T extends Object> PropertyStore<T> getZKPropertyStore(String zkAddress,
         PropertySerializer<T> serializer, String rootNamespace)
@@ -17,9 +18,10 @@ public class PropertyStoreFactory
     {
       throw new IllegalArgumentException("arguments can't be null");
     }
-
+    
     LOG.info("Get a zk property store. zkAddr: " + zkAddress + ", root: " + rootNamespace);
-    return new ZKPropertyStore<T>(new ZkClient(zkAddress), serializer, rootNamespace);
+    ZkClient zkClient = new ZkClient(zkAddress, DEFAULT_CONNECTION_TIMEOUT);
+    return new ZKPropertyStore<T>(zkClient, serializer, rootNamespace);
   }
 
   public static <T extends Object> PropertyStore<T> getFilePropertyStore(
