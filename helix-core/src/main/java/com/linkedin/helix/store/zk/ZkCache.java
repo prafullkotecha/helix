@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -20,7 +19,6 @@ import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.apache.commons.io.FileUtils;
 import org.apache.zookeeper.CreateMode;
 
-import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.manager.zk.ZkClient;
 import com.linkedin.helix.util.ZKClientPool;
 
@@ -228,6 +226,16 @@ public class ZkCache implements IZkChildListener, IZkDataListener {
 
 		boolean succeed = _client.delete(key);
 		_map.remove(key);
+        String parent = key.substring(0, key.lastIndexOf('/'));
+
+        ZNode zNode = _map.get(parent);
+        if (zNode != null) {
+            String name = key.substring(key.lastIndexOf('/') + 1);
+            System.out.println("Removing child:" + name
+                    + " from child set of parent:" + parent);
+            zNode._childSet.remove(name);
+        } 
+
 		return succeed;
 	}
 
@@ -251,8 +259,8 @@ public class ZkCache implements IZkChildListener, IZkDataListener {
 
 	public static void main(String[] args) throws Exception {
 		final String rootNamespace = "/testZkCache";
-		String zkAddress = "localhost:2188";
-		ZkServer server = startZkSever(zkAddress, rootNamespace);
+		String zkAddress = "localhost:2191";
+//		ZkServer server = startZkSever(zkAddress, rootNamespace);
 		ZkClient client = new ZkClient(zkAddress);
 		client.deleteRecursive(rootNamespace);
 
@@ -462,7 +470,7 @@ public class ZkCache implements IZkChildListener, IZkDataListener {
 
 		System.out.println("Verification passed");
 		client.close();
-		stopZkServer(server);
+//		stopZkServer(server);
 	}
 
 	// private static void addOp(Map<String, String> map, String key,
@@ -538,7 +546,7 @@ public class ZkCache implements IZkChildListener, IZkDataListener {
 			final String rootNamespace) throws Exception {
 		List<String> rootNamespaces = new ArrayList<String>();
 		rootNamespaces.add(rootNamespace);
-		return TestHelper.startZkSever(zkAddress, rootNamespaces);
+		return startZkSever(zkAddress, rootNamespaces);
 	}
 
 	static public ZkServer startZkSever(final String zkAddress,
@@ -550,7 +558,7 @@ public class ZkCache implements IZkChildListener, IZkDataListener {
 		final String logDir = "/tmp/" + zkDir + "/logs";
 		final String dataDir = "/tmp/" + zkDir + "/dataDir";
 		FileUtils.deleteDirectory(new File(dataDir));
-		FileUtils.deleteDirectory(new File(logDir));
+		FileUtils.deleteDirectory(new File(logDir)); 
 		ZKClientPool.reset();
 
 		IDefaultNameSpace defaultNameSpace = new IDefaultNameSpace() {
