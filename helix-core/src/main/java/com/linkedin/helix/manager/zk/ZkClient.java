@@ -302,7 +302,7 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     long start = System.currentTimeMillis();
     try
     {
-      return super.readData(path, returnNullIfPathNotExists);
+      return super.<T>readData(path, returnNullIfPathNotExists);
     }
     finally
     {
