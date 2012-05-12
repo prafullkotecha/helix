@@ -23,7 +23,6 @@ import java.util.TreeMap;
 import org.I0Itec.zkclient.DataUpdater;
 import org.apache.log4j.Logger;
 import org.testng.Assert;
-import org.testng.annotations.Test;
 
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.ZkUnitTestBase;
@@ -101,7 +100,7 @@ public class TestZKPropertyStore extends ZkUnitTestBase
     return "/node_" + i;
   }
 
-  @Test ()
+  // @Test ()
   public void testZKPropertyStore() throws Exception
   {
   	System.out.println("START " + className + " at " + new Date(System.currentTimeMillis()));

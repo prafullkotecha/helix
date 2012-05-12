@@ -16,6 +16,8 @@
 package com.linkedin.helix.store.zk;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.I0Itec.zkclient.IZkChildListener;
 import org.I0Itec.zkclient.IZkDataListener;
@@ -33,35 +35,57 @@ class ZkCallbackHandler<T> implements IZkChildListener, IZkDataListener
 
   // listen on prefix and all its childs
   private final String _prefix;
-  private final PropertyChangeListener<T> _listener;
+//  private final PropertyChangeListener<T> _listener;
 
-  public ZkCallbackHandler(ZkClient client, ZKPropertyStore<T> store, String prefix,
-                           PropertyChangeListener<T> listener)
+  final Set<PropertyChangeListener<T>> _listeners = new CopyOnWriteArraySet<PropertyChangeListener<T>>();
+  
+  public ZkCallbackHandler(ZkClient client, ZKPropertyStore<T> store, String prefix)
+//                           PropertyChangeListener<T> listener)
   {
     _zkClient = client;
     _store = store;
     _prefix = prefix;
-    _listener = listener;
+//    _listener = listener;
   }
 
+  void fireListeners(String key)
+  {
+    for (PropertyChangeListener<T> listener : _listeners) 
+    {
+      listener.onPropertyChange(key);
+    }
+  }
+  
+  public void addListener(PropertyChangeListener<T> listener)
+  {
+    _listeners.add(listener);
+  }
+  
   @Override
   public void handleDataChange(String path, Object data) throws Exception
   {
-    LOG.debug("Data changed @ " + path + " to " + data);
+    LOG.debug("dataChanged@ " + path + ", newData: " + data);
     String key = _store.getRelativePath(path);
-    _listener.onPropertyChange(key);
+//    _listener.onPropertyChange(key);
+    fireListeners(key);
   }
 
   @Override
-  public void handleDataDeleted(String dataPath) throws Exception
+  public void handleDataDeleted(String path) throws Exception
   {
-    LOG.debug("Data deleted @ " + dataPath);
+    LOG.debug("dataDeleted@ " + path);
+    
+    _zkClient.unsubscribeDataChanges(path, this);
+    _zkClient.unsubscribeChildChanges(path, this);
+
+    String key = _store.getRelativePath(path);
+    fireListeners(key);
   }
 
   @Override
   public void handleChildChange(String path, List<String> currentChilds) throws Exception
   {
-    LOG.debug("childs changed @ " + path + " to " + currentChilds);
+    LOG.debug("childChange@ " + path + ", curChilds: " + currentChilds);
     // System.out.println("childs changed @ " + path + " to " + currentChilds);
 
 
@@ -72,7 +96,7 @@ class ZkCallbackHandler<T> implements IZkChildListener, IZkDataListener
        * a child change is triggered on the deleted node
        * and in this case, the currentChilds is null
        */
-      return;
+//      return;
 //    } else if (currentChilds.size() == 0)
 //    {
 //      String key = _store.getRelativePath(path);
@@ -80,16 +104,21 @@ class ZkCallbackHandler<T> implements IZkChildListener, IZkDataListener
     }
     else
     {
+      _zkClient.subscribeDataChanges(path, this);
+      _zkClient.subscribeChildChanges(path, this);
+
       String key = _store.getRelativePath(path);
-      _listener.onPropertyChange(key);
+//      _listener.onPropertyChange(key);
+      fireListeners(key);
 
       for (String child : currentChilds)
       {
         String childPath = path.endsWith("/") ? path + child : path + "/" + child;
-        _zkClient.subscribeDataChanges(childPath, this);
-        _zkClient.subscribeChildChanges(childPath, this);
+//        _zkClient.subscribeDataChanges(childPath, this);
+//        _zkClient.subscribeChildChanges(childPath, this);
 
         // recursive call
+        // TODO: change _zkClient.getChildren() to _store.getChildren()
         handleChildChange(childPath, _zkClient.getChildren(childPath));
       }
     }

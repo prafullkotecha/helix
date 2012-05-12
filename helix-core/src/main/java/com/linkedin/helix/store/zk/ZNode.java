@@ -3,19 +3,22 @@ package com.linkedin.helix.store.zk;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.zookeeper.data.Stat;
+
 public class ZNode
 {
-  private final String _name;
+  final String _name;
+  Stat _stat;
+  Object _data;
+  Set<String> _childSet;
 
-  public ZNode(String name, Object data)
+  public ZNode(String name, Object data, Stat stat)
   {
     _name = name;
     _childSet = new HashSet<String>();
     _data = data;
+    _stat = stat;
   }
-
-  Object _data;
-  Set<String> _childSet;
 
   public void addChild(String child)
   {
