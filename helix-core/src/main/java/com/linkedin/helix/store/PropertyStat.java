@@ -15,21 +15,31 @@
  */
 package com.linkedin.helix.store;
 
+import org.apache.zookeeper.data.Stat;
+
 public class PropertyStat
 {
   private long _lastModifiedTime;   // time in milliseconds from epoch when this property was last modified
   private int _version;   // latest version number
+  private long _creationTime;
   
   public PropertyStat()
   {
-    this(0, 0);
+//    this(0, 0);
   }
   
-  public PropertyStat(long lastModifiedTime, int version)
+  public static void copyStat(Stat fromStat, PropertyStat toStat)
   {
-    _lastModifiedTime = lastModifiedTime;
-    _version = version;
+	  toStat.setLastModifiedTime(fromStat.getMtime());
+	  toStat.setVersion(fromStat.getVersion());
+	  toStat.setCreationTime(fromStat.getCtime());
   }
+  
+//  public PropertyStat(long lastModifiedTime, int version)
+//  {
+//    _lastModifiedTime = lastModifiedTime;
+//    _version = version;
+//  }
     
   public long getLastModifiedTime()
   {
@@ -50,5 +60,10 @@ public class PropertyStat
   public void setVersion(int version)
   {
     _version = version;
+  }
+  
+  public void setCreationTime(long creationTime)
+  {
+	  _creationTime = creationTime;
   }
 }

@@ -181,7 +181,7 @@ public interface PropertyStore<T>
    * @param comparator
    * @param create if absent
    */
-  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator);
+//  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator);
   
   /**
    * Atomically compare and set property
@@ -195,7 +195,7 @@ public interface PropertyStore<T>
    * @param createIfAbsent
    * @return
    */
-  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator, boolean createIfAbsent);
+//  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator, boolean createIfAbsent);
 
   /**
    * Start property store

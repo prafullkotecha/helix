@@ -133,13 +133,13 @@ public class TestFilePropertyStore
     listener2._propertyChangeReceived = false;
 
     // test compare and set
-    boolean success = store.compareAndSet("/child1/grandchild1", "grandchild1-old\n",
-                                          "grandchild1-new\n", comparator);
-    AssertJUnit.assertEquals(success, false);
-
-    success = store.compareAndSet("/child1/grandchild1", "grandchild1\n",
-                                  "grandchild1-new\n", comparator);
-    AssertJUnit.assertEquals(success, true);
+//    boolean success = store.compareAndSet("/child1/grandchild1", "grandchild1-old\n",
+//                                          "grandchild1-new\n", comparator);
+//    AssertJUnit.assertEquals(success, false);
+//
+//    success = store.compareAndSet("/child1/grandchild1", "grandchild1\n",
+//                                  "grandchild1-new\n", comparator);
+//    AssertJUnit.assertEquals(success, true);
 
     store.stop();
 

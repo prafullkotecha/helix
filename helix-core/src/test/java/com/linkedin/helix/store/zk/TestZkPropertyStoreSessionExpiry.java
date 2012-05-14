@@ -64,7 +64,7 @@ public class TestZkPropertyStoreSessionExpiry extends ZkUnitTestBase
 	}
 
 
-  @Test()
+//  @Test()
   public void testZkPropertyStoreSessionExpiry() throws Exception
   {
     LOG.info("START " + getShortClassName() + " at " + new Date(System.currentTimeMillis()));

@@ -840,93 +840,93 @@ public class FilePropertyStore<T> implements PropertyStore<T>
     _readWriteLock.writeLock().unlock();
   }
 
-  @Override
-  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator)
-  {
-    return compareAndSet(key, expected, update, comparator, false);
-  }
-
-  @Override
-  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator,
-                               boolean createIfAbsent)
-  {
-    String path = getPath(key);
-    File file = new File(path);
-//    FileInputStream fin = null;
-//    FileOutputStream fout = null;
-    RandomAccessFile raFile = null;
-    FileLock fLock = null;
-
-    try
-    {
-      _readWriteLock.writeLock().lock();
-
-      if (createIfAbsent)
-      {
-        file.createNewFile();
-      }
-
-//      fin = new FileInputStream(file);
-//      FileChannel fChannel = fin.getChannel();
-      raFile = new RandomAccessFile(file, "rw");
-      FileChannel fChannel = raFile.getChannel();
-      fLock = fChannel.lock();
-
-      T current = getProperty(key);
-      if (comparator.compare(current, expected) == 0)
-      {
-//        fout = new FileOutputStream(file);
+//  @Override
+//  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator)
+//  {
+//    return compareAndSet(key, expected, update, comparator, false);
+//  }
 //
-//        byte[] bytes = _serializer.serialize(update);
-//        fout.write(bytes);
-        setProperty(key, update);
-        return true;
-      }
-
-      return false;
-    }
-    catch (FileNotFoundException e)
-    {
-      logger.error("fail to compareAndSet. path:" + path, e);
-      return false;
-    }
-    catch (Exception e)
-    {
-      logger.error("fail to compareAndSet. path:" + path, e);
-      return false;
-    }
-    finally
-    {
-      _readWriteLock.writeLock().unlock();
-      try
-      {
-        if (fLock != null && fLock.isValid())
-        {
-           fLock.release();
-        }
-
-        if (raFile != null)
-        {
-          raFile.close();
-        }
-
-//        if (fin != null)
+//  @Override
+//  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator,
+//                               boolean createIfAbsent)
+//  {
+//    String path = getPath(key);
+//    File file = new File(path);
+////    FileInputStream fin = null;
+////    FileOutputStream fout = null;
+//    RandomAccessFile raFile = null;
+//    FileLock fLock = null;
+//
+//    try
+//    {
+//      _readWriteLock.writeLock().lock();
+//
+//      if (createIfAbsent)
+//      {
+//        file.createNewFile();
+//      }
+//
+////      fin = new FileInputStream(file);
+////      FileChannel fChannel = fin.getChannel();
+//      raFile = new RandomAccessFile(file, "rw");
+//      FileChannel fChannel = raFile.getChannel();
+//      fLock = fChannel.lock();
+//
+//      T current = getProperty(key);
+//      if (comparator.compare(current, expected) == 0)
+//      {
+////        fout = new FileOutputStream(file);
+////
+////        byte[] bytes = _serializer.serialize(update);
+////        fout.write(bytes);
+//        setProperty(key, update);
+//        return true;
+//      }
+//
+//      return false;
+//    }
+//    catch (FileNotFoundException e)
+//    {
+//      logger.error("fail to compareAndSet. path:" + path, e);
+//      return false;
+//    }
+//    catch (Exception e)
+//    {
+//      logger.error("fail to compareAndSet. path:" + path, e);
+//      return false;
+//    }
+//    finally
+//    {
+//      _readWriteLock.writeLock().unlock();
+//      try
+//      {
+//        if (fLock != null && fLock.isValid())
 //        {
-//          fin.close();
+//           fLock.release();
 //        }
 //
-//        if (fout != null)
+//        if (raFile != null)
 //        {
-//          fout.close();
+//          raFile.close();
 //        }
-      }
-      catch (IOException e)
-      {
-        logger.error("fail to close file. path:" + path, e);
-      }
-    }
-
-  }
+//
+////        if (fin != null)
+////        {
+////          fin.close();
+////        }
+////
+////        if (fout != null)
+////        {
+////          fout.close();
+////        }
+//      }
+//      catch (IOException e)
+//      {
+//        logger.error("fail to close file. path:" + path, e);
+//      }
+//    }
+//
+//  }
 
   @Override
   public boolean exists(String key)

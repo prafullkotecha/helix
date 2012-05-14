@@ -185,7 +185,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
     }
   }
 
-  // always a return normalized key
+  // return normalized key
   String getRelativePath(String path)
   {
     if (!path.startsWith(_root))
@@ -279,18 +279,18 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
     return getProperty(key, null);
   }
 
-  // bytes and stat are not null
-  private T getValueAndStat(byte[] bytes, Stat stat, PropertyStat propertyStat) throws PropertyStoreException
-  {
-    T value = _serializer.deserialize(bytes);
-
-    if (propertyStat != null)
-    {
-      propertyStat.setLastModifiedTime(stat.getMtime());
-      propertyStat.setVersion(stat.getVersion());
-    }
-    return value;
-  }
+//  // bytes and stat are not null
+//  private T getValueAndStat(byte[] bytes, Stat stat, PropertyStat propertyStat) throws PropertyStoreException
+//  {
+//    T value = _serializer.deserialize(bytes);
+//
+//    if (propertyStat != null)
+//    {
+//      propertyStat.setLastModifiedTime(stat.getMtime());
+//      propertyStat.setVersion(stat.getVersion());
+//    }
+//    return value;
+//  }
 
   /**
    * Start from key and go up to property store root return true if any parent is
@@ -327,7 +327,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
       byte[] bytes;
       if (isSubscribed(path))
       {
-        bytes = (byte[]) _cache.get(path);
+        bytes = (byte[]) _cache.get(path, stat);
 
       }
       else
@@ -335,10 +335,17 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
         bytes = _zkClient.readDataAndStat(path, stat, true);
       }
 
-      if (bytes != null)
+      value = _serializer.deserialize(bytes);
+
+      if (propertyStat != null)
       {
-        value = getValueAndStat(bytes, stat, propertyStat);
+        PropertyStat.copyStat(stat, propertyStat);
       }
+
+//      if (bytes != null)
+//      {
+//        value = getValueAndStat(bytes, stat, propertyStat);
+//      }
 
       // if (_cache.containsKey(normalizedKey))
       // {
@@ -742,96 +749,135 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
                                          boolean createIfAbsent) throws PropertyStoreException
   {
     String path = getAbsolutePath(key);
-    try
+    ByteArrayUpdater bytesUpdater = new ByteArrayUpdater(updater, _serializer);
+    
+    if (isSubscribed(path))
     {
-      if (!_zkClient.exists(path))
-      {
-        if (!createIfAbsent)
-        {
-          throw new PropertyStoreException("Can't update " + key
-              + " since no node exists");
-        }
-        else
-        {
-          _zkClient.createPersistent(path, true);
-        }
-      }
-
-      _zkClient.updateDataSerialized(path, new ByteArrayUpdater(updater, _serializer));
-    }
-    catch (Exception e)
+    	// TODO fix it
+ //   	_cache.updateSerialized(path, bytesUpdater, createIfAbsent);
+    } else
     {
-      LOG.error("Exception in updatePropertyUntilSucceed(" + key + ", " + createIfAbsent
-          + ")", e);
-      throw (new PropertyStoreException(e.toString()));
-    }
+        Stat stat = new Stat();
+        boolean retry;
+        do {
+            retry = false;
+            try {
+                byte[] oldData = _zkClient.readData(path, stat);
+                byte[] newData = bytesUpdater.update(oldData);
+                _zkClient.writeData(path, newData, stat.getVersion());
+            } catch (ZkBadVersionException e) {
+                retry = true;
+            } catch (ZkNoNodeException e)
+            {
+            	if (createIfAbsent) 
+            	{
+            		retry = true;
+            		_zkClient.createPersistent(path, true);
+            	} else
+            	{
+            		throw e;
+            	}
+            }
+        } while (retry);
 
+    	
+//	    try
+//	    {
+////	      if (!_zkClient.exists(path))
+////	      {
+////	        if (!createIfAbsent)
+////	        {
+////	          throw new PropertyStoreException("Can't update " + key
+////	              + " since no node exists");
+////	        }
+////	        else
+////	        {
+////	          _zkClient.createPersistent(path, true);
+////	        }
+////	      }
+//	
+////	      _zkClient.updateDataSerialized(path, new ByteArrayUpdater(updater, _serializer));
+//	    }
+//	    catch (ZkNoNodeException e)
+//	    {
+//	    	if (createIfAbsent)
+//	    	{
+//		          _zkClient.createPersistent(path, true);
+//	    	}
+//	    }
+//	    catch (Exception e)
+//	    {
+//	      LOG.error("Exception in updatePropertyUntilSucceed(" + key + ", " + createIfAbsent
+//	          + ")", e);
+//	      throw (new PropertyStoreException(e.toString()));
+//	    }
+    }
     // update cache
     // getProperty(key);
   }
 
-  @Override
-  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator)
-  {
-    return compareAndSet(key, expected, update, comparator, true);
-  }
-
-  @Override
-  public boolean compareAndSet(String key,
-                               T expected,
-                               T update,
-                               Comparator<T> comparator,
-                               boolean createIfAbsent)
-  {
-    String path = getAbsolutePath(key);
-
-    // if two threads call with createIfAbsent=true
-    // one thread creates the node, the other just goes through
-    // when wirteData() one thread writes the other gets ZkBadVersionException
-    if (!_zkClient.exists(path))
-    {
-      if (createIfAbsent)
-      {
-        _zkClient.createPersistent(path, true);
-      }
-      else
-      {
-        return false;
-      }
-    }
-
-    try
-    {
-      Stat stat = new Stat();
-      byte[] currentBytes = _zkClient.readDataAndStat(path, stat, true);
-      T current = null;
-      if (currentBytes != null)
-      {
-        current = _serializer.deserialize(currentBytes);
-      }
-
-      if (comparator.compare(current, expected) == 0)
-      {
-        byte[] valueBytes = _serializer.serialize(update);
-        _zkClient.writeData(path, valueBytes, stat.getVersion());
-
-        // update cache
-        // getProperty(key);
-
-        return true;
-      }
-    }
-    catch (ZkBadVersionException e)
-    {
-      LOG.warn("Get BadVersion when writing to zookeeper. Mostly Ignorable due to contention");
-    }
-    catch (Exception e)
-    {
-      LOG.error("Exception when compareAndSet(" + key + ")", e);
-    }
-
-    return false;
-  }
+//  @Override
+//  public boolean compareAndSet(String key, T expected, T update, Comparator<T> comparator)
+//  {
+//    return compareAndSet(key, expected, update, comparator, true);
+//  }
+//
+//  @Override
+//  public boolean compareAndSet(String key,
+//                               T expected,
+//                               T update,
+//                               Comparator<T> comparator,
+//                               boolean createIfAbsent)
+//  {
+//    String path = getAbsolutePath(key);
+//
+//    // if two threads call with createIfAbsent=true
+//    // one thread creates the node, the other just goes through
+//    // when wirteData() one thread writes the other gets ZkBadVersionException
+//    if (!_zkClient.exists(path))
+//    {
+//      if (createIfAbsent)
+//      {
+//        _zkClient.createPersistent(path, true);
+//      }
+//      else
+//      {
+//        return false;
+//      }
+//    }
+//
+//    try
+//    {
+//      Stat stat = new Stat();
+//      byte[] currentBytes = _zkClient.readDataAndStat(path, stat, true);
+//      T current = null;
+//      if (currentBytes != null)
+//      {
+//        current = _serializer.deserialize(currentBytes);
+//      }
+//
+//      if (comparator.compare(current, expected) == 0)
+//      {
+//        byte[] valueBytes = _serializer.serialize(update);
+//        _zkClient.writeData(path, valueBytes, stat.getVersion());
+//
+//        // update cache
+//        // getProperty(key);
+//
+//        return true;
+//      }
+//    }
+//    catch (ZkBadVersionException e)
+//    {
+//      LOG.warn("Get BadVersion when writing to zookeeper. Mostly Ignorable due to contention");
+//    }
+//    catch (Exception e)
+//    {
+//      LOG.error("Exception when compareAndSet(" + key + ")", e);
+//    }
+//
+//    return false;
+//  }
 
   @Override
   public boolean exists(String key)
@@ -1123,7 +1169,10 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
     for (String key : zkMap.keySet())
     {
       String actual = (String) (zkMap.get(key)._data);
-      byte[] byteArray = (byte[]) cache.get(key);
+      Stat actualStat = zkMap.get(key)._stat;
+
+      Stat cachedStat = new Stat();
+      byte[] byteArray = (byte[]) cache.get(key, cachedStat);
       String cached = byteArray == null ? null : new String(byteArray);
 
       // verify value
@@ -1131,7 +1180,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
       {
         if (cached != null)
         {
-          throw new Exception(key + " not equal. actual: " + actual + ", cached: "
+          throw new Exception(key + " not equal value. actual: " + actual + ", cached: "
               + cached);
         }
       }
@@ -1139,10 +1188,18 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
       {
         if (!actual.equals(cached))
         {
-          throw new Exception(key + " not equal. actual: " + actual + ", cached: "
+          throw new Exception(key + " not equal value. actual: " + actual + ", cached: "
               + cached);
         }
       }
+
+	// verify stat
+	if (!actualStat.equals(cachedStat)) {
+		// TODO: there is a bug of not updating root's stat
+		printChangesFor(key);
+		throw new Exception(key + " not equal stat. actual: "
+				+ actualStat + ", cached: " + cachedStat);
+	}
 
       // verify childs
       Set<String> actualChilds = zkMap.get(key)._childSet;
@@ -1181,7 +1238,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
         }
       }
       
-      // verify childs
+      // verify store getPropertyNames()
       List<String> actualKeys = getKeys(zkMap, key);
       if (actualKeys.size() > 1)
       {
@@ -1232,7 +1289,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, IZkStateListener //
     if (childs != null)
     {
       Stat stat = new Stat();
-      String value = client.readData(root);
+      String value = client.readData(root, stat);
       ZNode node = new ZNode(root, value, stat);
       node._childSet.addAll(childs);
       map.put(root, node);

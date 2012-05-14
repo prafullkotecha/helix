@@ -49,56 +49,56 @@ public class TestZKPropertyStoreMultiThread extends ZkUnitTestBase
     }
   }
 
-  public class TestCallableCAS implements Callable<Boolean>
-  {
-    @Override
-    public Boolean call()
-    {
-      try
-      {
-        ZKPropertyStore<ZNRecord> store
-          = new ZKPropertyStore<ZNRecord>(new ZkClient(ZK_ADDR),
-                                          new PropertyJsonSerializer<ZNRecord>(ZNRecord.class),
-                                          _root);
-        PropertyJsonComparator<ZNRecord> comparator = new PropertyJsonComparator<ZNRecord>(ZNRecord.class);
-        long id = Thread.currentThread().getId();
+//  public class TestCallableCAS implements Callable<Boolean>
+//  {
+//    @Override
+//    public Boolean call()
+//    {
+//      try
+//      {
+//        ZKPropertyStore<ZNRecord> store
+//          = new ZKPropertyStore<ZNRecord>(new ZkClient(ZK_ADDR),
+//                                          new PropertyJsonSerializer<ZNRecord>(ZNRecord.class),
+//                                          _root);
+//        PropertyJsonComparator<ZNRecord> comparator = new PropertyJsonComparator<ZNRecord>(ZNRecord.class);
+//        long id = Thread.currentThread().getId();
+//
+//        store.setProperty("key1", _record);
+//
+//        boolean success;
+//        do
+//        {
+//          ZNRecord current = store.getProperty("key1");
+//          ZNRecord update = new ZNRecord(current);
+//          update.setSimpleField("thread_" + id, "simpleValue");
+//
+//          success = store.compareAndSet("key1", current, update, comparator);
+//        } while (!success);
+//
+//        return Boolean.TRUE;
+//      }
+//      catch (Exception e)
+//      {
+//        LOG.error(e);
+//        return Boolean.FALSE;
+//      }
+//    }
+//  }
 
-        store.setProperty("key1", _record);
-
-        boolean success;
-        do
-        {
-          ZNRecord current = store.getProperty("key1");
-          ZNRecord update = new ZNRecord(current);
-          update.setSimpleField("thread_" + id, "simpleValue");
-
-          success = store.compareAndSet("key1", current, update, comparator);
-        } while (!success);
-
-        return Boolean.TRUE;
-      }
-      catch (Exception e)
-      {
-        LOG.error(e);
-        return Boolean.FALSE;
-      }
-    }
-  }
-
-  @Test ()
-  public void testCmpAndSet()
-  {
-    System.out.println("START testCmpAndSet at" + new Date(System.currentTimeMillis()));
-
-    Map<String, Boolean> results = TestHelper.<Boolean>startThreadsConcurrently(5, new TestCallableCAS(), 10);
-    Assert.assertEquals(results.size(), 5);
-    for (Boolean result : results.values())
-    {
-      Assert.assertTrue(result.booleanValue());
-    }
-
-    System.out.println("END testCmpAndSet at" + new Date(System.currentTimeMillis()));
-  }
+//  @Test ()
+//  public void testCmpAndSet()
+//  {
+//    System.out.println("START testCmpAndSet at" + new Date(System.currentTimeMillis()));
+//
+//    Map<String, Boolean> results = TestHelper.<Boolean>startThreadsConcurrently(5, new TestCallableCAS(), 10);
+//    Assert.assertEquals(results.size(), 5);
+//    for (Boolean result : results.values())
+//    {
+//      Assert.assertTrue(result.booleanValue());
+//    }
+//
+//    System.out.println("END testCmpAndSet at" + new Date(System.currentTimeMillis()));
+//  }
 
   private class TestUpdater implements DataUpdater<ZNRecord>
   {
@@ -139,7 +139,7 @@ public class TestZKPropertyStoreMultiThread extends ZkUnitTestBase
     }
   }
 
-  @Test()
+//  @Test()
   public void testUpdateUntilSucceed()
   {
     System.out.println("START testUpdateUntilSucceed at" + new Date(System.currentTimeMillis()));
