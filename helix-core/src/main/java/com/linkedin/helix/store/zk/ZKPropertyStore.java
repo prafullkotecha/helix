@@ -41,28 +41,21 @@ import com.linkedin.helix.store.PropertyStat;
 import com.linkedin.helix.store.PropertyStore;
 import com.linkedin.helix.store.PropertyStoreException;
 
-
 public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
 
 {
-  private static Logger                           LOG                =
-                                                                         Logger.getLogger(ZKPropertyStore.class);
+  private static Logger                               LOG          =
+                                                                       Logger.getLogger(ZKPropertyStore.class);
 
-//  private volatile boolean                        _isConnected       = false;
-//  private volatile boolean                        _hasSessionExpired = false;
-
-  protected final ZkClient                        _zkClient;
-  protected PropertySerializer<T>                 _serializer;
-  protected final String                          _root;
+  protected final ZkClient                            _zkClient;
+  protected PropertySerializer<T>                     _serializer;
+  protected final String                              _root;
 
   // zookeeperPath -> zkCallback
-//  private final Map<String, ZkCallbackHandler<T>> _callbackMap       =
-//                                                                         new ConcurrentHashMap<String, ZkCallbackHandler<T>>();
-  private final Map<String, Set<PropertyListener<T>>> _callbackMap       =
-      new ConcurrentHashMap<String, Set<PropertyListener<T>>>();
+  private final Map<String, Set<PropertyListener<T>>> _callbackMap =
+                                                                       new ConcurrentHashMap<String, Set<PropertyListener<T>>>();
 
-  
-  final ZkCache                                   _cache;
+  final ZkCache                                       _cache;
 
   public ZKPropertyStore(ZkClient zkClient,
                          final PropertySerializer<T> serializer,
@@ -80,7 +73,6 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
     setPropertySerializer(serializer);
 
     _zkClient.createPersistent(_root, true);
-//    _zkClient.subscribeStateChanges(this);
 
     _cache = new ZkCache(_root, _zkClient, this);
   }
@@ -142,7 +134,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
     String path = getAbsolutePath(prefix);
     if (isSubscribed(path))
     {
-//      _cache.set(path, null);
+      _cache.set(path, null);
     }
     else
     {
@@ -159,7 +151,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
     byte[] valueBytes = _serializer.serialize(value);
     if (isSubscribed(path))
     {
-//      _cache.set(path, valueBytes);
+      _cache.set(path, valueBytes);
     }
     else
     {
@@ -238,7 +230,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
     {
       if (isSubscribed(path))
       {
-//        _cache.remove(path);
+        _cache.remove(path);
       }
       else
       {
@@ -266,7 +258,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
     {
       if (isSubscribed(path))
       {
-//        _cache.remove(path);
+        _cache.remove(path);
       }
       else
       {
@@ -310,7 +302,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
 
     if (isSubscribed(prefixPath))
     {
-      List<String> paths = null;    // _cache.getKeys(prefixPath);
+      List<String> paths = _cache.getKeys(prefixPath);
 
       // strip off property store root
       for (String path : paths)
@@ -338,114 +330,62 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
     throw new PropertyStoreException("setPropertyDelimiter() not implemented for ZKPropertyStore");
   }
 
-//  void subscribeRecursive(String path, ZkCallbackHandler<T> zkCallback)
-//  {
-//    // TODO: replace with _store.getChildren()
-//    List<String> childs = _zkClient.getChildren(path);
-//    if (childs != null)
-//    {
-//      _zkClient.subscribeDataChanges(path, zkCallback);
-//      _zkClient.subscribeChildChanges(path, zkCallback);
-//
-//      for (String child : childs)
-//      {
-//        String childPath = path.endsWith("/") ? path + child : path + "/" + child;
-//        subscribeRecursive(childPath, zkCallback);
-//      }
-//    }
-//  }
-
   // put data/child listeners on prefix and all children
   @Override
-  public void subscribeForPropertyChange(String prefix,
-                                         final PropertyListener<T> listener) throws PropertyStoreException
+  public void subscribeForPropertyChange(String keyPrefix, final PropertyListener<T> listener) throws PropertyStoreException
   {
     if (listener == null)
     {
-      throw new IllegalArgumentException("listener can't be null. Prefix: " + prefix);
+      throw new IllegalArgumentException("listener can't be null. Prefix: " + keyPrefix);
     }
 
-    String path = getAbsolutePath(prefix);
+    String pathPrefix = getAbsolutePath(keyPrefix);
 
-//    Set<PropertyListener<T>> listenerSet = null;
-//    boolean needDoSubscribe = false;
     synchronized (_callbackMap)
     {
-      if (!isSubscribed(path))
+      if (!isSubscribed(pathPrefix))
       {
-        LOG.debug("Subscribed changes for prefix: " + path);
-        _cache.updateCache(path);
+        LOG.debug("Subscribed changes for pathPrefix: " + pathPrefix);
+        _cache.updateCache(pathPrefix);
       }
-      
-      if (!_callbackMap.containsKey(path))
-      {
-        _callbackMap.put(path, new CopyOnWriteArraySet<PropertyListener<T>>());
-//        needDoSubscribe = true;
-      }
-      Set<PropertyListener<T>> listenerSet = _callbackMap.get(path);
-      listenerSet.add(listener);
 
-//      if (needDoSubscribe)
-//      {
-////        subscribeRecursive(path, callback);
-//        LOG.debug("Subscribed changes for prefix: " + path);
-//
-//        _cache.updateCache(path);
-//      }
+      if (!_callbackMap.containsKey(pathPrefix))
+      {
+        _callbackMap.put(pathPrefix, new CopyOnWriteArraySet<PropertyListener<T>>());
+      }
+      Set<PropertyListener<T>> listenerSet = _callbackMap.get(pathPrefix);
+      listenerSet.add(listener);
     }
   }
 
-//  void unsubscribeRecursive(String path, ZkCallbackHandler<T> zkCallback)
-//  {
-//    // TODO: replace with _store.getChildren()
-//    List<String> childs = _zkClient.getChildren(path);
-//    if (childs != null)
-//    {
-//      _zkClient.unsubscribeDataChanges(path, zkCallback);
-//      _zkClient.unsubscribeChildChanges(path, zkCallback);
-//
-//      for (String child : childs)
-//      {
-//        String childPath = path.endsWith("/") ? path + child : path + "/" + child;
-//        unsubscribeRecursive(childPath, zkCallback);
-//      }
-//    }
-//  }
-
   @Override
-  public void unsubscribeForPropertyChange(String prefix,
-                                           PropertyListener<T> listener) throws PropertyStoreException
+  public void unsubscribeForPropertyChange(String keyPrefix, PropertyListener<T> listener) throws PropertyStoreException
   {
     if (listener == null)
     {
-      throw new IllegalArgumentException("listener can't be null. Prefix: " + prefix);
+      throw new IllegalArgumentException("listener can't be null. Prefix: " + keyPrefix);
     }
 
-    String path = getAbsolutePath(prefix);
-//    Set<PropertyListener<T>> callback = null;
-//    boolean needDoUnsubscribe = false;
+    String pathPrefix = getAbsolutePath(keyPrefix);
 
     synchronized (_callbackMap)
     {
-      Set<PropertyListener<T>> listenerSet = _callbackMap.get(path);
+      Set<PropertyListener<T>> listenerSet = _callbackMap.get(pathPrefix);
       if (listenerSet != null)
       {
-//        final Set<PropertyListener<T>> listeners = callback._listeners;
         listenerSet.remove(listener);
         if (listenerSet.isEmpty())
         {
-          _callbackMap.remove(path);
-//          needDoUnsubscribe = true;
+          _callbackMap.remove(pathPrefix);
         }
 
       }
 
-      if (!isSubscribed(path))
+      if (!isSubscribed(pathPrefix))
       {
-//        unsubscribeRecursive(path, callback);
-        LOG.debug("Unsubscribed changes for prefix: " + path);
+        LOG.debug("Unsubscribed changes for pathPrefix: " + pathPrefix);
 
-        _cache.purgeCache(path);
+        _cache.purgeCache(pathPrefix);
       }
     }
   }
@@ -484,7 +424,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
     if (isSubscribed(path))
     {
       // TODO fix it
-//      _cache.updateSerialized(path, bytesUpdater, createIfAbsent);
+      _cache.updateSerialized(path, bytesUpdater, createIfAbsent);
     }
     else
     {
@@ -524,56 +464,14 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
   public boolean exists(String key)
   {
     String path = getAbsolutePath(key);
-    return _zkClient.exists(path);
+    if (isSubscribed(path))
+    {
+      return _cache.exists(path);
+    } else
+    {
+      return _zkClient.exists(path);
+    }
   }
-
-//  @Override
-//  public void handleStateChanged(KeeperState state) throws Exception
-//  {
-//    LOG.info("KeeperState:" + state);
-//    switch (state)
-//    {
-//    case SyncConnected:
-//      _isConnected = true;
-//      break;
-//    case Disconnected:
-//      _isConnected = false;
-//      break;
-//    case Expired:
-//      _isConnected = false;
-//      _hasSessionExpired = true;
-//      break;
-//    }
-//  }
-//
-//  // TODO move this to ZkCache
-//  @Override
-//  public void handleNewSession() throws Exception
-//  {
-//    ZkConnection connection = ((ZkConnection) _zkClient.getConnection());
-//    ZooKeeper zookeeper = connection.getZookeeper();
-//    LOG.info("handleNewSession: " + zookeeper.getSessionId());
-//
-//    synchronized (_callbackMap)
-//    {
-//      for (String path : _callbackMap.keySet())
-//      {
-//        Set<PropertyListener<T>> listenerSet = _callbackMap.get(path);
-//        if (listenerSet == null)
-//        {
-//          LOG.error("Get a null callback for path: " + path + ". Remove it");
-//          _callbackMap.remove(path);
-//          continue;
-//        }
-//
-////        subscribeRecursive(path, callback);
-//
-//        // TODO do initial invocation
-//        // callback.handleChildChange(path, _zkClient.getChildren(path));
-//        // }
-//      }
-//    }
-//  }
 
   @Override
   public boolean start()
@@ -657,22 +555,19 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
       @Override
       public void onPropertyChange(String key)
       {
-        // TODO Auto-generated method stub
-        // System.out.println("onPropertyChange: " + key);
+        System.out.println("onPropertyChange: " + key);
       }
 
       @Override
       public void onPropertyCreate(String key)
       {
-        // TODO Auto-generated method stub
-        
+        System.out.println("onPropertyCreate: " + key);
       }
 
       @Override
       public void onPropertyDelete(String key)
       {
-        // TODO Auto-generated method stub
-        
+        System.out.println("onPropertyDelete: " + key);
       }
     });
 
@@ -747,11 +642,22 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
         int childId = ((int) (Math.random() * 10000)) % 5;
         sb.append(delim).append("child-" + childId);
       }
-      String key = sb.toString();
+      final String key = sb.toString();
       String storeKey = store.getRelativePath(key);
       String val = key;
       if (!client.exists(key))
       {
+        String keyToCreate = key;
+        while (keyToCreate.startsWith(store._root))
+        {
+          if (client.exists(keyToCreate))
+          {
+            break;
+          }
+          changes.add(keyToCreate + "-" + "storecreate" + "-" + System.currentTimeMillis());
+          keyToCreate = keyToCreate.substring(0, keyToCreate.lastIndexOf('/'));
+        }
+
         store.setProperty(storeKey, val);
         newWrites++;
       }
@@ -762,12 +668,12 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
         {
           System.out.println("Deleting key:" + key);
 
-          // Map<String, String> toDelete = new HashMap<String, String>();
-          // read(toDelete, client, key);
-          // for (String child : toDelete.keySet()) {
-          // changes.add(child + "-" + "delete" + "-"
-          // + System.currentTimeMillis());
-          // }
+          Map<String, ZNode> toDelete = new HashMap<String, ZNode>();
+          read(toDelete, client, key);
+          for (String child : toDelete.keySet())
+          {
+            changes.add(child + "-" + "storedelete" + "-" + System.currentTimeMillis());
+          }
 
           store.removeProperty(storeKey);
           deletion++;
@@ -777,10 +683,19 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
           System.out.println("Updating key:" + key);
           Object data = client.readData(key);
 
-          String object = (data != null ? data.toString() : key) + "-updated";
-          store.setProperty(storeKey, object);
-          // changes.add(key + "-" + "write" + "-"
-          // + System.currentTimeMillis());
+//          String object = (data != null ? data.toString() : key) + "-updated";
+//          store.setProperty(storeKey, object);
+          store.updatePropertyUntilSucceed(storeKey, new DataUpdater<String>()
+          {
+            
+            @Override
+            public String update(String currentData)
+            {
+              String updateStr = (currentData != null ? currentData : key) + "-updated";
+              return updateStr;
+            }
+          });
+          changes.add(key + "-" + "storewrite" + "-" + System.currentTimeMillis());
           updates++;
         }
       }
@@ -836,7 +751,6 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
       // verify stat
       if (!actualStat.equals(cachedStat))
       {
-        // TODO: there is a bug of not updating root's stat
         printChangesFor(key);
         throw new Exception(key + " not equal stat. actual: " + actualStat + ", cached: "
             + cachedStat);
@@ -889,7 +803,7 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
       String storeKeyPrefix = store.getRelativePath(key);
       List<String> storeKeys = store.getPropertyNames(storeKeyPrefix);
       List<String> storeKeys2 = new ArrayList<String>();
-      // prepend with root for comparing
+      // prepend root for comparing
       for (String storeKey2 : storeKeys)
       {
         if (storeKey2.equals("/"))
@@ -964,12 +878,12 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
   @Override
   public void handleDataChange(String path)
   {
+    String key = getRelativePath(path);
     while (path.length() >= _root.length())
     {
       if (_callbackMap.containsKey(path))
       {
         Set<PropertyListener<T>> listenerSet = _callbackMap.get(path);
-        String key = getRelativePath(path);
         for (PropertyListener<T> listener : listenerSet)
         {
           listener.onPropertyChange(key);
@@ -982,12 +896,13 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
   @Override
   public void handleNodeCreate(String path)
   {
+    String key = getRelativePath(path);
+
     while (path.length() >= _root.length())
     {
       if (_callbackMap.containsKey(path))
       {
         Set<PropertyListener<T>> listenerSet = _callbackMap.get(path);
-        String key = getRelativePath(path);
         for (PropertyListener<T> listener : listenerSet)
         {
           listener.onPropertyCreate(key);
@@ -1000,12 +915,13 @@ public class ZKPropertyStore<T> implements PropertyStore<T>, ZkListener
   @Override
   public void handleNodeDelete(String path)
   {
+    String key = getRelativePath(path);
+
     while (path.length() >= _root.length())
     {
       if (_callbackMap.containsKey(path))
       {
         Set<PropertyListener<T>> listenerSet = _callbackMap.get(path);
-        String key = getRelativePath(path);
         for (PropertyListener<T> listener : listenerSet)
         {
           listener.onPropertyDelete(key);
