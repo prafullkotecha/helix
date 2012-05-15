@@ -28,9 +28,9 @@ import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.ZkUnitTestBase;
 import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkClient;
-import com.linkedin.helix.store.PropertyChangeListener;
 import com.linkedin.helix.store.PropertyJsonComparator;
 import com.linkedin.helix.store.PropertyJsonSerializer;
+import com.linkedin.helix.store.PropertyListener;
 import com.linkedin.helix.store.PropertyStoreException;
 
 // TODO need to write performance test for zk-property store
@@ -44,7 +44,7 @@ public class TestZKPropertyStore extends ZkUnitTestBase
   final int secondLevelNr = 10;
   final int totalNodes = firstLevelNr * secondLevelNr;
 
-  class TestListener implements PropertyChangeListener<ZNRecord>
+  class TestListener implements PropertyListener<ZNRecord>
   {
     Map<String, String> _keySet;
     public TestListener(Map<String, String> keySet)
@@ -57,6 +57,20 @@ public class TestZKPropertyStore extends ZkUnitTestBase
     {
       long now = System.currentTimeMillis();
       _keySet.put(key, Long.toString(now));
+    }
+
+    @Override
+    public void onPropertyCreate(String key)
+    {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void onPropertyDelete(String key)
+    {
+      // TODO Auto-generated method stub
+      
     }
   }
 
@@ -165,7 +179,7 @@ public class TestZKPropertyStore extends ZkUnitTestBase
     // test subscribe
     Map<String, String> keyMap = new TreeMap<String, String>();
     // verify initial callbacks invoked for all 100 nodes
-    PropertyChangeListener<ZNRecord> listener = new TestListener(keyMap);
+    PropertyListener<ZNRecord> listener = new TestListener(keyMap);
     store.subscribeForPropertyChange("", listener);
     System.out.println("keyMap size: " + keyMap.size());
     Assert.assertTrue(keyMap.size() > 100);

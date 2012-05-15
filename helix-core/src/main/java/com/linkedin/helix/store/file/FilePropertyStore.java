@@ -49,7 +49,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
 import com.linkedin.helix.manager.file.FileCallbackHandler;
-import com.linkedin.helix.store.PropertyChangeListener;
+import com.linkedin.helix.store.PropertyListener;
 import com.linkedin.helix.store.PropertyJsonComparator;
 import com.linkedin.helix.store.PropertySerializer;
 import com.linkedin.helix.store.PropertyStat;
@@ -94,7 +94,7 @@ public class FilePropertyStore<T> implements PropertyStore<T>
   private Map<String, T> _lastModifiedFiles = new HashMap<String, T>();
   private Map<String, T> _curModifiedFiles = new HashMap<String, T>();
 
-  private final Map< String, CopyOnWriteArraySet<PropertyChangeListener<T> > > _fileChangeListeners; // map key to listener
+  private final Map< String, CopyOnWriteArraySet<PropertyListener<T> > > _fileChangeListeners; // map key to listener
 
   private class FilePropertyStoreRefreshThread implements Runnable
   {
@@ -261,12 +261,12 @@ public class FilePropertyStore<T> implements PropertyStore<T>
           // debug
 //          logger.error("Before send notification of " + file.getAbsolutePath() + " to listeners " + _fileChangeListeners);
 
-          for (Map.Entry< String, CopyOnWriteArraySet<PropertyChangeListener<T> > > entry : _fileChangeListeners.entrySet())
+          for (Map.Entry< String, CopyOnWriteArraySet<PropertyListener<T> > > entry : _fileChangeListeners.entrySet())
           {
             String absPath = file.getAbsolutePath();
             if (absPath.startsWith(entry.getKey()))
             {
-              for (PropertyChangeListener<T> listener : entry.getValue())
+              for (PropertyListener<T> listener : entry.getValue())
               {
                 if (listener instanceof FileCallbackHandler)
                 {
@@ -327,7 +327,7 @@ public class FilePropertyStore<T> implements PropertyStore<T>
     _firstRefreshCounter = new CountDownLatch(1);
     _readWriteLock = new ReentrantReadWriteLock();
 
-    _fileChangeListeners = new ConcurrentHashMap< String, CopyOnWriteArraySet<PropertyChangeListener<T> > >();
+    _fileChangeListeners = new ConcurrentHashMap< String, CopyOnWriteArraySet<PropertyListener<T> > >();
 
     // Strip off leading slash
     while (rootNamespace.startsWith("/"))
@@ -719,7 +719,7 @@ public class FilePropertyStore<T> implements PropertyStore<T>
   }
 
   @Override
-  public void subscribeForPropertyChange(String prefix, PropertyChangeListener<T> listener)
+  public void subscribeForPropertyChange(String prefix, PropertyListener<T> listener)
   throws PropertyStoreException
   {
     if (null != listener)
@@ -727,9 +727,9 @@ public class FilePropertyStore<T> implements PropertyStore<T>
       String path = getPath(prefix);
       synchronized (_fileChangeListeners)
       {
-        CopyOnWriteArraySet<PropertyChangeListener <T> > listeners = _fileChangeListeners.get(path);
+        CopyOnWriteArraySet<PropertyListener <T> > listeners = _fileChangeListeners.get(path);
         if (listeners == null) {
-            listeners = new CopyOnWriteArraySet<PropertyChangeListener <T> >();
+            listeners = new CopyOnWriteArraySet<PropertyListener <T> >();
             _fileChangeListeners.put(path, listeners);
         }
         listeners.add(listener);
@@ -739,7 +739,7 @@ public class FilePropertyStore<T> implements PropertyStore<T>
   }
 
   @Override
-  public void unsubscribeForPropertyChange(String prefix, PropertyChangeListener<T> listener)
+  public void unsubscribeForPropertyChange(String prefix, PropertyListener<T> listener)
   throws PropertyStoreException
   {
     if (null != listener)
@@ -747,7 +747,7 @@ public class FilePropertyStore<T> implements PropertyStore<T>
       String path = getPath(prefix);
       synchronized (_fileChangeListeners)
       {
-        final Set<PropertyChangeListener<T> > listeners = _fileChangeListeners.get(path);
+        final Set<PropertyListener<T> > listeners = _fileChangeListeners.get(path);
         if (listeners != null)
         {
             listeners.remove(listener);

@@ -23,17 +23,16 @@ import org.apache.log4j.Logger;
 import org.testng.AssertJUnit;
 import org.testng.annotations.Test;
 
-import com.linkedin.helix.store.PropertyChangeListener;
 import com.linkedin.helix.store.PropertyJsonComparator;
 import com.linkedin.helix.store.PropertyJsonSerializer;
-import com.linkedin.helix.store.file.FilePropertyStore;
+import com.linkedin.helix.store.PropertyListener;
 
 public class TestFilePropertyStore
 {
   private static Logger logger = Logger.getLogger(TestFilePropertyStore.class);
   private static final String rootNamespace = "/tmp/TestFilePropertyStore";
 
-  public class TestPropertyChangeListener implements PropertyChangeListener<String>
+  public class TestPropertyChangeListener implements PropertyListener<String>
   {
     public boolean _propertyChangeReceived = false;
 
@@ -42,6 +41,20 @@ public class TestFilePropertyStore
     {
       logger.info("property changed at " + key);
       _propertyChangeReceived = true;
+    }
+
+    @Override
+    public void onPropertyCreate(String key)
+    {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void onPropertyDelete(String key)
+    {
+      // TODO Auto-generated method stub
+      
     }
 
   }

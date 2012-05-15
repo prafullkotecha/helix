@@ -8,7 +8,7 @@ import org.apache.zookeeper.data.Stat;
 public class ZNode
 {
   final String _name;
-  Stat _stat;
+  private Stat _stat;
   Object _data;
   Set<String> _childSet;
 
@@ -33,5 +33,15 @@ public class ZNode
   public void setData(Object data)
   {
     _data= data;    
+  }
+  
+  public void setStat(Stat stat)
+  {
+    _stat = stat;
+  }
+  
+  public Stat getStat()
+  {
+    return _stat;
   }
 }

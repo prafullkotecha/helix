@@ -22,20 +22,19 @@ import org.apache.log4j.Logger;
 import org.testng.AssertJUnit;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 import com.linkedin.helix.ZkUnitTestBase;
 import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkClient;
-import com.linkedin.helix.store.PropertyChangeListener;
 import com.linkedin.helix.store.PropertyJsonSerializer;
+import com.linkedin.helix.store.PropertyListener;
 
 public class TestZkPropertyStoreSessionExpiry extends ZkUnitTestBase
 {
   private static final Logger LOG = Logger.getLogger(TestZkPropertyStoreSessionExpiry.class);
 
   private class TestPropertyChangeListener
-  implements PropertyChangeListener<String>
+  implements PropertyListener<String>
   {
     public boolean _propertyChangeReceived = false;
 
@@ -45,6 +44,20 @@ public class TestZkPropertyStoreSessionExpiry extends ZkUnitTestBase
       // TODO Auto-generated method stub
       LOG.info("property change, " + key);
       _propertyChangeReceived = true;
+    }
+
+    @Override
+    public void onPropertyCreate(String key)
+    {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public void onPropertyDelete(String key)
+    {
+      // TODO Auto-generated method stub
+      
     }
   }
 

@@ -24,7 +24,7 @@ import org.I0Itec.zkclient.IZkDataListener;
 import org.apache.log4j.Logger;
 
 import com.linkedin.helix.manager.zk.ZkClient;
-import com.linkedin.helix.store.PropertyChangeListener;
+import com.linkedin.helix.store.PropertyListener;
 
 class ZkCallbackHandler<T> implements IZkChildListener, IZkDataListener
 {
@@ -37,7 +37,7 @@ class ZkCallbackHandler<T> implements IZkChildListener, IZkDataListener
   private final String _prefix;
 //  private final PropertyChangeListener<T> _listener;
 
-  final Set<PropertyChangeListener<T>> _listeners = new CopyOnWriteArraySet<PropertyChangeListener<T>>();
+  final Set<PropertyListener<T>> _listeners = new CopyOnWriteArraySet<PropertyListener<T>>();
   
   public ZkCallbackHandler(ZkClient client, ZKPropertyStore<T> store, String prefix)
 //                           PropertyChangeListener<T> listener)
@@ -50,13 +50,13 @@ class ZkCallbackHandler<T> implements IZkChildListener, IZkDataListener
 
   void fireListeners(String key)
   {
-    for (PropertyChangeListener<T> listener : _listeners) 
+    for (PropertyListener<T> listener : _listeners) 
     {
       listener.onPropertyChange(key);
     }
   }
   
-  public void addListener(PropertyChangeListener<T> listener)
+  public void addListener(PropertyListener<T> listener)
   {
     _listeners.add(listener);
   }

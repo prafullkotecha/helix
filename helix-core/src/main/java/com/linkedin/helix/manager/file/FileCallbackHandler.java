@@ -47,13 +47,13 @@ import com.linkedin.helix.model.IdealState;
 import com.linkedin.helix.model.InstanceConfig;
 import com.linkedin.helix.model.LiveInstance;
 import com.linkedin.helix.model.Message;
-import com.linkedin.helix.store.PropertyChangeListener;
+import com.linkedin.helix.store.PropertyListener;
 import com.linkedin.helix.store.PropertyStoreException;
 import com.linkedin.helix.store.file.FilePropertyStore;
 import com.linkedin.helix.util.HelixUtil;
 
 // TODO remove code duplication: CallbackHandler and CallbackHandlerForFile
-public class FileCallbackHandler implements PropertyChangeListener<ZNRecord>
+public class FileCallbackHandler implements PropertyListener<ZNRecord>
 {
 
   private static Logger LOG = Logger.getLogger(FileCallbackHandler.class);
@@ -291,5 +291,19 @@ public class FileCallbackHandler implements PropertyChangeListener<ZNRecord>
     }
 
     return ret;
+  }
+
+  @Override
+  public void onPropertyCreate(String key)
+  {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void onPropertyDelete(String key)
+  {
+    // TODO Auto-generated method stub
+    
   }
 }

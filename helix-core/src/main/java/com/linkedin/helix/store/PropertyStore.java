@@ -93,7 +93,7 @@ public interface PropertyStore<T>
    * @throws PropertyStoreException
    */
   void subscribeForPropertyChange(String prefix,
-      PropertyChangeListener<T> listener) throws PropertyStoreException;
+      PropertyListener<T> listener) throws PropertyStoreException;
 
   /**
    * Removes the subscription for the prefix
@@ -102,7 +102,7 @@ public interface PropertyStore<T>
    * @throws PropertyStoreException
    */
   void unsubscribeForPropertyChange(String prefix,
-      PropertyChangeListener<T> listener) throws PropertyStoreException;
+      PropertyListener<T> listener) throws PropertyStoreException;
 
   /**
    * Indicates if the implementation supports the feature of storing data in
