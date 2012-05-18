@@ -26,7 +26,7 @@ function cecho
 }
 
 echo "build helix"
-cd /home/zzhang/temp/workspace/helix
+cd /home/zzhang/workspace3/helix
 rm -rf helix-core/target/*.jar
 mvn package -Dmaven.test.skip.exec=true
 cd helix-core/target
@@ -34,14 +34,14 @@ chmod +x helix-core-pkg/bin/*
 tar jcf helix-core-pkg.tar.bz2 helix-core-pkg
 
 cecho "files to copy" $green
-cd /home/zzhang/temp/workspace/helix
+cd /home/zzhang/workspace3/helix
 ls helix-core/target/*.jar
 ls helix-core/target/*.bz2
 
 # : <<'END'
 for i in `seq 0 $(($machine_nb-1))`; do
   echo "copy helix-core jars to ${MACHINE_TAB[$i]}"
-  cd /home/zzhang/temp/workspace/helix/helix-core/target
+  cd /home/zzhang/workspace3/helix/helix-core/target
   scp *.jar ${USER_TAB[$i]}@${MACHINE_TAB[$i]}:~/workspace/helix/helix-core/target/
 
   echo "copy helix-core-pkg to ${MACHINE_TAB[$i]}"

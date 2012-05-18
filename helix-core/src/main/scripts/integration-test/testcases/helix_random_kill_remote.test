@@ -70,7 +70,7 @@ $SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_addre
 
 
 # add resource
-$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -addResource test-cluster test-db 1200 MasterSlave"
+$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -addResource test-cluster test-db 120 MasterSlave"
 
 # add nodes
 start_port=8900

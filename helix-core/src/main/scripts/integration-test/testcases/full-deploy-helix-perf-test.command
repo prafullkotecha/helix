@@ -27,11 +27,11 @@ function cecho
 
 cecho "trying to skip tar local m2 repo and helix jar" $red
 # : <<'END'
-cecho "tar local m2 repo and helix jar.." $green
-cd
-echo "tar m2 repo"
-tar jcf /tmp/m2.tar.bz2 .m2
-cd ~/temp/workspace
+# cecho "tar local m2 repo and helix jar.." $green
+# cd
+# echo "tar m2 repo"
+# tar jcf /tmp/m2.tar.bz2 .m2
+cd ~/workspace3
 echo "tar helix"
 tar jcf /tmp/helix.tar.bz2 helix
 
@@ -48,14 +48,14 @@ tar jcf helix.tar.bz2 helix
 #: <<'END'
 for i in `seq 0 $(($machine_nb-1))`; do
   cd /tmp
-  echo "copy m2 repo to ${MACHINE_TAB[$i]}"
-  scp m2.tar.bz2 ${USER_TAB[$i]}@${MACHINE_TAB[$i]}:~/
+#  echo "copy m2 repo to ${MACHINE_TAB[$i]}"
+#  scp m2.tar.bz2 ${USER_TAB[$i]}@${MACHINE_TAB[$i]}:~/
   echo "copy helix tar to ${MACHINE_TAB[$i]}"
   scp helix.tar.bz2 ${USER_TAB[$i]}@${MACHINE_TAB[$i]}:~/workspace/
 
-  echo "overwrite m2 repo on ${MACHINE_TAB[$i]}"
-  ssh ${USER_TAB[$i]}@${MACHINE_TAB[$i]} "rm -rf .m2"
-  ssh ${USER_TAB[$i]}@${MACHINE_TAB[$i]} "tar jxf m2.tar.bz2"
+#  echo "overwrite m2 repo on ${MACHINE_TAB[$i]}"
+#  ssh ${USER_TAB[$i]}@${MACHINE_TAB[$i]} "rm -rf .m2"
+#  ssh ${USER_TAB[$i]}@${MACHINE_TAB[$i]} "tar jxf m2.tar.bz2"
   echo "overwrite helix on ${MACHINE_TAB[$i]}"
   ssh ${USER_TAB[$i]}@${MACHINE_TAB[$i]} "rm -rf workspace/helix"
   ssh ${USER_TAB[$i]}@${MACHINE_TAB[$i]} "cd workspace;tar jxf helix.tar.bz2"

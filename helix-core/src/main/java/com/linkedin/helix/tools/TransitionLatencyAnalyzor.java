@@ -3,8 +3,12 @@ package com.linkedin.helix.tools;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -17,7 +21,9 @@ import com.linkedin.helix.model.Message.MessageState;
 
 public class TransitionLatencyAnalyzor
 {
-  private static Logger LOG = Logger.getLogger(TransitionLatencyAnalyzor.class);
+  private static Logger           LOG           =
+                                                    Logger.getLogger(TransitionLatencyAnalyzor.class);
+  final static ZNRecordSerializer _deserializer = new ZNRecordSerializer();
 
   static String getAttributeValue(String line, String attribute)
   {
@@ -115,20 +121,86 @@ public class TransitionLatencyAnalyzor
     return lastMsg;
   }
 
+  static ZNRecord getZNRecord(String line)
+  {
+    ZNRecord record = null;
+    String value = getAttributeValue(line, "data:");
+    if (value != null)
+    {
+      record = (ZNRecord) _deserializer.deserialize(value.getBytes());
+//      if (record == null)
+//      {
+//        System.out.println(line);
+//      }
+    }
+    return record;
+  }
+
+  /**
+   * Try to find the last start of liveInstances
+   */
+  static List<String> findLastStart(String zkLog, String clusterName) throws Exception
+  {
+    Set<String> liveInstances = new HashSet<String>();
+    List<String> liveInstanceLines = new ArrayList<String>(); 
+    
+    FileInputStream fis = new FileInputStream(zkLog);
+    BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+
+    long lastTimestamp = 0;
+    String pattern = clusterName + "/LIVEINSTANCES";
+    String inputLine;
+    while ((inputLine = br.readLine()) != null)
+    {
+      if (inputLine.indexOf(pattern) != -1)
+      {
+        ZNRecord record = getZNRecord(inputLine);
+        if (record != null)
+        {
+          LiveInstance liveInstance = new LiveInstance(record);
+          if (!liveInstances.contains(liveInstance.getInstanceName()))
+          {
+            liveInstances.add(liveInstance.getInstanceName());
+            liveInstanceLines.add(inputLine);
+          }
+        } else
+        {
+          // record == null means we create /{clusterName}/LIVEINSTANCES itself
+          liveInstances.clear();
+          liveInstanceLines.clear();
+          long timestamp = Long.parseLong(getAttributeValue(inputLine, "time:"));
+          if (timestamp > lastTimestamp)
+          {
+            lastTimestamp = timestamp;
+//            System.out.println(inputLine);
+          }
+        }
+      }
+    }
+    br.close();
+    fis.close();
+
+    return liveInstanceLines;
+  }
+
   public static void main(String[] args) throws Exception
   {
+
     if (args.length != 2)
     {
       System.err.println("USAGE: TransitionLatencyAnalyzor logFile clusterName");
       System.exit(1);
     }
 
-    final ZNRecordSerializer deserializer = new ZNRecordSerializer();
-
     Map<String, SessionItem> sessions = new HashMap<String, SessionItem>(); // zkSession->sessionItem
     Map<String, MsgItem> msgs = new HashMap<String, MsgItem>(); // msgId->msgItem
 
     // input file
+    String zkLog = args[0];
+    List<String> liveInstanceLines = findLastStart(zkLog, "test-cluster");
+//    System.out.println(liveInstanceLines);
+
+    
     String logfilepath = args[0];
     String clusterName = args[1];
     FileInputStream fis = new FileInputStream(logfilepath);
@@ -136,8 +208,20 @@ public class TransitionLatencyAnalyzor
 
     int pos;
     String inputLine;
+    boolean isStarted = false;
     while ((inputLine = br.readLine()) != null)
     {
+      if (!isStarted)
+      {
+        if (!inputLine.equals(liveInstanceLines.get(0)))
+        {
+          continue;
+        } else
+        {
+          isStarted = true;
+        }
+      }
+      
       if (inputLine.indexOf(clusterName + "/LIVEINSTANCES") != -1)
       {
         pos = inputLine.indexOf("LIVEINSTANCES");
@@ -147,7 +231,8 @@ public class TransitionLatencyAnalyzor
           String timestamp = getAttributeValue(inputLine, "time:");
           String session = getAttributeValue(inputLine, "session:");
           ZNRecord record =
-              (ZNRecord) deserializer.deserialize(inputLine.substring(pos + 5).getBytes());
+              (ZNRecord) _deserializer.deserialize(inputLine.substring(pos + 5)
+                                                            .getBytes());
 
           LiveInstance liveInstance = new LiveInstance(record);
           sessions.put(session,
@@ -164,7 +249,8 @@ public class TransitionLatencyAnalyzor
         if (sessions.containsKey(session))
         {
           sessions.get(session).endTime = Long.parseLong(timestamp);
-          System.out.println(timestamp + ": kill instance " + sessions.get(session).instanceName);
+          System.out.println(timestamp + ": kill instance "
+              + sessions.get(session).instanceName);
         }
       }
       else if (inputLine.indexOf(clusterName + "/EXTERNALVIEW") != -1)
@@ -175,7 +261,8 @@ public class TransitionLatencyAnalyzor
         {
           String timestamp = getAttributeValue(inputLine, "time:");
           ZNRecord record =
-              (ZNRecord) deserializer.deserialize(inputLine.substring(pos + 5).getBytes());
+              (ZNRecord) _deserializer.deserialize(inputLine.substring(pos + 5)
+                                                            .getBytes());
           ExternalView extView = new ExternalView(record);
           int masterCnt = ClusterStateVerifier.countStateNbInExtView(extView, "MASTER");
           int slaveCnt = ClusterStateVerifier.countStateNbInExtView(extView, "SLAVE");
@@ -186,7 +273,8 @@ public class TransitionLatencyAnalyzor
           }
         }
       }
-      else if (inputLine.indexOf(clusterName) != -1 && inputLine.indexOf("MESSAGES") != -1)
+      else if (inputLine.indexOf(clusterName) != -1
+          && inputLine.indexOf("MESSAGES") != -1)
       {
         String timestamp = getAttributeValue(inputLine, "time:");
         String type = getAttributeValue(inputLine, "type:");
@@ -200,7 +288,7 @@ public class TransitionLatencyAnalyzor
           {
 
             byte[] msgBytes = inputLine.substring(pos + 5).getBytes();
-            ZNRecord record = (ZNRecord) deserializer.deserialize(msgBytes);
+            ZNRecord record = (ZNRecord) _deserializer.deserialize(msgBytes);
             Message msg = new Message(record);
             MessageState msgState = msg.getMsgState();
             String msgType = msg.getMsgType();
@@ -229,7 +317,7 @@ public class TransitionLatencyAnalyzor
           {
 
             byte[] msgBytes = inputLine.substring(pos + 5).getBytes();
-            ZNRecord record = (ZNRecord) deserializer.deserialize(msgBytes);
+            ZNRecord record = (ZNRecord) _deserializer.deserialize(msgBytes);
             Message msg = new Message(record);
             MessageState msgState = msg.getMsgState();
             String msgType = msg.getMsgType();
@@ -267,9 +355,9 @@ public class TransitionLatencyAnalyzor
             msgItem.deleteTime = Long.parseLong(timestamp);
             msgs.put(msgId, msgItem);
             msgItem.latency = msgItem.deleteTime - msgItem.sendTime;
-             System.out.println(timestamp + ": delMsg " + msg.getPartitionName() + "("
-             + msg.getFromState() + "->" + msg.getToState() + ") to "
-             + msg.getTgtName() + ", latency: " + msgItem.latency);
+            System.out.println(timestamp + ": delMsg " + msg.getPartitionName() + "("
+                + msg.getFromState() + "->" + msg.getToState() + ") to "
+                + msg.getTgtName() + ", latency: " + msgItem.latency);
           }
           else
           {
@@ -283,15 +371,19 @@ public class TransitionLatencyAnalyzor
     // statistics
     String firstStartSession = findFirstStartSession(sessions);
     String firstEndSession = findFirstEndSession(sessions);
-    
-    String lastMsgSent = findLastMessageIn(msgs, sessions.get(firstStartSession).startTime,
-                                           sessions.get(firstEndSession).endTime);
-    System.out.println("initial setup time: " + (msgs.get(lastMsgSent).sendTime - sessions.get(firstStartSession).startTime ));
-    
-    lastMsgSent = findLastMessageIn(msgs, sessions.get(firstEndSession).endTime, Long.MAX_VALUE);
-    System.out.println("kill recover time: " + (msgs.get(lastMsgSent).sendTime - sessions.get(firstEndSession).endTime));
-    
-    
+
+    String lastMsgSent =
+        findLastMessageIn(msgs,
+                          sessions.get(firstStartSession).startTime,
+                          sessions.get(firstEndSession).endTime);
+    System.out.println("initial setup time: "
+        + (msgs.get(lastMsgSent).sendTime - sessions.get(firstStartSession).startTime));
+
+    lastMsgSent =
+        findLastMessageIn(msgs, sessions.get(firstEndSession).endTime, Long.MAX_VALUE);
+    System.out.println("kill recover time: "
+        + (msgs.get(lastMsgSent).sendTime - sessions.get(firstEndSession).endTime));
+
     long maxLatency = Long.MIN_VALUE;
     long minLatency = Long.MAX_VALUE;
     int offlineToSlaveCnt = 0;

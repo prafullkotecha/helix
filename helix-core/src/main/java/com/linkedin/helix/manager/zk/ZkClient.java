@@ -224,7 +224,7 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long end = System.currentTimeMillis();
-      LOG.info("updateDataSerialized. path: " + path + ", time: " + (end - start));
+      LOG.info("update. path: " + path + ", time: " + (end - start));
     }
   }
 
@@ -291,7 +291,7 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long end = System.currentTimeMillis();
-      LOG.info("createPersistent. path: " + path + ", time: " + (end - start));
+      LOG.info("create. path: " + path + ", time: " + (end - start));
     }
 
   }
@@ -307,7 +307,7 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long end = System.currentTimeMillis();
-      LOG.info("readData. path: " + path + ", time: " + (end - start));
+      LOG.info("zk-readData. path: " + path + ", time: " + (end - start));
     }
   }
 
@@ -365,7 +365,7 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     } finally
     {
       long end = System.currentTimeMillis();
-      LOG.info("readDataAndStat. path: " + path + ", time: " + (end - start));
+      LOG.info("zk-readData. path: " + path + ", time: " + (end - start));
     }
     return data;
   }
