@@ -34,7 +34,8 @@ public class ZKClientPool
     if (_zkClientMap.containsKey(zkServer))
     {
       ZkClient zkClient = _zkClientMap.get(zkServer);
-      if (zkClient.getConnection().getZookeeperState() == States.CONNECTED)
+      if (zkClient.getConnection() != null 
+          && zkClient.getConnection().getZookeeperState() == States.CONNECTED)
       {
         return zkClient;
       }
@@ -46,7 +47,8 @@ public class ZKClientPool
       if (_zkClientMap.containsKey(zkServer))
       {
         ZkClient zkClient = _zkClientMap.get(zkServer);
-        if (zkClient.getConnection().getZookeeperState() != States.CONNECTED)
+        if (zkClient.getConnection() == null 
+            || zkClient.getConnection().getZookeeperState() != States.CONNECTED)
         {
           _zkClientMap.remove(zkServer);
         }

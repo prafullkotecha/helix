@@ -691,7 +691,8 @@ public class ClusterStateVerifier
     long endTime = System.currentTimeMillis();
     
     zkClient.delete("/" + clusterName + "/CONFIGS/CLUSTER/verify");
-    zkClient.close();
+    // no need to close, these zkclient is from zkclientpool
+//    zkClient.close();
     
     // debug
     System.err.println(endTime + ": " + result + ": wait " + (endTime - startTime)

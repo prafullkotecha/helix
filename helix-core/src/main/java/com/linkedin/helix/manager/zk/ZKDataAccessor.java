@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.I0Itec.zkclient.exception.ZkBadVersionException;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
@@ -131,42 +130,42 @@ public class ZKDataAccessor implements DataAccessor
       }
       
       // HACK: using write through cache for CurrentState update
-      if (type == PropertyType.CURRENTSTATES)
-      {
-          String csPath = path.substring(0, path.lastIndexOf('/'));
-          String resourceName = path.substring(path.lastIndexOf('/') + 1);
-
-          synchronized (_cache)
-          {
-            if (_cache.containsKey(csPath) && _cache.get(csPath).containsKey(resourceName))
-            {
-              int curVersion = 0;
-              Stat stat;
-              try
-              {
-                ZNRecord csRecord = _cache.get(csPath).get(resourceName);
-                curVersion = csRecord.getVersion();
-                csRecord.merge(value);
-                _zkClient.writeData(path, csRecord, curVersion);
-                stat = _zkClient.getStat(path);
-                csRecord.setVersion(stat.getVersion());
-                _cache.get(csPath).put(resourceName, csRecord);
-                return true;
-              } catch (ZkBadVersionException e)
-              {
-                stat = _zkClient.getStat(path);
-                logger.error("bad zk version. cached:" + curVersion + ", actual:" + stat.getVersion());
-              }
-            } else
-            {
-              if (!_cache.containsKey(csPath))
-              {
-                _cache.put(csPath, new HashMap<String, ZNRecord>());
-              }
-              _cache.get(csPath).put(resourceName, value);
-            }
-          }
-      }
+//      if (type == PropertyType.CURRENTSTATES)
+//      {
+//          String csPath = path.substring(0, path.lastIndexOf('/'));
+//          String resourceName = path.substring(path.lastIndexOf('/') + 1);
+//
+//          synchronized (_cache)
+//          {
+//            if (_cache.containsKey(csPath) && _cache.get(csPath).containsKey(resourceName))
+//            {
+//              int curVersion = 0;
+//              Stat stat;
+//              try
+//              {
+//                ZNRecord csRecord = _cache.get(csPath).get(resourceName);
+//                curVersion = csRecord.getVersion();
+//                csRecord.merge(value);
+//                _zkClient.writeData(path, csRecord, curVersion);
+//                stat = _zkClient.getStat(path);
+//                csRecord.setVersion(stat.getVersion());
+//                _cache.get(csPath).put(resourceName, csRecord);
+//                return true;
+//              } catch (ZkBadVersionException e)
+//              {
+//                stat = _zkClient.getStat(path);
+//                logger.error("bad zk version. cached:" + curVersion + ", actual:" + stat.getVersion());
+//              }
+//            } else
+//            {
+//              if (!_cache.containsKey(csPath))
+//              {
+//                _cache.put(csPath, new HashMap<String, ZNRecord>());
+//              }
+//              _cache.get(csPath).put(resourceName, value);
+//            }
+//          }
+//      }
       
       if (!type.isAsync())
       {
@@ -193,18 +192,18 @@ public class ZKDataAccessor implements DataAccessor
     String path = PropertyPathConfig.getPath(type, _clusterName, keys);
 
     // HACK
-    if (type == PropertyType.CURRENTSTATES)
-    {
-      ZNRecord record = null;
-      String csPath = path.substring(0, path.lastIndexOf('/'));
-      String resourceName = path.substring(path.lastIndexOf('/') + 1);
-
-      if (_cache.containsKey(csPath))
-      {
-        record = _cache.get(csPath).get(resourceName);
-      }
-      return record;
-    }
+//    if (type == PropertyType.CURRENTSTATES)
+//    {
+//      ZNRecord record = null;
+//      String csPath = path.substring(0, path.lastIndexOf('/'));
+//      String resourceName = path.substring(path.lastIndexOf('/') + 1);
+//
+//      if (_cache.containsKey(csPath))
+//      {
+//        record = _cache.get(csPath).get(resourceName);
+//      }
+//      return record;
+//    }
     
     if (!type.isCached())
     {
