@@ -144,7 +144,7 @@
               <name>start-standalone-zookeeper</name>
             </program>
             <program>
-              <mainClass>com.linkedin.helix.tools.TransitionLatencyAnalyzor</mainClass>
+              <mainClass>com.linkedin.helix.tools.ZkLogAnalyzor</mainClass>
               <name>analyze-zk-log</name>
             </program>
             <program>

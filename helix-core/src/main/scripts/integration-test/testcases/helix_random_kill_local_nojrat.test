@@ -120,18 +120,19 @@ n=$((${#MACHINE_TAB[*]} * ${mocks_per_node}))
 m=1
 
 # do kill m random and restart for r rounds
-# for r in {0..0}; do
-: <<'END'
+for r in {0..0}; do
+# : <<'END'
   to_kill=`shuf --input-range=1-$n | head -${m}`
   for k in ${to_kill[*]}; do
-    j=$((($k - 1) / 5))
-    i=$((($k - 1) % 5 + 1))
+    j=$((($k - 1) / $mocks_per_node))
+    i=$((($k - 1) % $mocks_per_node + 1))
 	  port=$(($start_port + $i))
     cecho "kill ${MACHINE_TAB[$j]}:$port" $red
-	  ssh ${USER_TAB[$j]}@${MACHINE_TAB[$j]} "${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o stop --component_id=$i"
+#	  ssh ${USER_TAB[$j]}@${MACHINE_TAB[$j]} "${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o stop --component_id=$i"
+	  ${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o stop --component_id=$i
 #    sleep 3
   done
-#  sleep 10
+  sleep 10
 
   # verify cluster state after kill
   verifier_output=$VIEW_ROOT/$LOG_DIR_FROM_ROOT/verifier_`date +"%y%m%d_%H%M%S"`.log
@@ -139,8 +140,8 @@ m=1
   echo "verifier_output=$verifier_output"
   verifier_result=`grep 'Successful\|fail' $verifier_output`
   cecho "$verifier_result" $red
-  sleep 10
-END
+#  sleep 10
+# END
 
 : <<'END'
   for k in ${to_kill[*]}; do
@@ -162,7 +163,7 @@ END
   sleep 10
 END
 
-# done
+done
 # END
 
 # clean up

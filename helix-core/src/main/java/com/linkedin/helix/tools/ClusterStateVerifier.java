@@ -636,10 +636,15 @@ public class ClusterStateVerifier
   {
     long startTime = System.currentTimeMillis();
     LOG.info("start verify. timeout: " + timeout);
-
+    
     CountDownLatch countDown = new CountDownLatch(1);
     ZkClient zkClient = verifier.getZkClient();
     String clusterName = verifier.getClusterName();
+    
+    // add an ephemeral node to /{clusterName}/CONFIGS/CLUSTER/verify
+    // so when analyze zk log, we know when a test ends
+    zkClient.createEphemeral("/" + clusterName + "/CONFIGS/CLUSTER/verify");
+
 
     ExtViewVeriferZkListener listener =
         new ExtViewVeriferZkListener(countDown, zkClient, verifier);
@@ -684,7 +689,10 @@ public class ClusterStateVerifier
     }
 
     long endTime = System.currentTimeMillis();
-
+    
+    zkClient.delete("/" + clusterName + "/CONFIGS/CLUSTER/verify");
+    zkClient.close();
+    
     // debug
     System.err.println(endTime + ": " + result + ": wait " + (endTime - startTime)
         + "ms, " + verifier);
