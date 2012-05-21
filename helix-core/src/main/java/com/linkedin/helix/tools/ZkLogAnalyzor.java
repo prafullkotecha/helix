@@ -123,6 +123,15 @@ public class ZkLogAnalyzor
           liveInstanceLines.add(inputLine);
         }
       }
+      else if (inputLine.indexOf("/" + clusterName + "/CONFIGS/CLUSTER/verify") != -1)
+      {
+        String type = getAttributeValue(inputLine, "type:");
+        if (type.equals("delete"))
+        {
+          // System.out.println(inputLine);
+          liveInstanceLines.add(inputLine);
+        }
+      }
     }
     br.close();
     fis.close();
@@ -432,22 +441,22 @@ public class ZkLogAnalyzor
     
     // statistics
     // print session create/close duration
-    System.out.println("Instance\t\t\t\t duration");
+    System.out.println("\nController (zk session)\t\t\t\t\t start\t\t end");
     System.out.println("---------------------------------------------------------------------------------------------");
     long start = Long.parseLong(getAttributeValue(leaderLine, "time:"));
     long end = 0;
     LiveInstance liveInstance = new LiveInstance(getZNRecord(leaderLine));
+    System.out.println(liveInstance.getInstanceName() + "("+ leaderSession +")\t " + start);
     if (leaderCloseLine != null)
     {
-      end = Long.parseLong(getAttributeValue(leaderCloseLine, "time:"));
-      System.out.println(liveInstance.getInstanceName() + "("+ leaderSession +")\t " + start + "-" + end + " ("+(end-start)+"ms)");
-    } else
-    {
       // the controller waits for 30s to disconnect, so we might not have it in transaction log yet
-      System.out.println(liveInstance.getInstanceName() + "("+ leaderSession +")\t " + start + "-?");
+      end = Long.parseLong(getAttributeValue(leaderCloseLine, "time:"));
+      System.out.println(liveInstance.getInstanceName() + "("+ leaderSession +")\t\t\t " + end + " ("+(end-start)+"ms)");
     }
-    
-    
+
+    System.out.println("\nParticipant (zk session)\t\t start\t\t end");
+    System.out.println("---------------------------------------------------------------------------------------------");
+    // sessionId -> instanceName
     for (String line : liveInstanceLines)
     {
       if (line.indexOf("/" + clusterName + "/LIVEINSTANCES/") != -1)
@@ -455,16 +464,32 @@ public class ZkLogAnalyzor
         liveInstance = new LiveInstance(getZNRecord(line));
         String session = getAttributeValue(line, "session:");
         start = Long.parseLong(getAttributeValue(line, "time:"));
-        Iterator<String> iter = liveInstanceLines.iterator();
-        while (iter.hasNext())
+        System.out.println(liveInstance.getInstanceName() + " ("+ session +")\t " + start);
+//        Iterator<String> iter = liveInstanceLines.iterator();
+//        while (iter.hasNext())
+//        {
+//          String line2 = iter.next();
+//          if (line2.indexOf("closeSession") != -1 && getAttributeValue(line2, "session:").equals(session))
+//          {
+//            end = Long.parseLong(getAttributeValue(line2, "time:"));
+//            System.out.println(liveInstance.getInstanceName() + "("+ session +")\t " + start + "-" + end + " ("+(end-start)+"ms)");
+//          }
+//        }
+      }
+      else if (line.indexOf("closeSession") != -1)
+      {
+        String session = getAttributeValue(line, "session:");
+        if (sessionMap.containsKey(session))
         {
-          String line2 = iter.next();
-          if (line2.indexOf("closeSession") != -1 && getAttributeValue(line2, "session:").equals(session))
-          {
-            end = Long.parseLong(getAttributeValue(iter.next(), "time:"));
-            System.out.println(liveInstance.getInstanceName() + "("+ session +")\t " + start + "-" + end + " ("+(end-start)+"ms)");
-          }
+          end = Long.parseLong(getAttributeValue(line, "time:"));
+          String instanceName = new LiveInstance(getZNRecord(sessionMap.get(session))).getInstanceName();
+          System.out.println(instanceName + "("+ session +")\t\t\t " + end + " ("+(end-start)+"ms)");
         }
+      }
+      else if (line.indexOf("/" + clusterName + "/CONFIGS/CLUSTER/verify") != -1) 
+      {
+        end = Long.parseLong(getAttributeValue(line, "time:"));
+        System.out.println("verify\t\t\t\t\t\t\t " + end);
       }
     }
     
@@ -483,41 +508,40 @@ public class ZkLogAnalyzor
     
     // print state transition latency related stats
     System.out.println();
-    System.out.println("Test duration\t\t\t\t\t\t\t State transition latency");
+    System.out.println("Test duration\t\t\t\t State transition latency");
     System.out.println("------------------------------------------------------------------------------------------");
 
+    
     String startLine = liveInstanceLines.get(0);
-    String endLine = null;
-    boolean nextStartFound = true;
-    boolean nextEndFound = false;
-    for (String line : liveInstanceLines)
+//    String endLine = null;
+//    boolean nextStartFound = true;
+//    boolean nextEndFound = false;
+    Iterator<String> iter = liveInstanceLines.iterator();
+    iter.next();
+    // for (String line : liveInstanceLines)
+    while (iter.hasNext())
     {
-      if (!nextEndFound && line.indexOf("closeSession") != -1)
+      String line = iter.next();
+      if (line.indexOf("/" + clusterName + "/CONFIGS/CLUSTER/verify") != -1)
       {
-        // find next end session
-        endLine = line;
-        nextStartFound = false;
-        nextEndFound = true;
         long startTimestamp = Long.parseLong(getAttributeValue(startLine, "time:"));
-        long endTimestamp = Long.parseLong(getAttributeValue(endLine, "time:"));
-        System.out.print("Instances start-end: " + startTimestamp + "-" + endTimestamp 
+        long endTimestamp = Long.parseLong(getAttributeValue(line, "time:"));
+        System.out.print(startTimestamp + "-" + endTimestamp 
                            + " (" + (endTimestamp - startTimestamp) + "ms)\t ");
         String lastSendMsgLine = findLastMessageSentBetween(sendMessageLines, startTimestamp, endTimestamp);
         long timestamp = Long.parseLong(getAttributeValue(lastSendMsgLine, "time:"));
         System.out.println("" + (timestamp - startTimestamp) + "ms");
-      } else if (!nextStartFound && line.indexOf("/" + clusterName + "/LIVEINSTANCE/") != -1)
-      {
-        // find next start session
-        startLine = line;
-        nextStartFound = true;
-        nextEndFound = false;
-        long startTimestamp = Long.parseLong(getAttributeValue(startLine, "time:"));
-        long endTimestamp = Long.parseLong(getAttributeValue(endLine, "time:"));
-        System.out.print("Instances end-restart: " + endTimestamp + "-" + startTimestamp 
-                         + " (" + (startTimestamp - endTimestamp) + "ms)\t\t ");
-        String lastSendMsgLine = findLastMessageSentBetween(sendMessageLines, endTimestamp, startTimestamp);
-        long timestamp = Long.parseLong(getAttributeValue(lastSendMsgLine, "time:"));
-        System.out.println("" + (timestamp - endTimestamp) + "ms");
+        
+        // find the next start/close
+        while (iter.hasNext())
+        {
+          String line2 = iter.next();
+          if (line2.indexOf("closeSession") != -1)
+          {
+            startLine = line2;
+            break;
+          }
+        }
       }
     }
 
