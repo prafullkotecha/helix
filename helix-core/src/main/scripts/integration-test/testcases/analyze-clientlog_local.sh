@@ -17,7 +17,7 @@ ls *process_start*.log -1rt | tail -n 1 | xargs grep "zk-readData\." | grep STAT
 # update stats
 ls *process_start*.log -1rt | tail -n 1 | xargs grep "update\." | sed 's/.*time/time/g'|  awk -F: '{sum+=$2; count++}END{print "update\t\t " sum "\t " count "\t " sum/count}'
 ls *process_start*.log -1rt | tail -n 1 | xargs grep "update\." | grep MESSAGES | sed 's/.*time/time/g'|  awk -F: '{sum+=$2; count++}END{print "  update MSG\t " sum "\t " count "\t " sum/count}'
-ls *process_start*.log -1rt | tail -n 1 | xargs grep "update\." | grep CURRENTSTATES | sed 's/.*time/time/g'|  awk -F: '{sum+=$2; count++}END{print "  update CS\t " sum "\t " count "\t " sum/count}'
+ls *process_start*.log -1rt | tail -n 1 | xargs grep "update\." | grep CURRENTSTATES | sed 's/.*time/time/g'|  awk -F: '{sum+=$2; count++}END{ if (count > 0) print "  update CS\t " sum "\t " count "\t " sum/count; else print "  update CS\t " 0 }'
 
 
 
