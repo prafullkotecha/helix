@@ -17,6 +17,7 @@ package com.linkedin.helix.manager.zk;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 import org.I0Itec.zkclient.DataUpdater;
@@ -35,7 +36,7 @@ public final class ZKUtil
   private static int RETRYLIMIT = 3;
 
 
-//  private final static HashSet<String> namePool = new HashSet<String>();
+  private final static HashSet<String> namePool = new HashSet<String>();
   
   private ZKUtil()
   {
@@ -178,22 +179,22 @@ public final class ZKUtil
             }
           };
           
-//          synchronized(namePool)
-//          {
-//            while(namePool.contains(path))    // already being locked
-//            {
-//              namePool.wait();                // wait for release
-//            }
-//            namePool.add(path);
-//          }
+          synchronized(namePool)
+          {
+            while(namePool.contains(path))    // already being locked
+            {
+              namePool.wait();                // wait for release
+            }
+            namePool.add(path);
+          }
           
           client.updateDataSerialized(path, updater);
           
-//          synchronized(namePool)
-//          {
-//            namePool.remove(path);
-//            namePool.notifyAll();
-//          }
+          synchronized(namePool)
+          {
+            namePool.remove(path);
+            namePool.notifyAll();
+          }
         } else
         {
           CreateMode mode = (persistent) ? CreateMode.PERSISTENT : CreateMode.EPHEMERAL;
