@@ -23,9 +23,9 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
-import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.ClusterMessagingService;
 import com.linkedin.helix.Criteria;
+import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.PropertyType;
 import com.linkedin.helix.messaging.handling.AsyncCallbackService;
@@ -257,7 +257,7 @@ public class DefaultMessagingService implements ClusterMessagingService
       }
       catch (Exception e)
       {
-        _logger.error(e);
+        _logger.error("fail to send no op msg", e);
       }
     }
   }
