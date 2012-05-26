@@ -219,7 +219,7 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     long start = System.currentTimeMillis();
     try
     {
-      return super.readData(path, stat);
+      return super.<T>readData(path, stat);
     }
     finally
     {
