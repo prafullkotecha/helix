@@ -56,7 +56,7 @@ public class ZkCache implements IZkChildListener, IZkDataListener, IZkStateListe
     // init();
   }
 
-  private void init()
+  public void init()
   {
     updateCache(_rootPath);
   }
@@ -103,7 +103,7 @@ public class ZkCache implements IZkChildListener, IZkDataListener, IZkStateListe
 
   }
 
-  void updateCache(String path)
+  public void updateCache(String path)
   {
     try
     {
