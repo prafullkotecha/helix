@@ -27,6 +27,20 @@ public class ZkLogAnalyzor
                                                     Logger.getLogger(ZkLogAnalyzor.class);
   final static ZNRecordSerializer _deserializer = new ZNRecordSerializer();
 
+  static class Stats
+  {
+    int msgSentCount = 0;
+    int msgSentCount_O2S = 0;   // Offline to Slave
+    int msgSentCount_S2M = 0;   // Slave to Master
+    int msgSentCount_M2S = 0;   // Master to Slave
+    int msgDeleteCount = 0;
+    int msgModifyCount = 0;
+    int curStateCreateCount = 0;
+    int curStateUpdateCount = 0;
+    int extViewCreateCount = 0;
+    int extViewUpdateCount = 0;
+  }
+  
   static String getAttributeValue(String line, String attribute)
   {
     String[] parts = line.split("\\s");
@@ -50,7 +64,7 @@ public class ZkLogAnalyzor
     String lastSendMsgLine = null;
     for (String line : messageSendLines)
     {
-      ZNRecord record = getZNRecord(line);
+//      ZNRecord record = getZNRecord(line);
 //      Message msg = new Message(record);
       long timestamp = Long.parseLong(getAttributeValue(line, "time:"));
       if (timestamp >= start && timestamp <= end && timestamp > lastSendMsgTimestamp)
@@ -62,6 +76,25 @@ public class ZkLogAnalyzor
     assert (lastSendMsgLine != null) : "No message sent between " + start + " - " + end;
     return lastSendMsgLine;
   }
+  
+  static String findLastCSUpdateBetween(List<String> csUpdateLines, long start, long end)
+  {
+    long lastCSUpdateTimestamp = Long.MIN_VALUE;
+    String lastCSUpdateLine = null;
+    for (String line : csUpdateLines)
+    {
+//      ZNRecord record = getZNRecord(line);
+      long timestamp = Long.parseLong(getAttributeValue(line, "time:"));
+      if (timestamp >= start && timestamp <= end && timestamp > lastCSUpdateTimestamp)
+      {
+        lastCSUpdateTimestamp = timestamp;
+        lastCSUpdateLine = line;
+      }
+    }
+    assert (lastCSUpdateLine != null) : "No CS update between " + start + " - " + end;
+    return lastCSUpdateLine;
+  }
+
 
   static ZNRecord getZNRecord(String line)
   {
@@ -184,7 +217,11 @@ public class ZkLogAnalyzor
     Map<String, String> sessionMap = new HashMap<String, String>();
     
     // message send lines in time order
-    List<String> sendMessageLines = new ArrayList<String>();
+//    List<String> sendMessageLines = new ArrayList<String>();
+    
+    // CS update lines in time order
+    List<String> csUpdateLines = new ArrayList<String>();
+
 
     String zkLog = "/tmp/zkLogAnalyzor_zklog.parsed";   // args[0];
     String clusterName = args[1];
@@ -192,10 +229,12 @@ public class ZkLogAnalyzor
     List<String> liveInstanceLines = findStartTimeOfLastTestRun(zkLog, clusterName);
 //    System.out.println(liveInstanceLines);
 
-    // find the leader
+    // find the leader && verify timestamps
     String leaderLine = null;
     String leaderCloseLine = null;
     String leaderSession = null;
+    List<String> verifyLines = new ArrayList<String>();
+    Map<String, Stats> statsMap = new HashMap<String, Stats>();
     for (String line : liveInstanceLines)
     {
       if (line.indexOf("/" + clusterName + "/CONTROLLER/LEADER") != -1)
@@ -205,6 +244,9 @@ public class ZkLogAnalyzor
       } else if (line.indexOf("closeSession") != -1 && getAttributeValue(line, "session:").equals(leaderSession))
       {
         leaderCloseLine = line;
+      } else if (line.indexOf("/" + clusterName + "/CONFIGS/CLUSTER/verify") != -1)
+      {
+        verifyLines.add(line);
       }
     }
     assert(leaderLine != null) : "No leader found";
@@ -214,230 +256,240 @@ public class ZkLogAnalyzor
     FileInputStream fis = new FileInputStream(zkLog);
     BufferedReader br = new BufferedReader(new InputStreamReader(fis));
 
-//    int pos;
-    int msgSentCount = 0;
-    int msgSentCount_O2S = 0;   // Offlien to Slave
-    int msgSentCount_S2M = 0;   // Slave to Master
-    int msgSentCount_M2S = 0;   // Master to Slave
-    int msgDeleteCount = 0;
-    int msgModifyCount = 0;
-    int curStateCreateCount = 0;
-    int curStateUpdateCount = 0;
-    int extViewCreateCount = 0;
-    int extViewUpdateCount = 0;
+//    int msgSentCount = 0;
+//    int msgSentCount_O2S = 0;   // Offline to Slave
+//    int msgSentCount_S2M = 0;   // Slave to Master
+//    int msgSentCount_M2S = 0;   // Master to Slave
+//    int msgDeleteCount = 0;
+//    int msgModifyCount = 0;
+//    int curStateCreateCount = 0;
+//    int curStateUpdateCount = 0;
+//    int extViewCreateCount = 0;
+//    int extViewUpdateCount = 0;
 
     
-    String inputLine;
     boolean isStarted = false;
-    while ((inputLine = br.readLine()) != null)
-    {
-      if (!isStarted)
-      {
-        if (!inputLine.equals(liveInstanceLines.get(0)))
-        {
-          continue;
-        } else
-        {
-          isStarted = true;
-        }
-      }
-      
-      if (inputLine.indexOf("/" + clusterName + "/LIVEINSTANCES/") != -1)
-      {
-        ZNRecord record = getZNRecord(inputLine);
-        LiveInstance liveInstance = new LiveInstance(record);
-        String session = getAttributeValue(inputLine, "session:");
-        String timestamp = getAttributeValue(inputLine, "time:");
-        sessionMap.put(session, inputLine);
-//        System.out.println(timestamp + ", create LIVEINSTANCE " + liveInstance.getInstanceName());
-      }
-      else if (inputLine.indexOf("closeSession") != -1)
-      {
-        String timestamp = getAttributeValue(inputLine, "time:");
-        String session = getAttributeValue(inputLine, "session:");
-        if (sessionMap.containsKey(session))
-        {
-          String line = sessionMap.get(session);
-          ZNRecord record = getZNRecord(line);
-          LiveInstance liveInstance = new LiveInstance(record);
 
-//          System.out.println(timestamp + ", close LIVEINSTANCE "
-//              + liveInstance.getInstanceName());
-        }
-      } 
-      else if (inputLine.indexOf("/" + clusterName + "/CONTROLLER/LEADER") != -1)
+    for (String verifyLine : verifyLines)
+    {
+      Stats stats = new Stats();
+      String inputLine;
+      while ((inputLine = br.readLine()) != null)
       {
-        ZNRecord record = getZNRecord(inputLine);
-        LiveInstance liveInstance = new LiveInstance(record);
-        String session = getAttributeValue(inputLine, "session:");
-        String timestamp = getAttributeValue(inputLine, "time:");
-        sessionMap.put(session, inputLine);
-//        System.out.println(timestamp + ", create LEADER " + liveInstance.getInstanceName());
-      }
-      else if (inputLine.indexOf("/" + clusterName + "/") != -1 
-          && inputLine.indexOf("/CURRENTSTATES/") != -1)
-      {
-        String type = getAttributeValue(inputLine, "type:");
-        if (type.equals("create"))
+        if (!isStarted)
         {
-          curStateCreateCount++;
-        } else if (type.equals("setData"))
-        {
-          curStateUpdateCount++;
+          if (!inputLine.equals(liveInstanceLines.get(0)))
+          {
+            continue;
+          } else
+          {
+            isStarted = true;
+          }
         }
-      }
-      else if (inputLine.indexOf("/" + clusterName + "/EXTERNALVIEW/") != -1)
-      {
-        String session = getAttributeValue(inputLine, "session:");
-        if (session.equals(leaderSession))
+  
+        if (inputLine.equals(verifyLine))
+        {
+          statsMap.put(inputLine, stats);
+          break;
+        }
+        
+        if (inputLine.indexOf("/" + clusterName + "/LIVEINSTANCES/") != -1)
+        {
+          ZNRecord record = getZNRecord(inputLine);
+          LiveInstance liveInstance = new LiveInstance(record);
+          String session = getAttributeValue(inputLine, "session:");
+          String timestamp = getAttributeValue(inputLine, "time:");
+          sessionMap.put(session, inputLine);
+  //        System.out.println(timestamp + ", create LIVEINSTANCE " + liveInstance.getInstanceName());
+        }
+        else if (inputLine.indexOf("closeSession") != -1)
+        {
+          String timestamp = getAttributeValue(inputLine, "time:");
+          String session = getAttributeValue(inputLine, "session:");
+          if (sessionMap.containsKey(session))
+          {
+            String line = sessionMap.get(session);
+            ZNRecord record = getZNRecord(line);
+            LiveInstance liveInstance = new LiveInstance(record);
+  
+  //          System.out.println(timestamp + ", close LIVEINSTANCE "
+  //              + liveInstance.getInstanceName());
+          }
+        } 
+        else if (inputLine.indexOf("/" + clusterName + "/CONTROLLER/LEADER") != -1)
+        {
+          ZNRecord record = getZNRecord(inputLine);
+          LiveInstance liveInstance = new LiveInstance(record);
+          String session = getAttributeValue(inputLine, "session:");
+          String timestamp = getAttributeValue(inputLine, "time:");
+          sessionMap.put(session, inputLine);
+  //        System.out.println(timestamp + ", create LEADER " + liveInstance.getInstanceName());
+        }
+        else if (inputLine.indexOf("/" + clusterName + "/") != -1 
+            && inputLine.indexOf("/CURRENTSTATES/") != -1)
         {
           String type = getAttributeValue(inputLine, "type:");
           if (type.equals("create"))
           {
-            extViewCreateCount++;
+            stats.curStateCreateCount++;
           } else if (type.equals("setData"))
           {
-            extViewUpdateCount++;
+            csUpdateLines.add(inputLine);
+            stats.curStateUpdateCount++;
           }
-        }        
-        
-//        pos = inputLine.indexOf("EXTERNALVIEW");
-//        pos = inputLine.indexOf("data:{", pos);
-//        if (pos != -1)
-//        {
-//          String timestamp = getAttributeValue(inputLine, "time:");
-//          ZNRecord record =
-//              (ZNRecord) _deserializer.deserialize(inputLine.substring(pos + 5)
-//                                                            .getBytes());
-//          ExternalView extView = new ExternalView(record);
-//          int masterCnt = ClusterStateVerifier.countStateNbInExtView(extView, "MASTER");
-//          int slaveCnt = ClusterStateVerifier.countStateNbInExtView(extView, "SLAVE");
-//          if (masterCnt == 1200)
-//          {
-//            System.out.println(timestamp + ": externalView " + extView.getResourceName()
-//                + " has " + masterCnt + " MASTER, " + slaveCnt + " SLAVE");
-//          }
-//        }
-      }
-        else if (inputLine.indexOf("/" + clusterName + "/") != -1
-            && inputLine.indexOf("/MESSAGES/") != -1)
+        }
+        else if (inputLine.indexOf("/" + clusterName + "/EXTERNALVIEW/") != -1)
         {
-          String timestamp = getAttributeValue(inputLine, "time:");
-          String type = getAttributeValue(inputLine, "type:");
-//          String leaderSession = getAttributeValue(leaderLine, "session:");
-
-        if (type.equals("create"))
-        {
-          ZNRecord record = getZNRecord(inputLine);
-          Message msg = new Message(record);
-          String sendSession = getAttributeValue(inputLine, "session:");
-          if (sendSession.equals(leaderSession) 
-              && msg.getMsgType().equals("STATE_TRANSITION") 
-              && msg.getMsgState() == MessageState.NEW)
+          String session = getAttributeValue(inputLine, "session:");
+          if (session.equals(leaderSession))
           {
-            sendMessageLines.add(inputLine);
-            msgSentCount++;
-            
-            if (msg.getFromState().equals("OFFLINE") && msg.getToState().equals("SLAVE"))
+            String type = getAttributeValue(inputLine, "type:");
+            if (type.equals("create"))
             {
-              msgSentCount_O2S++;
-            } else if (msg.getFromState().equals("SLAVE") && msg.getToState().equals("MASTER")) 
+              stats.extViewCreateCount++;
+            } else if (type.equals("setData"))
             {
-              msgSentCount_S2M++;
-            } else if (msg.getFromState().equals("MASTER") && msg.getToState().equals("SLAVE"))
-            {
-              msgSentCount_M2S++;
+              stats.extViewUpdateCount++;
             }
-          }
+          }        
           
-//          pos = inputLine.indexOf("MESSAGES");
-//          pos = inputLine.indexOf("data:{", pos);
-//          if (pos != -1)
-//          {
-//
-//            byte[] msgBytes = inputLine.substring(pos + 5).getBytes();
-//            ZNRecord record = (ZNRecord) _deserializer.deserialize(msgBytes);
-//            Message msg = new Message(record);
-//            MessageState msgState = msg.getMsgState();
-//            String msgType = msg.getMsgType();
-//            if (msgType.equals("STATE_TRANSITION") && msgState == MessageState.NEW)
-//            {
-//              if (!msgs.containsKey(msg.getMsgId()))
-//              {
-//                msgs.put(msg.getMsgId(), new MsgItem(Long.parseLong(timestamp), msg));
-//              }
-//              else
-//              {
-//                LOG.error("msg: " + msg.getMsgId() + " already sent");
-//              }
-//
-//              System.out.println(timestamp + ": sendMsg " + msg.getPartitionName() + "("
-//                  + msg.getFromState() + "->" + msg.getToState() + ") to "
-//                  + msg.getTgtName() + ", size: " + msgBytes.length);
-//            }
-//          }
+  //        pos = inputLine.indexOf("EXTERNALVIEW");
+  //        pos = inputLine.indexOf("data:{", pos);
+  //        if (pos != -1)
+  //        {
+  //          String timestamp = getAttributeValue(inputLine, "time:");
+  //          ZNRecord record =
+  //              (ZNRecord) _deserializer.deserialize(inputLine.substring(pos + 5)
+  //                                                            .getBytes());
+  //          ExternalView extView = new ExternalView(record);
+  //          int masterCnt = ClusterStateVerifier.countStateNbInExtView(extView, "MASTER");
+  //          int slaveCnt = ClusterStateVerifier.countStateNbInExtView(extView, "SLAVE");
+  //          if (masterCnt == 1200)
+  //          {
+  //            System.out.println(timestamp + ": externalView " + extView.getResourceName()
+  //                + " has " + masterCnt + " MASTER, " + slaveCnt + " SLAVE");
+  //          }
+  //        }
         }
-        else if (type.equals("setData"))
-        {
-          msgModifyCount++;
-//          pos = inputLine.indexOf("MESSAGES");
-//          pos = inputLine.indexOf("data:{", pos);
-//          if (pos != -1)
-//          {
-//
-//            byte[] msgBytes = inputLine.substring(pos + 5).getBytes();
-//            ZNRecord record = (ZNRecord) _deserializer.deserialize(msgBytes);
-//            Message msg = new Message(record);
-//            MessageState msgState = msg.getMsgState();
-//            String msgType = msg.getMsgType();
-//            if (msgType.equals("STATE_TRANSITION") && msgState == MessageState.READ)
-//            {
-//              if (!msgs.containsKey(msg.getMsgId()))
-//              {
-//                LOG.error("msg: " + msg.getMsgId() + " never sent");
-//              }
-//              else
-//              {
-//                MsgItem msgItem = msgs.get(msg.getMsgId());
-//                if (msgItem.readTime == 0)
-//                {
-//                  msgItem.readTime = Long.parseLong(timestamp);
-//                  msgs.put(msg.getMsgId(), msgItem);
-//                  // System.out.println(timestamp + ": readMsg " + msg.getPartitionName()
-//                  // + "("
-//                  // + msg.getFromState() + "->" + msg.getToState() + ") to "
-//                  // + msg.getTgtName() + ", latency: " + (msgItem.readTime -
-//                  // msgItem.sendTime));
-//                }
-//              }
-//
-//            }
-//          }
+          else if (inputLine.indexOf("/" + clusterName + "/") != -1
+              && inputLine.indexOf("/MESSAGES/") != -1)
+          {
+            String timestamp = getAttributeValue(inputLine, "time:");
+            String type = getAttributeValue(inputLine, "type:");
+  //          String leaderSession = getAttributeValue(leaderLine, "session:");
+  
+          if (type.equals("create"))
+          {
+            ZNRecord record = getZNRecord(inputLine);
+            Message msg = new Message(record);
+            String sendSession = getAttributeValue(inputLine, "session:");
+            if (sendSession.equals(leaderSession) 
+                && msg.getMsgType().equals("STATE_TRANSITION") 
+                && msg.getMsgState() == MessageState.NEW)
+            {
+//              sendMessageLines.add(inputLine);
+              stats.msgSentCount++;
+              
+              if (msg.getFromState().equals("OFFLINE") && msg.getToState().equals("SLAVE"))
+              {
+                stats.msgSentCount_O2S++;
+              } else if (msg.getFromState().equals("SLAVE") && msg.getToState().equals("MASTER")) 
+              {
+                stats.msgSentCount_S2M++;
+              } else if (msg.getFromState().equals("MASTER") && msg.getToState().equals("SLAVE"))
+              {
+                stats.msgSentCount_M2S++;
+              }
+            }
+            
+  //          pos = inputLine.indexOf("MESSAGES");
+  //          pos = inputLine.indexOf("data:{", pos);
+  //          if (pos != -1)
+  //          {
+  //
+  //            byte[] msgBytes = inputLine.substring(pos + 5).getBytes();
+  //            ZNRecord record = (ZNRecord) _deserializer.deserialize(msgBytes);
+  //            Message msg = new Message(record);
+  //            MessageState msgState = msg.getMsgState();
+  //            String msgType = msg.getMsgType();
+  //            if (msgType.equals("STATE_TRANSITION") && msgState == MessageState.NEW)
+  //            {
+  //              if (!msgs.containsKey(msg.getMsgId()))
+  //              {
+  //                msgs.put(msg.getMsgId(), new MsgItem(Long.parseLong(timestamp), msg));
+  //              }
+  //              else
+  //              {
+  //                LOG.error("msg: " + msg.getMsgId() + " already sent");
+  //              }
+  //
+  //              System.out.println(timestamp + ": sendMsg " + msg.getPartitionName() + "("
+  //                  + msg.getFromState() + "->" + msg.getToState() + ") to "
+  //                  + msg.getTgtName() + ", size: " + msgBytes.length);
+  //            }
+  //          }
+          }
+          else if (type.equals("setData"))
+          {
+            stats.msgModifyCount++;
+  //          pos = inputLine.indexOf("MESSAGES");
+  //          pos = inputLine.indexOf("data:{", pos);
+  //          if (pos != -1)
+  //          {
+  //
+  //            byte[] msgBytes = inputLine.substring(pos + 5).getBytes();
+  //            ZNRecord record = (ZNRecord) _deserializer.deserialize(msgBytes);
+  //            Message msg = new Message(record);
+  //            MessageState msgState = msg.getMsgState();
+  //            String msgType = msg.getMsgType();
+  //            if (msgType.equals("STATE_TRANSITION") && msgState == MessageState.READ)
+  //            {
+  //              if (!msgs.containsKey(msg.getMsgId()))
+  //              {
+  //                LOG.error("msg: " + msg.getMsgId() + " never sent");
+  //              }
+  //              else
+  //              {
+  //                MsgItem msgItem = msgs.get(msg.getMsgId());
+  //                if (msgItem.readTime == 0)
+  //                {
+  //                  msgItem.readTime = Long.parseLong(timestamp);
+  //                  msgs.put(msg.getMsgId(), msgItem);
+  //                  // System.out.println(timestamp + ": readMsg " + msg.getPartitionName()
+  //                  // + "("
+  //                  // + msg.getFromState() + "->" + msg.getToState() + ") to "
+  //                  // + msg.getTgtName() + ", latency: " + (msgItem.readTime -
+  //                  // msgItem.sendTime));
+  //                }
+  //              }
+  //
+  //            }
+  //          }
+          }
+          else if (type.equals("delete"))
+          {
+            stats.msgDeleteCount++;
+  //          String msgId = path.substring(path.lastIndexOf('/') + 1);
+  //          if (msgs.containsKey(msgId))
+  //          {
+  //            MsgItem msgItem = msgs.get(msgId);
+  //            Message msg = msgItem.msg;
+  //            msgItem.deleteTime = Long.parseLong(timestamp);
+  //            msgs.put(msgId, msgItem);
+  //            msgItem.latency = msgItem.deleteTime - msgItem.sendTime;
+  //            System.out.println(timestamp + ": delMsg " + msg.getPartitionName() + "("
+  //                + msg.getFromState() + "->" + msg.getToState() + ") to "
+  //                + msg.getTgtName() + ", latency: " + msgItem.latency);
+  //          }
+  //          else
+  //          {
+  //            // messages other than STATE_TRANSITION message
+  //            // LOG.error("msg: " + msgId + " never sent");
+  //          }
+          }
         }
-        else if (type.equals("delete"))
-        {
-          msgDeleteCount++;
-//          String msgId = path.substring(path.lastIndexOf('/') + 1);
-//          if (msgs.containsKey(msgId))
-//          {
-//            MsgItem msgItem = msgs.get(msgId);
-//            Message msg = msgItem.msg;
-//            msgItem.deleteTime = Long.parseLong(timestamp);
-//            msgs.put(msgId, msgItem);
-//            msgItem.latency = msgItem.deleteTime - msgItem.sendTime;
-//            System.out.println(timestamp + ": delMsg " + msg.getPartitionName() + "("
-//                + msg.getFromState() + "->" + msg.getToState() + ") to "
-//                + msg.getTgtName() + ", latency: " + msgItem.latency);
-//          }
-//          else
-//          {
-//            // messages other than STATE_TRANSITION message
-//            // LOG.error("msg: " + msgId + " never sent");
-//          }
-        }
-      }
-    } // end of [br.readLine()) != null]
-
+      } // end of [br.readLine()) != null]
+    }
     
     // statistics
     // print session create/close duration
@@ -494,16 +546,16 @@ public class ZkLogAnalyzor
     }
     
     // print message related stats
-    System.out.println();
-    System.out.println("Operation\t\t Total\t O->S\t S->M\t M->S");
-    System.out.println("------------------------------------------------------");
-    System.out.println("Create message\t\t " + msgSentCount + "\t " + msgSentCount_O2S + "\t " + msgSentCount_S2M + "\t " + msgSentCount_M2S);
-    System.out.println("Modify message\t\t " + msgModifyCount);
-    System.out.println("Delete message\t\t " + msgDeleteCount);
-    System.out.println("Create currentState\t " + curStateCreateCount);
-    System.out.println("Update currentState\t " + curStateUpdateCount);
-    System.out.println("Create extView\t\t " + extViewCreateCount);
-    System.out.println("Update extView\t\t " + extViewUpdateCount);
+//    System.out.println();
+//    System.out.println("Operation\t\t Total\t O->S\t S->M\t M->S");
+//    System.out.println("------------------------------------------------------");
+//    System.out.println("Create message\t\t " + msgSentCount + "\t " + msgSentCount_O2S + "\t " + msgSentCount_S2M + "\t " + msgSentCount_M2S);
+//    System.out.println("Modify message\t\t " + msgModifyCount);
+//    System.out.println("Delete message\t\t " + msgDeleteCount);
+//    System.out.println("Create currentState\t " + curStateCreateCount);
+//    System.out.println("Update currentState\t " + curStateUpdateCount);
+//    System.out.println("Create extView\t\t " + extViewCreateCount);
+//    System.out.println("Update extView\t\t " + extViewUpdateCount);
 
     
     // print state transition latency related stats
@@ -528,9 +580,21 @@ public class ZkLogAnalyzor
         long endTimestamp = Long.parseLong(getAttributeValue(line, "time:"));
         System.out.print(startTimestamp + "-" + endTimestamp 
                            + " (" + (endTimestamp - startTimestamp) + "ms)\t ");
-        String lastSendMsgLine = findLastMessageSentBetween(sendMessageLines, startTimestamp, endTimestamp);
-        long timestamp = Long.parseLong(getAttributeValue(lastSendMsgLine, "time:"));
+//        String lastSendMsgLine = findLastMessageSentBetween(sendMessageLines, startTimestamp, endTimestamp);
+//        long timestamp = Long.parseLong(getAttributeValue(lastSendMsgLine, "time:"));
+        String lastCSUpdateLine = findLastCSUpdateBetween(csUpdateLines, startTimestamp, endTimestamp);
+        long timestamp = Long.parseLong(getAttributeValue(lastCSUpdateLine, "time:"));
         System.out.println("" + (timestamp - startTimestamp) + "ms");
+        
+        // print stats for this test
+        Stats stats = statsMap.get(line);
+        System.out.println("  Create MSG\t" + stats.msgSentCount + "\t " + stats.msgSentCount_O2S + "(O->S)\t " + stats.msgSentCount_S2M + "(S->M)\t " + stats.msgSentCount_M2S + "(M->S)");
+        System.out.println("  Modify MSG\t" + stats.msgModifyCount);
+        System.out.println("  Delete MSG\t" + stats.msgDeleteCount);
+        System.out.println("  Create CS\t" + stats.curStateCreateCount);
+        System.out.println("  Update CS\t" + stats.curStateUpdateCount);
+        System.out.println("  Create EV\t" + stats.extViewCreateCount);
+        System.out.println("  Update EV\t" + stats.extViewUpdateCount);
         
         // find the next start/close
         while (iter.hasNext())
