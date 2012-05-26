@@ -46,7 +46,6 @@ import com.linkedin.helix.MessageListener;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.PropertyType;
 import com.linkedin.helix.model.CurrentState;
-import com.linkedin.helix.model.ExternalView;
 import com.linkedin.helix.model.HealthStat;
 import com.linkedin.helix.model.IdealState;
 import com.linkedin.helix.model.InstanceConfig;
@@ -184,10 +183,10 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
         ExternalViewChangeListener externalViewListener =
             (ExternalViewChangeListener) _listener;
         subscribeForChanges(changeContext, true, true);
-        List<ExternalView> externalViewList =
-            _accessor.getChildValues(ExternalView.class, PropertyType.EXTERNALVIEW);
-
-        externalViewListener.onExternalViewChange(externalViewList, changeContext);
+//        List<ExternalView> externalViewList =
+//            _accessor.getChildValues(ExternalView.class, PropertyType.EXTERNALVIEW);
+//
+//        externalViewListener.onExternalViewChange(externalViewList, changeContext);
       }
       else if (_changeType == ChangeType.CONTROLLER)
       {
