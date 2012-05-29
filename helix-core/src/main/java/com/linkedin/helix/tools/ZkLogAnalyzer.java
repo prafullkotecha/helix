@@ -21,10 +21,10 @@ import com.linkedin.helix.model.LiveInstance;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.MessageState;
 
-public class ZkLogAnalyzor
+public class ZkLogAnalyzer
 {
   private static Logger           LOG           =
-                                                    Logger.getLogger(ZkLogAnalyzor.class);
+                                                    Logger.getLogger(ZkLogAnalyzer.class);
   final static ZNRecordSerializer _deserializer = new ZNRecordSerializer();
 
   static class Stats
