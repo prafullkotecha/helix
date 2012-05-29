@@ -35,6 +35,11 @@ public class ZNode
     _data= data;    
   }
   
+  public Object getData()
+  {
+    return _data;
+  }
+  
   public void setStat(Stat stat)
   {
     _stat = stat;

@@ -21,7 +21,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import org.I0Itec.zkclient.DataUpdater;
 import org.I0Itec.zkclient.IZkConnection;
 import org.I0Itec.zkclient.ZkConnection;
 import org.I0Itec.zkclient.exception.ZkException;
@@ -32,6 +31,7 @@ import org.I0Itec.zkclient.serialize.ZkSerializer;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.AsyncCallback.StringCallback;
+import org.apache.zookeeper.AsyncCallback.VoidCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
@@ -194,7 +194,7 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     {
       Stat stat = retryUntilConnected(new Callable<Stat>()
       {
-  
+
         @Override
         public Stat call() throws Exception
         {
@@ -202,31 +202,46 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
           return stat;
         }
       });
-  
+
       return stat;
     }
     finally
     {
       long end = System.currentTimeMillis();
-      LOG.info("getStat. path: " + path + ", time: " + (end - start));
+      LOG.info("exists. path: " + path + ", time: " + (end - start));
     }
 
   }
 
   @Override
-  public <T extends Object> void updateDataSerialized(String path, DataUpdater<T> updater)
+  public <T extends Object> T readData(String path, Stat stat)
   {
     long start = System.currentTimeMillis();
     try
     {
-      super.updateDataSerialized(path, updater);
+      return super.<T>readData(path, stat);
     }
     finally
     {
       long end = System.currentTimeMillis();
-      LOG.info("update. path: " + path + ", time: " + (end - start));
+      LOG.info("getData. path: " + path + ", time: " + (end - start));
     }
   }
+  
+//  @Override
+//  public <T extends Object> void updateDataSerialized(String path, DataUpdater<T> updater)
+//  {
+//    long start = System.currentTimeMillis();
+//    try
+//    {
+//      super.updateDataSerialized(path, updater);
+//    }
+//    finally
+//    {
+//      long end = System.currentTimeMillis();
+//      LOG.info("update. path: " + path + ", time: " + (end - start));
+//    }
+//  }
 
   @Override
   public String create(final String path, Object data, final CreateMode mode) throws ZkInterruptedException,
@@ -247,19 +262,18 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
   }
 
   @Override
-  public void writeData(String path, Object object) 
+  public void writeData(final String path, Object datat, final int expectedVersion)
   {
     long start = System.currentTimeMillis();
     try
     {
-      super.writeData(path, object);
+      super.writeData(path, datat, expectedVersion);
     }
     finally
     {
       long end = System.currentTimeMillis();
-      LOG.info("write. path: " + path + ", time: " + (end - start));
+      LOG.info("setData. path: " + path + ", time: " + (end - start));
     }
-    
   }
 
   @Override
@@ -277,42 +291,42 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     }
   }
 
-  @Override
-  public void createPersistent(String path, boolean createParents) throws ZkInterruptedException,
-      IllegalArgumentException,
-      ZkException,
-      RuntimeException
-  {
-    long start = System.currentTimeMillis();
-    try
-    {
-      super.createPersistent(path, createParents);
-    }
-    finally
-    {
-      long end = System.currentTimeMillis();
-      LOG.info("create. path: " + path + ", time: " + (end - start));
-    }
+//  @Override
+//  public void createPersistent(String path, boolean createParents) throws ZkInterruptedException,
+//      IllegalArgumentException,
+//      ZkException,
+//      RuntimeException
+//  {
+//    long start = System.currentTimeMillis();
+//    try
+//    {
+//      super.createPersistent(path, createParents);
+//    }
+//    finally
+//    {
+//      long end = System.currentTimeMillis();
+//      LOG.info("create. path: " + path + ", time: " + (end - start));
+//    }
+//
+//  }
 
-  }
+//  @Override
+//  public <T extends Object> T readData(String path, boolean returnNullIfPathNotExists)
+//  {
+//    long start = System.currentTimeMillis();
+//    try
+//    {
+//      return super.<T> readData(path, returnNullIfPathNotExists);
+//    }
+//    finally
+//    {
+//      long end = System.currentTimeMillis();
+//      LOG.info("zk-readData. path: " + path + ", time: " + (end - start));
+//    }
+//  }
 
   @Override
-  public <T extends Object> T readData(String path, boolean returnNullIfPathNotExists) 
-  {
-    long start = System.currentTimeMillis();
-    try
-    {
-      return super.<T>readData(path, returnNullIfPathNotExists);
-    }
-    finally
-    {
-      long end = System.currentTimeMillis();
-      LOG.info("zk-readData. path: " + path + ", time: " + (end - start));
-    }
-  }
-
-  @Override
-  public boolean delete(final String path) 
+  public boolean delete(final String path)
   {
     long start = System.currentTimeMillis();
     try
@@ -324,9 +338,9 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
       long end = System.currentTimeMillis();
       LOG.info("delete. path: " + path + ", time: " + (end - start));
     }
-    
+
   }
-  
+
   @Override
   public List<String> getChildren(String path)
   {
@@ -340,9 +354,8 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
       long end = System.currentTimeMillis();
       LOG.info("getChildren. path: " + path + ", time: " + (end - start));
     }
-    
-  }
 
+  }
 
   @SuppressWarnings("unchecked")
   public <T extends Object> T readDataAndStat(String path,
@@ -354,7 +367,7 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     T data = null;
     try
     {
-      data = (T) super.readData(path, stat);
+      data = (T) this.readData(path, stat);
     }
     catch (ZkNoNodeException e)
     {
@@ -362,11 +375,17 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
       {
         throw e;
       }
-    } finally
-    {
-      long end = System.currentTimeMillis();
-      LOG.info("zk-readData. path: " + path + ", time: " + (end - start));
     }
+//    finally
+//    {
+//      long end = System.currentTimeMillis();
+////      if (path.indexOf("EXTERNALVIEW") != -1)
+////      {
+////        System.out.println("ZkClient.readDataAndStat()");
+////      }
+//      
+//        LOG.info("zk-readData. path: " + path + ", time: " + (end - start));
+//    }
     return data;
   }
 
@@ -403,20 +422,21 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
 
   public void asyncWriteData(final String path, Object datat)
   {
-    long start = System.currentTimeMillis();
-    try
-    {
+//    long start = System.currentTimeMillis();
+//    try
+//    {
       Stat stat = getStat(path);
       this.asyncWriteData(path,
                           datat,
                           stat.getVersion(),
                           new LogStatCallback("asyncSetData"),
                           null);
-    } finally
-    {
-      long end = System.currentTimeMillis();
-      LOG.info("asyncWriteData. path: " + path + ", time: " + (end - start));
-    }
+//    }
+//    finally
+//    {
+//      long end = System.currentTimeMillis();
+//      LOG.info("asyncWriteData. path: " + path + ", time: " + (end - start));
+//    }
   }
 
   public void asyncWriteData(final String path,
@@ -425,8 +445,17 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
                              final StatCallback cb,
                              final Object ctx)
   {
-    final byte[] data = _zkSerializer.serialize(datat);
-    ((ZkConnection) _connection).getZookeeper().setData(path, data, version, cb, ctx);
+    long start = System.currentTimeMillis();
+    try
+    {
+      final byte[] data = _zkSerializer.serialize(datat);
+      ((ZkConnection) _connection).getZookeeper().setData(path, data, version, cb, ctx);
+    }
+    finally
+    {
+      long end = System.currentTimeMillis();
+      LOG.info("asyncSetData. path: " + path + ", time: " + (end - start));
+    }
 
   }
 
@@ -438,13 +467,51 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
    */
   void retryAsyncCreate(String path, AsyncContext ctx)
   {
-    ((ZkConnection) _connection).getZookeeper()
+    long start = System.currentTimeMillis();
+    try
+    {
+
+      ((ZkConnection) _connection).getZookeeper()
                                 .create(path,
                                         ctx._data,
                                         Arrays.asList(DEFAULT_ACL),
                                         ctx._mode,
                                         new AsyncCreateCallback("asyncCreate", this),
                                         ctx);
+    }
+    finally
+    {
+      long end = System.currentTimeMillis();
+      LOG.info("asyncCreate. path: " + path + ", time: " + (end - start));
+    }
+  }
+
+  public void asyncDelete(String path)
+  {
+    long start = System.currentTimeMillis();
+    try
+    {
+      Stat stat = getStat(path);
+      ((ZkConnection) _connection).getZookeeper().delete(path,
+                                                         stat.getVersion(),
+                                                         new VoidCallback()
+                                                         {
+                                                           @Override
+                                                           public void processResult(int rc,
+                                                                                     String path,
+                                                                                     Object ctx)
+                                                           {
+//                                                             LOG.info("deleted " + path);
+                                                           }
+                                                         },
+                                                         null);
+    }
+    finally
+    {
+      long end = System.currentTimeMillis();
+      LOG.info("asyncDelete. path: " + path + ", time: " + (end - start));
+    }
+
   }
 
   /**
@@ -455,22 +522,26 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
    */
   public void asyncCreate(final String path, Object datat, CreateMode mode)
   {
-    long start = System.currentTimeMillis();
-    try
-    {
+//    long start = System.currentTimeMillis();
+//    try
+//    {
       final byte[] data = _zkSerializer.serialize(datat);
-      ((ZkConnection) _connection).getZookeeper()
-                                  .create(path,
-                                          data,
-                                          Arrays.asList(DEFAULT_ACL),
-                                          mode,
-                                          new AsyncCreateCallback("asyncCreate", this),
-                                          new AsyncContext(data, mode, ASYNC_RETRY_LIMIT));
-    } finally
-    {
-      long end = System.currentTimeMillis();
-      LOG.info("asyncCreate. path: " + path + ", time: " + (end - start));
-    }
+      
+      this.retryAsyncCreate(path, new AsyncContext(data, mode, ASYNC_RETRY_LIMIT));
+
+//      ((ZkConnection) _connection).getZookeeper()
+//                                  .create(path,
+//                                          data,
+//                                          Arrays.asList(DEFAULT_ACL),
+//                                          mode,
+//                                          new AsyncCreateCallback("asyncCreate", this),
+//                                          new AsyncContext(data, mode, ASYNC_RETRY_LIMIT));
+//    }
+//    finally
+//    {
+//      long end = System.currentTimeMillis();
+//      LOG.info("asyncCreate. path: " + path + ", time: " + (end - start));
+//    }
   }
 
   public void asyncCreate(final String path,
@@ -480,13 +551,24 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
                           StringCallback cb,
                           Object ctx)
   {
+    long start = System.currentTimeMillis();
+
     final byte[] data = _zkSerializer.serialize(datat);
-    ((ZkConnection) _connection).getZookeeper().create(path,
-                                                       data,
-                                                       acl,
-                                                       createMode,
-                                                       cb,
-                                                       ctx);
+    try
+    {
+
+      ((ZkConnection) _connection).getZookeeper().create(path,
+                                                         data,
+                                                         acl,
+                                                         createMode,
+                                                         cb,
+                                                         ctx);
+    }
+    finally
+    {
+      long end = System.currentTimeMillis();
+      LOG.info("asyncCreate. path: " + path + ", time: " + (end - start));
+    }
   }
 
 }

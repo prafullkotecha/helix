@@ -89,14 +89,16 @@ public class HelixStateTransitionHandler extends MessageHandler
     String initStateValue = stateModelDef.getInitialState();
     CurrentState currentState = accessor.getProperty(CurrentState.class,
         PropertyType.CURRENTSTATES, instanceName, manager.getSessionId(), resourceName);
+    CurrentState currentStateDelta = new CurrentState(resourceName);
 
     // Set an empty current state record if it is null
     if (currentState == null)
     {
       currentState = new CurrentState(resourceName);
       currentState.setSessionId(manager.getSessionId());
-      accessor.updateProperty(PropertyType.CURRENTSTATES, currentState, instanceName,
-          manager.getSessionId(), resourceName);
+      currentStateDelta.setSessionId(manager.getSessionId());
+//      accessor.updateProperty(PropertyType.CURRENTSTATES, currentState, instanceName,
+//          manager.getSessionId(), resourceName);
     }
 
     /**
@@ -106,7 +108,7 @@ public class HelixStateTransitionHandler extends MessageHandler
      * model def
      */
 
-    CurrentState currentStateDelta = new CurrentState(resourceName);
+//    CurrentState currentStateDelta = new CurrentState(resourceName);
     if (currentState.getState(partitionName) == null)
     {
       currentStateDelta.setState(partitionName, initStateValue);
@@ -136,8 +138,8 @@ public class HelixStateTransitionHandler extends MessageHandler
         currentStateDelta.setStateModelFactoryName(factoryName);
       }
     }
-    accessor.updateProperty(PropertyType.CURRENTSTATES, currentStateDelta, instanceName,
-        manager.getSessionId(), resourceName);
+//    accessor.updateProperty(PropertyType.CURRENTSTATES, currentStateDelta, instanceName,
+//        manager.getSessionId(), resourceName);
 
     // Verify the fromState and current state of the stateModel
     String state = currentState.getState(partitionName);
@@ -168,17 +170,56 @@ public class HelixStateTransitionHandler extends MessageHandler
       CurrentState currentState = accessor.getProperty(CurrentState.class,
           PropertyType.CURRENTSTATES, instanceName, manager.getSessionId(), resource);
 
+      CurrentState currentStateDelta = new CurrentState(resource);
+      String resourceName = message.getResourceName();
+      String partitionName = message.getPartitionName();
+      String stateModelName = message.getStateModelDef();
+
+
       if (currentState == null)
       {
-        logger
-            .warn("currentState is null. Storage node should be working with static file based cluster manager.");
+//        logger
+//            .warn("currentState is null. Storage node should be working with static file based cluster manager.");
+        currentState = new CurrentState(resourceName);
+        currentState.setSessionId(manager.getSessionId());
+        currentStateDelta.setSessionId(manager.getSessionId());
+
+      }
+
+//      if (currentState.getState(partitionName) == null)
+//      {
+//        currentStateDelta.setState(partitionName, initStateValue);
+//        currentState.setState(partitionName, initStateValue);
+//
+//        logger
+//            .info("Setting initial state for partition: " + partitionName + " to " + initStateValue);
+//      }
+
+      // Set the state model def to current state
+      if (currentState.getStateModelDefRef() == null)
+      {
+        if (stateModelName != null)
+        {
+          logger.info("Setting state model def on current state: " + stateModelName);
+          currentStateDelta.setStateModelDefRef(stateModelName);
+        }
+      }
+
+      // set state model factory name if null
+      if (currentState.getStateModelFactoryName() == null)
+      {
+        String factoryName = message.getStateModelFactoryName();
+        if (factoryName != null)
+        {
+          logger.info("Setting state model factory name on current state: " + factoryName);
+          currentStateDelta.setStateModelFactoryName(factoryName);
+        }
       }
 
       // TODO verify that fromState is same as currentState this task
       // was
       // called at.
       // Verify that no one has edited this field
-      CurrentState currentStateDelta = new CurrentState(resource);
       
       if (taskResult.isSucess())
       {
