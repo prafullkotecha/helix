@@ -207,7 +207,7 @@ public class ZkLogAnalyzor
         leaderCloseLine = line;
       }
     }
-    assert(leaderLine != null) : "No leader found";
+    if(leaderLine == null) throw new RuntimeException( "No leader line found");
     liveInstanceLines.remove(leaderLine);
 
     

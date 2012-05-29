@@ -257,7 +257,7 @@ public class HelixTask implements Callable<HelixTaskResult>
       HelixTaskResult taskResult)
   {
     // report stat
-    if (!message.getMsgType().equals(MessageType.STATE_TRANSITION.toString()))
+    if (true || !message.getMsgType().equals(MessageType.STATE_TRANSITION.toString()))
     {
       return;
     }

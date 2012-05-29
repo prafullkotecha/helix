@@ -385,6 +385,7 @@ public class StatusUpdateUtil
   public void logError(Message message, Class classInfo, String additionalInfo,
       DataAccessor accessor)
   {
+    if(true)return;
     logMessageStatusUpdateRecord(message, Level.HELIX_ERROR, classInfo,
         additionalInfo, accessor);
   }
@@ -392,6 +393,7 @@ public class StatusUpdateUtil
   public void logError(Message message, Class classInfo, Exception e,
       String additionalInfo, DataAccessor accessor)
   {
+    if(true)return;
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     e.printStackTrace(pw);
@@ -402,6 +404,7 @@ public class StatusUpdateUtil
   public void logInfo(Message message, Class classInfo, String additionalInfo,
       DataAccessor accessor)
   {
+    if(true)return;
     logMessageStatusUpdateRecord(message, Level.HELIX_INFO, classInfo,
         additionalInfo, accessor);
   }
@@ -409,6 +412,7 @@ public class StatusUpdateUtil
   public void logWarning(Message message, Class classInfo,
       String additionalInfo, DataAccessor accessor)
   {
+    if(true)return;
     logMessageStatusUpdateRecord(message, Level.HELIX_WARNING, classInfo,
         additionalInfo, accessor);
   }
