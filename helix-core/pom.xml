@@ -158,7 +158,7 @@
               <name>start-standalone-zookeeper</name>
             </program>
             <program>
-              <mainClass>com.linkedin.helix.tools.ZkLogAnalyzor</mainClass>
+              <mainClass>com.linkedin.helix.tools.ZkLogAnalyzer</mainClass>
               <name>analyze-zk-log</name>
             </program>
             <program>
