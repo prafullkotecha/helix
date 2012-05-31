@@ -148,13 +148,15 @@ public class ZkCachedDataAccessor implements DataAccessor
         // create message
         try
         {
-          _zkClient.create(path, mergedRecord, mode);
+//          _zkClient.create(path, mergedRecord, mode);
+          _zkClient.asyncCreate(path, mergedRecord, mode);
         }
         catch (ZkNoNodeException e)
         {
           String parentDir = path.substring(0, path.lastIndexOf('/'));
           _zkClient.createPersistent(parentDir, true);
-          _zkClient.create(path, mergedRecord, mode);
+//          _zkClient.create(path, mergedRecord, mode);
+          _zkClient.asyncCreate(path, mergedRecord, mode);
         }
       }
       else if (_instanceType == InstanceType.PARTICIPANT)
@@ -165,7 +167,8 @@ public class ZkCachedDataAccessor implements DataAccessor
         {
           _writeThroughCacheLock.writeLock().lock();
           _writeThroughCache.put(path, new ZNode(null, mergedRecord, null));
-          _zkClient.writeData(path, mergedRecord);
+//          _zkClient.writeData(path, mergedRecord);
+          _zkClient.asyncWriteData(path, mergedRecord);
         }
         catch (ZkNoNodeException e)
         {

@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class TestLogAnalyzor
+public class TestLogAnalyzer
 {
   static int getTime(String line)
   {
@@ -29,7 +29,7 @@ public class TestLogAnalyzor
   {
     if (args.length != 1)
     {
-      System.err.println("USAGE: TestLogAnalyzor testLogDir");
+      System.err.println("USAGE: TestLogAnalyzer testLogDir");
       System.exit(1);
     }
 
@@ -121,12 +121,12 @@ public class TestLogAnalyzor
     String inputLine;
     int readCnt = 0;
     int writeCnt = 0;
-    int updateCnt = 0;
+//    int updateCnt = 0;
     int deleteCnt = 0;
     int createCnt = 0;
     float totalReadTime = 0;
     float totalWriteTime = 0;
-    float totalUpdateTime = 0;
+//    float totalUpdateTime = 0;
     float totalDeleteTime = 0;
     float totalCreateTime = 0;
 
@@ -143,10 +143,10 @@ public class TestLogAnalyzor
           Date date = sdformat.parse(dateStr);
           if (date.after(testDate))
           {
-            System.out.println("read:\t" + readCnt + "\t" + (totalReadTime / readCnt));
-            System.out.println("update:\t" + updateCnt + "\t"
-                + (totalUpdateTime / updateCnt));
-            System.out.println("write:\t" + updateCnt + "\t"
+            System.out.println("getData:\t" + readCnt + "\t" + (totalReadTime / readCnt));
+//            System.out.println("update:\t" + updateCnt + "\t"
+//                + (totalUpdateTime / updateCnt));
+            System.out.println("setData:\t" + writeCnt + "\t"
                 + (totalWriteTime / writeCnt));
             System.out.println("delete:\t" + deleteCnt + "\t"
                 + (totalDeleteTime / deleteCnt));
@@ -159,16 +159,16 @@ public class TestLogAnalyzor
 
             readCnt = 0;
             writeCnt = 0;
-            updateCnt = 0;
+//            updateCnt = 0;
             deleteCnt = 0;
             totalReadTime = 0;
             totalWriteTime = 0;
-            totalUpdateTime = 0;
+//            totalUpdateTime = 0;
             totalDeleteTime = 0;
             break;
           }
 
-          if (inputLine.indexOf("zk-readData.") != -1)
+          if (inputLine.indexOf("getData.") != -1)
           {
             int time = getTime(inputLine);
             if (time >= 0)
@@ -177,15 +177,16 @@ public class TestLogAnalyzor
               totalReadTime += time;
             }
           }
-          else if (inputLine.indexOf("update.") != -1)
-          {
-            int time = getTime(inputLine);
-            if (time >= 0)
-            {
-              updateCnt++;
-              totalUpdateTime += time;
-            }
-          } else if (inputLine.indexOf("write.") != -1)
+//          else if (inputLine.indexOf("update.") != -1)
+//          {
+//            int time = getTime(inputLine);
+//            if (time >= 0)
+//            {
+//              updateCnt++;
+//              totalUpdateTime += time;
+//            }
+//          } 
+          else if (inputLine.indexOf("setData.") != -1)
           {
             int time = getTime(inputLine);
             if (time >= 0)
@@ -217,12 +218,12 @@ public class TestLogAnalyzor
     // last run
     readCnt = 0;
     writeCnt = 0;
-    updateCnt = 0;
+//    updateCnt = 0;
     deleteCnt = 0;
     createCnt = 0;
     totalReadTime = 0;
     totalWriteTime = 0;
-    totalUpdateTime = 0;
+//    totalUpdateTime = 0;
     totalDeleteTime = 0;
     totalCreateTime = 0;
 
@@ -230,7 +231,7 @@ public class TestLogAnalyzor
     {
       if (inputLine.indexOf("ZkClient.java") != -1)
       {
-        if (inputLine.indexOf("zk-readData.") != -1)
+        if (inputLine.indexOf("getData.") != -1)
         {
           int time = getTime(inputLine);
           if (time >= 0)
@@ -239,15 +240,16 @@ public class TestLogAnalyzor
             totalReadTime += time;
           }
         }
-        else if (inputLine.indexOf("update.") != -1)
-        {
-          int time = getTime(inputLine);
-          if (time >= 0)
-          {
-            updateCnt++;
-            totalUpdateTime += time;
-          }
-        } else if (inputLine.indexOf("write.") != -1)
+//        else if (inputLine.indexOf("update.") != -1)
+//        {
+//          int time = getTime(inputLine);
+//          if (time >= 0)
+//          {
+//            updateCnt++;
+//            totalUpdateTime += time;
+//          }
+//        } 
+        else if (inputLine.indexOf("setData.") != -1)
         {
           int time = getTime(inputLine);
           if (time >= 0)
@@ -274,9 +276,9 @@ public class TestLogAnalyzor
         }
       }
     }
-    System.out.println("read:\t" + readCnt + "\t" + (totalReadTime / readCnt));
-    System.out.println("update:\t" + updateCnt + "\t" + (totalUpdateTime / updateCnt));
-    System.out.println("write:\t" + updateCnt + "\t"
+    System.out.println("getData:\t" + readCnt + "\t" + (totalReadTime / readCnt));
+//    System.out.println("update:\t" + updateCnt + "\t" + (totalUpdateTime / updateCnt));
+    System.out.println("setData:\t" + writeCnt + "\t"
         + (totalWriteTime / writeCnt));
     System.out.println("delete:\t" + deleteCnt + "\t"
         + (totalDeleteTime / deleteCnt));

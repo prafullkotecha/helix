@@ -15,11 +15,14 @@
  */
 package com.linkedin.helix.manager.zk;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.I0Itec.zkclient.IZkConnection;
 import org.I0Itec.zkclient.ZkConnection;
@@ -29,10 +32,12 @@ import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.I0Itec.zkclient.serialize.SerializableSerializer;
 import org.I0Itec.zkclient.serialize.ZkSerializer;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.AsyncCallback.DataCallback;
 import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.AsyncCallback.VoidCallback;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
@@ -77,6 +82,58 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
       _mode = mode;
       _retry = retry;
     }
+  }
+  
+  class AsyncReadCallback implements DataCallback
+  {
+    AtomicBoolean success = new AtomicBoolean(false);
+    byte[] _data;
+    Stat _stat;
+   
+    public byte[] getData()
+    {
+      return _data;
+    }
+    
+    public Stat getStat()
+    {
+      return _stat;
+    }
+    
+    public boolean waitForSuccess()
+    {
+      try
+      {
+        while(!success.get())
+        {
+          synchronized (success)
+          {
+            success.wait();
+          }
+        }
+      }
+      catch (InterruptedException e)
+      {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+      return true;
+    }
+    
+    @Override
+    public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat)
+    {
+      // TODO Auto-generated method stub
+      synchronized (success)
+      {
+        success.set(true);
+        success.notify();
+      }
+      
+      _data = data;
+      _stat = stat;
+    }
+    
   }
 
   /**
@@ -228,20 +285,57 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     }
   }
   
-//  @Override
-//  public <T extends Object> void updateDataSerialized(String path, DataUpdater<T> updater)
-//  {
-//    long start = System.currentTimeMillis();
-//    try
-//    {
-//      super.updateDataSerialized(path, updater);
-//    }
-//    finally
-//    {
-//      long end = System.currentTimeMillis();
-//      LOG.info("update. path: " + path + ", time: " + (end - start));
-//    }
-//  }
+
+//  public <T extends Object> List<T> asyncReadChildData(final String parentPath, Watcher watcher,
+//                                                       DataCallback cb, Object ctx)
+  public <T extends Object> List<T> asyncReadChildData(final String parentPath, Watcher watcher, Object ctx, List<Stat> stats)
+  {
+    long start = System.currentTimeMillis();
+    List<String> children = getChildren(parentPath);
+    try
+    {
+      
+//      List<String> children = getChildren(parentPath);
+      if (children == null || children.size() == 0)
+      {
+        return Collections.emptyList();
+      }
+
+      List<T> childRecords = new ArrayList<T>();
+      List<AsyncReadCallback> cbList = new ArrayList<AsyncReadCallback>(children.size());
+      for (String child : children)
+      {
+        String childPath = parentPath + "/" + child;
+        AsyncReadCallback cb = new AsyncReadCallback();
+        cbList.add(cb);
+        ((ZkConnection) _connection).getZookeeper().getData(childPath, watcher, cb, ctx);
+      }
+      
+      for (AsyncReadCallback cb : cbList)
+      {
+        cb.waitForSuccess();
+        byte[] data = cb.getData();
+        Stat stat = cb.getStat();
+        
+        if (data != null && stat != null)
+        {
+          T datat = (T) _zkSerializer.deserialize(data);
+          childRecords.add(datat);
+          if (stats != null)
+          {
+            stats.add(stat);
+          }
+        }
+      }
+      
+      return childRecords;
+    }
+    finally
+    {
+      long end = System.currentTimeMillis();
+      LOG.info("getData. path: " + parentPath + ", time: " + (end - start));
+    }
+  }
 
   @Override
   public String create(final String path, Object data, final CreateMode mode) throws ZkInterruptedException,

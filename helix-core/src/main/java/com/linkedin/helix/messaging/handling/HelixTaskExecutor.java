@@ -18,9 +18,7 @@ package com.linkedin.helix.messaging.handling;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -65,6 +63,7 @@ public class HelixTaskExecutor implements MessageListener
 
   private static Logger                                  logger             =
                                                                                 Logger.getLogger(HelixTaskExecutor.class);
+  private long latestMessageCreateTimestamp;
 
   public HelixTaskExecutor()
   {
@@ -196,7 +195,7 @@ public class HelixTaskExecutor implements MessageListener
 
   protected void reportCompletion(String msgId)
   {
-    //synchronized (_lock)
+    // synchronized (_lock)
     {
       logger.info("message " + msgId + " finished");
       if (_taskMap.containsKey(msgId))
@@ -254,7 +253,8 @@ public class HelixTaskExecutor implements MessageListener
 
     if (messages == null || messages.size() == 0)
     {
-      logger.info("No Messages to process");
+//      logger.info("No Messages to process");
+      System.out.println("No Messages to process");
       return;
     }
 
@@ -298,6 +298,7 @@ public class HelixTaskExecutor implements MessageListener
       }
     }
     Collections.sort(messages, new MessageTimeComparator());
+    
     int newMsg=0;
     int readMsg=0;
     long updateTime =0;
@@ -325,7 +326,7 @@ public class HelixTaskExecutor implements MessageListener
       if (sessionId.equals(tgtSessionId) || tgtSessionId.equals("*"))
       {
         MessageHandler handler = null;
-        if (MessageState.NEW == message.getMsgState())
+        if (MessageState.NEW == message.getMsgState() && message.getCreateTimeStamp() > latestMessageCreateTimestamp)
         {
           try
           {
@@ -360,10 +361,10 @@ public class HelixTaskExecutor implements MessageListener
             }
             else
             {
-              accessor.updateProperty(PropertyType.MESSAGES,
-                                      message,
-                                      instanceName,
-                                      message.getId());
+//              accessor.updateProperty(PropertyType.MESSAGES,
+//                                      message,
+//                                      instanceName,
+//                                      message.getId());
 
             }
             long endUpdate = System.currentTimeMillis();
@@ -430,6 +431,8 @@ public class HelixTaskExecutor implements MessageListener
                                      accessor);
       }
     }
+    
+    latestMessageCreateTimestamp = messages.get(messages.size() - 1).getCreateTimeStamp();
     long end = System.currentTimeMillis();
     logger.info("Onmessage took " + (end - start) + " for processing new:"+newMsg + " and read:"+ readMsg  + " updatetime:"+ updateTime + " scheduleTime:"+ submitTIme);
   }

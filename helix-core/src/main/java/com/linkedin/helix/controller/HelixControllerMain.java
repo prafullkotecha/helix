@@ -40,12 +40,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
-import com.linkedin.helix.ConfigScope.ConfigScopeProperty;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.HelixManagerFactory;
 import com.linkedin.helix.InstanceType;
-import com.linkedin.helix.PropertyType;
-import com.linkedin.helix.monitoring.mbeans.ClusterStatusMonitor;
 import com.linkedin.helix.participant.DistClusterControllerStateModelFactory;
 import com.linkedin.helix.participant.StateMachineEngine;
 
@@ -219,7 +216,7 @@ public class HelixControllerMain
     controllerName = cmd.getOptionValue(name);
 
     // Espresso_driver.py will consume this
-    logger.info("Cluster manager started, zkServer: " + zkConnectString + ", clusterName:"
+    System.out.println("Cluster manager started, zkServer: " + zkConnectString + ", clusterName:"
         + clusterName + ", controllerName:" + controllerName + ", mode:" + controllerMode);
 
     HelixManager manager = startHelixController(zkConnectString, clusterName, controllerName,

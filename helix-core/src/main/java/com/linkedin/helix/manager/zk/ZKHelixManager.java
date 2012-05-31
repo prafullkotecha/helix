@@ -88,7 +88,7 @@ public class ZKHelixManager implements HelixManager
   private final String _instanceName;
   private final String _zkConnectString;
   private static final int DEFAULT_SESSION_TIMEOUT = 30000;
-  private ZKDataAccessor _accessor;
+  private DataAccessor _accessor;
   private ConfigAccessor _configAccessor;
   protected ZkClient _zkClient;
   private final List<CallbackHandler> _handlers;
@@ -505,6 +505,8 @@ public class ZKHelixManager implements HelixManager
     ZkSerializer zkSerializer = new ZNRecordSerializer();
     _zkClient = new ZkClient(zkServers, _sessionTimeout, CONNECTIONTIMEOUT, zkSerializer);
     _accessor = new ZKDataAccessor(_clusterName, _zkClient);
+//    _accessor = new ZkCachedDataAccessor(_clusterName, _zkClient, _instanceType);
+
     _configAccessor = new ConfigAccessor(_zkClient);
     int retryCount = 0;
 
@@ -559,7 +561,7 @@ public class ZKHelixManager implements HelixManager
   protected void handleNewSession()
   {
     _sessionId = UUID.randomUUID().toString();
-    _accessor.reset();
+//    _accessor.reset();
 
     resetHandlers();
 

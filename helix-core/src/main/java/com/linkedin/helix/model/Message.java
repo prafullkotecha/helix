@@ -15,7 +15,6 @@
  */
 package com.linkedin.helix.model;
 
-import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -57,7 +56,7 @@ public class Message extends ZNRecordDecorator
     _record.setSimpleField(Attributes.MSG_TYPE.toString(), type);
     setMsgId(msgId);
     setMsgState(MessageState.NEW);
-    _record.setSimpleField(Attributes.CREATE_TIMESTAMP.toString(), "" + new Date().getTime());
+    _record.setSimpleField(Attributes.CREATE_TIMESTAMP.toString(), "" + System.nanoTime());// new Date().getTime());
   }
 
   public Message(ZNRecord record)
@@ -69,7 +68,7 @@ public class Message extends ZNRecordDecorator
     }
     if (getCreateTimeStamp() == 0)
     {
-      _record.setSimpleField(Attributes.CREATE_TIMESTAMP.toString(), "" + new Date().getTime());
+      _record.setSimpleField(Attributes.CREATE_TIMESTAMP.toString(), "" + System.nanoTime()); // new Date().getTime());
     }
   }
 

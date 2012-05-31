@@ -200,68 +200,77 @@ public final class ZKUtil
       {
         if (client.exists(path))
         {
-          AtomicInteger count = null;
-
-          count = countPool.putIfAbsent(path, new AtomicInteger(0));
-          if (count == null)
-          {
-            count = countPool.get(path);
-          }
-          count.incrementAndGet();
-
-          // synchronized (namePool)
-          // {
-          // if (!namePool.containsKey(path))
-          // {
-          // namePool.put(path, new ZNRecord(record));
-          // }
-          ZNRecord newRec = namePool.putIfAbsent(path, new ZNRecord(record));
-          if (newRec == null)
-          {
-            newRec = namePool.get(path);
-          }
-
-          // else
-          // {
-          // while (namePool.containsKey(path)) // already being locked
-          // {
-          // namePool.wait(); // wait for release
-          // }
-          // }
-
-          if (count.decrementAndGet() == 0)
-          {
-            client.updateDataSerialized(path, new DataUpdater<ZNRecord>()
+          DataUpdater<ZNRecord> updater = new DataUpdater<ZNRecord>() {
+            @Override
+            public ZNRecord update(ZNRecord currentData)
             {
-              @Override
-              public ZNRecord update(ZNRecord currentData)
+              if (currentData != null && mergeOnUpdate)
               {
-                if (currentData != null && mergeOnUpdate)
-                {
-                  currentData.merge(namePool.get(path));
-                  return currentData;
-                }
-                return record;
+                currentData.merge(record);
+                return currentData;
               }
-            });
-            namePool.remove(path);
-            newRec.notifyAll();
-          }
-          else
+              return record;
+            }
+          };
+          
+          synchronized(namePool)
           {
-            ZNRecord curRecord = namePool.get(path);
-            curRecord.merge(record);
-            newRec.wait(); // wait for release
+            while(namePool.contains(path))    // already being locked
+            {
+              namePool.wait();                // wait for release
+            }
+
+            namePool.put(path, new ZNRecord(""));
           }
-          // }
+          
+          client.updateDataSerialized(path, updater);
+          
+          synchronized(namePool)
+          {
 
-          // client.updateDataSerialized(path, updater);
-
-          // synchronized (namePool)
-          // {
-          // namePool.remove(path);
-          // namePool.notifyAll();
-          // }
+            namePool.remove(path);
+            namePool.notifyAll();
+          }
+          
+//          AtomicInteger count = null;
+//
+//          count = countPool.putIfAbsent(path, new AtomicInteger(0));
+//          if (count == null)
+//          {
+//            count = countPool.get(path);
+//          }
+//          count.incrementAndGet();
+//
+//          ZNRecord newRec = namePool.putIfAbsent(path, new ZNRecord(record));
+//          if (newRec == null)
+//          {
+//            newRec = namePool.get(path);
+//          }
+//
+//          if (count.decrementAndGet() == 0)
+//          {
+//            client.updateDataSerialized(path, new DataUpdater<ZNRecord>()
+//            {
+//              @Override
+//              public ZNRecord update(ZNRecord currentData)
+//              {
+//                if (currentData != null && mergeOnUpdate)
+//                {
+//                  currentData.merge(namePool.get(path));
+//                  return currentData;
+//                }
+//                return record;
+//              }
+//            });
+//            namePool.remove(path);
+//            newRec.notifyAll();
+//          }
+//          else
+//          {
+//            ZNRecord curRecord = namePool.get(path);
+//            curRecord.merge(record);
+//            newRec.wait(); // wait for release
+//          }
         }
         else
         {

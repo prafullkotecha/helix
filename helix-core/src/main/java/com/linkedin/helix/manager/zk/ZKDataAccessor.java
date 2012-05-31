@@ -51,6 +51,9 @@ public class ZKDataAccessor implements DataAccessor
   private final Map<String, Map<String, ZNRecord>> _cache =
                                                               new ConcurrentHashMap<String, Map<String, ZNRecord>>();
 
+  
+
+  
   public ZKDataAccessor(String clusterName, ZkClient zkClient)
   {
     _clusterName = clusterName;
@@ -140,51 +143,18 @@ public class ZKDataAccessor implements DataAccessor
     }
     else
     {
+      if (type.equals(PropertyType.MESSAGES))
+      {
+        _zkClient.asyncWriteData(path, value);
+        return true;
+      }
+
       String parent = new File(path).getParent();
 
       if (!_zkClient.exists(parent))
       {
         _zkClient.createPersistent(parent, true);
       }
-
-      // HACK: using write through cache for CurrentState update
-      // if (type == PropertyType.CURRENTSTATES)
-      // {
-      // String csPath = path.substring(0, path.lastIndexOf('/'));
-      // String resourceName = path.substring(path.lastIndexOf('/') + 1);
-      //
-      // synchronized (_cache)
-      // {
-      // if (_cache.containsKey(csPath) && _cache.get(csPath).containsKey(resourceName))
-      // {
-      // int curVersion = 0;
-      // Stat stat;
-      // try
-      // {
-      // ZNRecord csRecord = _cache.get(csPath).get(resourceName);
-      // curVersion = csRecord.getVersion();
-      // csRecord.merge(value);
-      // _zkClient.writeData(path, csRecord, curVersion);
-      // stat = _zkClient.getStat(path);
-      // csRecord.setVersion(stat.getVersion());
-      // _cache.get(csPath).put(resourceName, csRecord);
-      // return true;
-      // } catch (ZkBadVersionException e)
-      // {
-      // stat = _zkClient.getStat(path);
-      // logger.error("bad zk version. cached:" + curVersion + ", actual:" +
-      // stat.getVersion());
-      // }
-      // } else
-      // {
-      // if (!_cache.containsKey(csPath))
-      // {
-      // _cache.put(csPath, new HashMap<String, ZNRecord>());
-      // }
-      // _cache.get(csPath).put(resourceName, value);
-      // }
-      // }
-      // }
 
       if (!type.isAsync())
       {
@@ -219,20 +189,6 @@ public class ZKDataAccessor implements DataAccessor
   public ZNRecord getProperty(PropertyType type, String... keys)
   {
     String path = PropertyPathConfig.getPath(type, _clusterName, keys);
-
-    // HACK
-    // if (type == PropertyType.CURRENTSTATES)
-    // {
-    // ZNRecord record = null;
-    // String csPath = path.substring(0, path.lastIndexOf('/'));
-    // String resourceName = path.substring(path.lastIndexOf('/') + 1);
-    //
-    // if (_cache.containsKey(csPath))
-    // {
-    // record = _cache.get(csPath).get(resourceName);
-    // }
-    // return record;
-    // }
 
     if (!type.isCached())
     {
@@ -294,6 +250,23 @@ public class ZKDataAccessor implements DataAccessor
 
   {
     String path = PropertyPathConfig.getPath(type, _clusterName, keys);
+    
+    if (type == PropertyType.MESSAGES)
+    {
+      List<Stat> stats = new ArrayList<Stat>();
+      List<ZNRecord> msgs = _zkClient.asyncReadChildData(path, null, null, stats);
+
+      for (int i = 0; i < msgs.size(); i++)
+      {
+        ZNRecord msg = msgs.get(i);
+        Stat stat = stats.get(i);
+        msg.setVersion(stat.getVersion());
+        msg.setCreationTime(stat.getCtime());
+        msg.setModifiedTime(stat.getMtime());
+      }
+      return msgs;
+    }
+    
     // if (path == null)
     // {
     // System.err.println("path is null");
