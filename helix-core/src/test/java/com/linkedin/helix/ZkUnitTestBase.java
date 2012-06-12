@@ -64,7 +64,7 @@ public class ZkUnitTestBase
   protected static final String CLUSTER_PREFIX = "CLUSTER";
   protected static final String CONTROLLER_CLUSTER_PREFIX = "CONTROLLER_CLUSTER";
 
-  @BeforeSuite(alwaysRun = true)
+  @BeforeSuite
   public void beforeSuite() throws Exception
   {
     _zkServer = TestHelper.startZkSever(ZK_ADDR);
@@ -77,7 +77,7 @@ public class ZkUnitTestBase
     _gZkClient.setZkSerializer(new ZNRecordSerializer());
   }
 
-  @AfterSuite(alwaysRun = true)
+  @AfterSuite
   public void afterTest()
   {
     TestHelper.stopZkServer(_zkServer);
