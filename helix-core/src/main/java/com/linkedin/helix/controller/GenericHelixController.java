@@ -1,5 +1,6 @@
 package com.linkedin.helix.controller;
 
+import java.io.StringWriter;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -7,6 +8,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.log4j.Logger;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig;
 
 import com.linkedin.helix.ConfigChangeListener;
 import com.linkedin.helix.ControllerChangeListener;
@@ -229,7 +232,27 @@ public class GenericHelixController implements
       logger.info("No pipeline to run for event:" + event.getName());
       return;
     }
+    
+    if(logger.isTraceEnabled())
+    {
+      ObjectMapper mapper = new ObjectMapper();
 
+      SerializationConfig serializationConfig = mapper.getSerializationConfig();
+      serializationConfig.set(SerializationConfig.Feature.INDENT_OUTPUT, true);
+      serializationConfig.set(SerializationConfig.Feature.AUTO_DETECT_FIELDS, true);
+      serializationConfig.set(SerializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS,
+                              true);
+      StringWriter sw = new StringWriter();
+      try
+      {
+        mapper.writeValue(sw, event);
+        logger.info("ClusterEvent=\n"+ sw);
+      }
+      catch(Exception e)
+      {
+        logger.warn(e);
+      }
+    }
     for (Pipeline pipeline : pipelines)
     {
       try

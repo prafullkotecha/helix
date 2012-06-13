@@ -95,14 +95,35 @@ public class CurrentStateOutput
     return null;
   }
 
-  public Map<String, String> getCurrentStateMap(String resourceName,
-      Partition resource)
+  /**
+   * given (resource, partition), returns (instance->toState) map
+   * @param resourceName
+   * @param partition
+   * @return
+   */
+  public Map<String, String> getPendingStateMap(String resourceName, Partition partition)
   {
-    Map<Partition, Map<String, String>> map = _currentStateMap
-        .get(resourceName);
-    if (map != null)
+    if (_pendingStateMap.containsKey(resourceName))
     {
-      return map.get(resource);
+      Map<Partition, Map<String, String>> map = _pendingStateMap.get(resourceName);
+      if (map.containsKey(partition))
+      {
+        return map.get(partition);
+      }
+    }
+    return Collections.emptyMap();
+  }
+  
+  public Map<String, String> getCurrentStateMap(String resourceName,
+      Partition partition)
+  {
+    if (_currentStateMap.containsKey(resourceName))
+    {
+      Map<Partition, Map<String, String>> map = _currentStateMap.get(resourceName);
+      if (map.containsKey(partition))
+      {
+        return map.get(partition);
+      }
     }
     return Collections.emptyMap();
   }
