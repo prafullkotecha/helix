@@ -279,6 +279,11 @@ public class MessageSelectionStage extends AbstractBaseStage
                                                       ClusterDataCache cache)
   {
     Map<String, Bounds> stateConstraints = new HashMap<String, Bounds>();
+    if(stateModelDefinition == null)
+    {
+      LOG.warn("stateModelDefinition is null");
+      return stateConstraints;
+    }
 
     List<String> statePriorityList = stateModelDefinition.getStatesPriorityList();
     for (String state : statePriorityList)
@@ -325,13 +330,15 @@ public class MessageSelectionStage extends AbstractBaseStage
   private Map<String, Integer> getStateTransitionPriorityMap(StateModelDefinition stateModelDef)
   {
     Map<String, Integer> stateTransitionPriorities = new HashMap<String, Integer>();
-    List<String> stateTransitionPriorityList =
-        stateModelDef.getStateTransitionPriorityList();
-    for (int i = 0; i < stateTransitionPriorityList.size(); i++)
+    if(stateModelDef != null)
     {
-      stateTransitionPriorities.put(stateTransitionPriorityList.get(i), i);
+      List<String> stateTransitionPriorityList =
+        stateModelDef.getStateTransitionPriorityList();
+      for (int i = 0; i < stateTransitionPriorityList.size(); i++)
+      {
+        stateTransitionPriorities.put(stateTransitionPriorityList.get(i), i);
+      }
     }
-
     return stateTransitionPriorities;
   }
 }

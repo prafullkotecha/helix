@@ -17,6 +17,7 @@ import com.linkedin.helix.controller.GenericHelixController;
 import com.linkedin.helix.manager.file.FileHelixAdmin;
 import com.linkedin.helix.mock.storage.DummyProcess;
 import com.linkedin.helix.model.IdealState;
+import com.linkedin.helix.model.IdealState.IdealStateProperty;
 import com.linkedin.helix.model.InstanceConfig;
 import com.linkedin.helix.model.InstanceConfig.InstanceConfigProperty;
 import com.linkedin.helix.store.PropertyJsonComparator;
@@ -161,6 +162,7 @@ public class FileCMTestBase
             "MASTER", "SLAVE");
 
     newIdealState.merge(idealState.getRecord());
+    newIdealState.setSimpleField(IdealStateProperty.REPLICAS.toString(), replica + 1 + "");
     _mgmtTool.setResourceIdealState(clusterName, resourceName, new IdealState(newIdealState));
   }
 }
