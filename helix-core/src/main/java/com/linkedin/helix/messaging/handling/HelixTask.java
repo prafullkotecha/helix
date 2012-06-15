@@ -228,7 +228,6 @@ public class HelixTask implements Callable<HelixTaskResult>
       Message replyMessage = Message.createReplyMessage(_message,
           _manager.getInstanceName(), taskResult.getTaskResultMap());
       Criteria recipientCriteria = new Criteria();
-      recipientCriteria.setDataSource(DataSource.IDEALSTATES);
       recipientCriteria.setInstanceName(replyMessage.getTgtName());
       recipientCriteria.setSelfExcluded(false);
       recipientCriteria.setRecipientInstanceType(message.getSrcInstanceType());
