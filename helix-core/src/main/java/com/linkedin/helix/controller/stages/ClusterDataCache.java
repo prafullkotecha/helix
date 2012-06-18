@@ -64,18 +64,21 @@ public class ClusterDataCache
 
   public boolean refresh(DataAccessor accessor)
   {
+    if(_idealStateMap==null)
     _idealStateMap = accessor.getChildValuesMap(IdealState.class, PropertyType.IDEALSTATES);
     _liveInstanceMap = accessor.getChildValuesMap(LiveInstance.class, PropertyType.LIVEINSTANCES);
 
     for (LiveInstance instance : _liveInstanceMap.values())
     {
-      LOG.trace("live instance: " + instance.getInstanceName() + " " + instance.getSessionId());
+      LOG.info("live instance: " + instance.getInstanceName() + " " + instance.getSessionId());
     }
-
+if(_stateModelDefMap==null)
     _stateModelDefMap = accessor.getChildValuesMap(StateModelDefinition.class,
         PropertyType.STATEMODELDEFS);
+if(_instanceConfigMap==null || true)
     _instanceConfigMap = accessor.getChildValuesMap(InstanceConfig.class, PropertyType.CONFIGS,
         ConfigScopeProperty.PARTICIPANT.toString());
+if(_constraintMap==null)
     _constraintMap = accessor.getChildValuesMap(Constraint.class, PropertyType.CONFIGS,
                                                 ConfigScopeProperty.CONSTRAINT.toString());
 

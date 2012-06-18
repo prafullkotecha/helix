@@ -61,9 +61,9 @@ public class TestHelixTaskHandler
 
     context = new NotificationContext(manager);
     HelixStateTransitionHandler stHandler = new HelixStateTransitionHandler(stateModel, message,
-        context);
-    HelixTask handler;
-    handler = new HelixTask(message, context, stHandler, executor);
+        context, null);
+    HelixTask handler=null;
+    //handler = new HelixTask(message, context, stHandler, executor);
     handler.call();
     AssertJUnit.assertTrue(stateModel.stateModelInvoked);
     System.out.println("END TestCMTaskHandler.testInvocation() at "
@@ -98,11 +98,11 @@ public class TestHelixTaskHandler
     accessor.setProperty(PropertyType.STATEMODELDEFS, stateModelDef, "MasterSlave");
 
     context = new NotificationContext(manager);
-    HelixTask handler;
+    HelixTask handler=null;
     HelixStateTransitionHandler stHandler = new HelixStateTransitionHandler(stateModel, message,
-        context);
+        context, null);
 
-    handler = new HelixTask(message, context, stHandler, executor);
+    //handler = new HelixTask(message, context, stHandler, executor);
     handler.call();
     AssertJUnit.assertTrue(stateModel.stateModelInvoked);
     System.out.println("END TestCMTaskHandler.testInvocationAnnotated() at "

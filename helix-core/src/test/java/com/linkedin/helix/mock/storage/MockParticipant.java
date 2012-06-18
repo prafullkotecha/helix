@@ -68,6 +68,7 @@ public class MockParticipant extends Thread
     public void onBecomeSlaveFromOffline(Message message, NotificationContext context)
     {
       LOG.info("Become SLAVE from OFFLINE");
+      mysleep(100);
       if (_transition != null)
       {
         _transition.doTransition(message, context);
@@ -75,10 +76,23 @@ public class MockParticipant extends Thread
       }
     }
 
+    private void mysleep(int delay)
+    {
+      try
+      {
+        sleep(delay);
+      }
+      catch (InterruptedException e)
+      {
+        e.printStackTrace();
+      }
+    }
+
     @Transition(to="MASTER",from="SLAVE")
     public void onBecomeMasterFromSlave(Message message, NotificationContext context)
     {
       LOG.info("Become MASTER from SLAVE");
+      mysleep(100);
       if (_transition != null)
       {
         _transition.doTransition(message, context);

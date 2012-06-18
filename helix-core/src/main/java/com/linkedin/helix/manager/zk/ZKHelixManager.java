@@ -502,10 +502,10 @@ public class ZKHelixManager implements HelixManager
 
   private void createClient(String zkServers) throws Exception
   {
-    ZkSerializer zkSerializer = new ZNRecordSerializer();
+    ZkSerializer zkSerializer = new ZNRecordStreamingSerializer();
     _zkClient = new ZkClient(zkServers, _sessionTimeout, CONNECTIONTIMEOUT, zkSerializer);
     _accessor = new ZKDataAccessor(_clusterName, _zkClient);
-//    _accessor = new ZkCachedDataAccessor(_clusterName, _zkClient, _instanceType);
+    //_accessor = new ZkCachedDataAccessor(_clusterName, _zkClient, _instanceType);
 
     _configAccessor = new ConfigAccessor(_zkClient);
     int retryCount = 0;

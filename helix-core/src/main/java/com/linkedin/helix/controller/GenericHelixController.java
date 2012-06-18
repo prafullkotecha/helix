@@ -196,6 +196,7 @@ public class GenericHelixController implements
    */
   protected void handleEvent(ClusterEvent event)
   {
+    long start = System.currentTimeMillis();
     HelixManager manager = event.getAttribute("helixmanager");
     if (manager == null)
     {
@@ -264,6 +265,8 @@ public class GenericHelixController implements
         break;
       }
     }
+    long end = System.currentTimeMillis();
+    logger.info(event.getName() +" took " + (end-start) +" to complete");
   }
 
   // TODO since we read data in pipeline, we can get rid of reading from zookeeper in

@@ -212,7 +212,7 @@ public final class ZKUtil
               return record;
             }
           };
-          
+          long start = System.currentTimeMillis();
           synchronized(namePool)
           {
             while(namePool.contains(path))    // already being locked
@@ -222,12 +222,12 @@ public final class ZKUtil
 
             namePool.put(path, new ZNRecord(""));
           }
-          
+          long end = System.currentTimeMillis();
+          logger.info("Waited "+ (end-start)+" to update path:"+ path);
           client.updateDataSerialized(path, updater);
           
           synchronized(namePool)
           {
-
             namePool.remove(path);
             namePool.notifyAll();
           }

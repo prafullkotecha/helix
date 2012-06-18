@@ -236,6 +236,7 @@ public class ZkCachedDataAccessor implements DataAccessor
           if (_writeThroughCache.containsKey(path))
           {
             getRecord = (ZNRecord) _writeThroughCache.get(path).getData();
+            
           }
           else
           {
@@ -279,7 +280,7 @@ public class ZkCachedDataAccessor implements DataAccessor
     }
 
 //    getRecord = _zkClient.readData(path, true);
-    return getRecord;
+    return (getRecord!=null)?new ZNRecord(getRecord):null;
   }
 
   @Override

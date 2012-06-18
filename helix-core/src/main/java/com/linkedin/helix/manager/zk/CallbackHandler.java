@@ -107,7 +107,7 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
         // + changeContext.getPathChanged()
             + _path + " listener:" + _listener.getClass().getCanonicalName());
       }
-
+      logger.info("Change notification for "+_changeType);
       if (_changeType == IDEAL_STATE)
       {
 
@@ -167,7 +167,7 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
         List<Message> messages =
             _accessor.getChildValues(Message.class, PropertyType.MESSAGES, instanceName);
         messageListener.onMessage(instanceName, messages, changeContext);
-
+        
       }
       else if (_changeType == MESSAGES_CONTROLLER)
       {

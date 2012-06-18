@@ -45,14 +45,16 @@ public class HelixStateTransitionHandler extends MessageHandler
   private final StateModel _stateModel;
   StatusUpdateUtil _statusUpdateUtil;
   private final StateModelParser _transitionMethodFinder;
+  private CurrentState currentStateDelta;
 
   public HelixStateTransitionHandler(StateModel stateModel, Message message,
-      NotificationContext context)
+      NotificationContext context, CurrentState  currentStateDelta)
   {
     super(message, context);
     this._stateModel = stateModel;
     _statusUpdateUtil = new StatusUpdateUtil();
     _transitionMethodFinder = new StateModelParser();
+    this.currentStateDelta= currentStateDelta;
   }
 
   private void prepareMessageExecution(HelixManager manager, Message message) throws HelixException
@@ -75,20 +77,11 @@ public class HelixStateTransitionHandler extends MessageHandler
     String fromState = message.getFromState();
     String toState = message.getToState();
 
-    List<StateModelDefinition> stateModelDefs = accessor.getChildValues(StateModelDefinition.class,
-        PropertyType.STATEMODELDEFS);
-
-    String stateModelName = message.getStateModelDef();
-    StateModelDefinition stateModelDef = lookupStateModel(stateModelName, stateModelDefs);
-
-    if (stateModelDef == null)
-    {
-      throw new HelixException("No State Model Defined for " + stateModelName);
-
-    }
+    /*
     String initStateValue = stateModelDef.getInitialState();
     CurrentState currentState = accessor.getProperty(CurrentState.class,
         PropertyType.CURRENTSTATES, instanceName, manager.getSessionId(), resourceName);
+    
     CurrentState currentStateDelta = new CurrentState(resourceName);
 
     // Set an empty current state record if it is null
@@ -101,12 +94,12 @@ public class HelixStateTransitionHandler extends MessageHandler
 //          manager.getSessionId(), resourceName);
     }
 
-    /**
-     * For resource unit that does not have a state, initialize it to OFFLINE If
-     * current state does not have a state model def, set it. Do the two updates
-     * together, otherwise controller may view a current state with a NULL state
-     * model def
-     */
+    
+     //* For resource unit that does not have a state, initialize it to OFFLINE If
+     //* current state does not have a state model def, set it. Do the two updates
+     //* together, otherwise controller may view a current state with a NULL state
+     //* model def
+     
 
 //    CurrentState currentStateDelta = new CurrentState(resourceName);
     if (currentState.getState(partitionName) == null)
@@ -143,7 +136,9 @@ public class HelixStateTransitionHandler extends MessageHandler
 
     // Verify the fromState and current state of the stateModel
     String state = currentState.getState(partitionName);
-
+*/
+    String state = currentStateDelta.getState(partitionName);
+    
     if (fromState != null && !fromState.equals("*") && !fromState.equalsIgnoreCase(state))
     {
       String errorMessage = "Current state of stateModel does not match the fromState in Message"
@@ -152,7 +147,7 @@ public class HelixStateTransitionHandler extends MessageHandler
 
       _statusUpdateUtil
           .logError(message, HelixStateTransitionHandler.class, errorMessage, accessor);
-      logger.error(errorMessage);
+      logger.error(errorMessage + " state model state:"+ _stateModel.getCurrentState());
       throw new HelixException(errorMessage);
     }
   }
@@ -167,24 +162,24 @@ public class HelixStateTransitionHandler extends MessageHandler
       String resource = message.getResourceName();
       String instanceName = manager.getInstanceName();
 
-      CurrentState currentState = accessor.getProperty(CurrentState.class,
-          PropertyType.CURRENTSTATES, instanceName, manager.getSessionId(), resource);
-
-      CurrentState currentStateDelta = new CurrentState(resource);
+//      CurrentState currentState = accessor.getProperty(CurrentState.class,
+//          PropertyType.CURRENTSTATES, instanceName, manager.getSessionId(), resource);
+//
+//      CurrentState currentStateDelta = new CurrentState(resource);
       String resourceName = message.getResourceName();
       String partitionName = message.getPartitionName();
       String stateModelName = message.getStateModelDef();
 
 
-      if (currentState == null)
-      {
-//        logger
-//            .warn("currentState is null. Storage node should be working with static file based cluster manager.");
-        currentState = new CurrentState(resourceName);
-        currentState.setSessionId(manager.getSessionId());
-        currentStateDelta.setSessionId(manager.getSessionId());
-
-      }
+//      if (currentState == null)
+//      {
+////        logger
+////            .warn("currentState is null. Storage node should be working with static file based cluster manager.");
+//        currentState = new CurrentState(resourceName);
+//        currentState.setSessionId(manager.getSessionId());
+//        currentStateDelta.setSessionId(manager.getSessionId());
+//
+//      }
 
 //      if (currentState.getState(partitionName) == null)
 //      {
@@ -196,25 +191,25 @@ public class HelixStateTransitionHandler extends MessageHandler
 //      }
 
       // Set the state model def to current state
-      if (currentState.getStateModelDefRef() == null)
-      {
-        if (stateModelName != null)
-        {
-          logger.info("Setting state model def on current state: " + stateModelName);
-          currentStateDelta.setStateModelDefRef(stateModelName);
-        }
-      }
+//      if (currentState.getStateModelDefRef() == null)
+//      {
+//        if (stateModelName != null)
+//        {
+//          logger.info("Setting state model def on current state: " + stateModelName);
+//          currentStateDelta.setStateModelDefRef(stateModelName);
+//        }
+//      }
 
       // set state model factory name if null
-      if (currentState.getStateModelFactoryName() == null)
-      {
-        String factoryName = message.getStateModelFactoryName();
-        if (factoryName != null)
-        {
-          logger.info("Setting state model factory name on current state: " + factoryName);
-          currentStateDelta.setStateModelFactoryName(factoryName);
-        }
-      }
+//      if (currentState.getStateModelFactoryName() == null)
+//      {
+//        String factoryName = message.getStateModelFactoryName();
+//        if (factoryName != null)
+//        {
+//          logger.info("Setting state model factory name on current state: " + factoryName);
+//          currentStateDelta.setStateModelFactoryName(factoryName);
+//        }
+//      }
 
       // TODO verify that fromState is same as currentState this task
       // was
@@ -271,6 +266,11 @@ public class HelixStateTransitionHandler extends MessageHandler
 
   public HelixTaskResult handleMessageInternal(Message message, NotificationContext context)
   {
+    long start=0;
+    long afterPrepare=0;
+    long afterInvoke=0;
+    long afterPost=0;
+    start = System.currentTimeMillis();
     synchronized (_stateModel)
     {
       HelixTaskResult taskResult = new HelixTaskResult();
@@ -286,7 +286,9 @@ public class HelixStateTransitionHandler extends MessageHandler
         try
         {
           prepareMessageExecution(manager, message);
+          afterPrepare = System.currentTimeMillis();
           invoke(accessor, context, taskResult, message);
+          afterInvoke = System.currentTimeMillis();
         } catch (InterruptedException e)
         {
           throw e;
@@ -303,6 +305,8 @@ public class HelixStateTransitionHandler extends MessageHandler
           exception = e;
         }
         postExecutionMessage(manager, message, context, taskResult, exception);
+        afterPost = System.currentTimeMillis();
+        logger.info("pre time:"+ (afterPrepare-start) + " invoke time:" + (afterInvoke-afterPrepare) +" post time:"+(afterPost-afterInvoke));
         return taskResult;
       } catch (InterruptedException e)
       {
@@ -321,6 +325,7 @@ public class HelixStateTransitionHandler extends MessageHandler
         return taskResult;
       }
     }
+   
   }
 
   private void invoke(DataAccessor accessor, NotificationContext context,

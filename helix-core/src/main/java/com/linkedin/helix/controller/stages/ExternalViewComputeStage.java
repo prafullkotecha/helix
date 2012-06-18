@@ -22,6 +22,7 @@ import org.apache.log4j.Logger;
 import com.linkedin.helix.DataAccessor;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.PropertyType;
+import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.controller.pipeline.AbstractBaseStage;
 import com.linkedin.helix.controller.pipeline.StageException;
 import com.linkedin.helix.model.ExternalView;
@@ -81,8 +82,11 @@ public class ExternalViewComputeStage extends AbstractBaseStage
       {
         clusterStatusMonitor.onExternalViewChange(view, cache._idealStateMap.get(view.getResourceName()));
       }
-      
-      dataAccessor.setProperty(PropertyType.EXTERNALVIEW, view, resourceName);
+      ZNRecord curView = dataAccessor.getProperty(PropertyType.EXTERNALVIEW, resourceName);
+      if (curView == null || !curView.equals(view.getRecord()))
+      {
+        dataAccessor.setProperty(PropertyType.EXTERNALVIEW, view, resourceName);
+      }
     }
     log.info("END ExternalViewComputeStage.process()");
   }

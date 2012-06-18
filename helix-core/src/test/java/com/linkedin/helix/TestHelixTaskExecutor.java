@@ -64,9 +64,9 @@ public class TestHelixTaskExecutor
         MessageType.TASK_REPLY.toString(), new AsyncCallbackService());
     String clusterName =" testcluster";
     context = new NotificationContext(manager);
-    HelixStateTransitionHandler handler = new HelixStateTransitionHandler(stateModel, message, context);
+    HelixStateTransitionHandler handler = new HelixStateTransitionHandler(stateModel, message, context, null);
 
-    executor.scheduleTask(message, handler, context);
+ //   executor.scheduleTask(message, handler, context);
     while (!executor.isDone(msgId))
     {
       Thread.sleep(500);

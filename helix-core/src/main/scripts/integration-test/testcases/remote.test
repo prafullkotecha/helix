@@ -1,0 +1,218 @@
+#!/bin/bash
+# test that we can kill/restart mock participant remotely
+export TEST_NAME=helix_random_kill_remote
+source setup_env.inc
+
+# users/machines/dirs info for each test machine
+USER_TAB=( "kgopalak" "kgopalak" "kgopalak" "kgopalak" "kgopalak" "kgopalak" )
+MACHINE_TAB=( "eat1-app05.corp" "eat1-app06.corp" "eat1-app07.corp" "eat1-app08.corp"  "eat1-app09.corp" "eat1-app10.corp"  )
+SCRIPT_DIR_TAB=( "/export/home/eng/kgopalak/workspace/helix/helix-core/src/main/scripts/integration-test/script" "/export/home/eng/kgopalak/workspace/helix/helix-core/src/main/scripts/integration-test/script" "/export/home/eng/kgopalak/workspace/helix/helix-core/src/main/scripts/integration-test/script" "/export/home/eng/kgopalak/workspace/helix/helix-core/src/main/scripts/integration-test/script" "/export/home/eng/kgopalak/workspace/helix/helix-core/src/main/scripts/integration-test/script" "/export/home/eng/kgopalak/workspace/helix/helix-core/src/main/scripts/integration-test/script" )
+
+parallelism=$1
+num_partitions=$2
+num_replicas=2
+# constants
+machine_nb=${#MACHINE_TAB[*]}
+controller_idx=0
+#mocks_per_node=1
+mocks_per_node=$3
+
+# colorful echo
+red='\e[00;31m'
+green='\e[00;32m'
+function cecho
+{
+  message="$1"
+  if [ -n "$message" ]; then
+    color="$2"
+    if [ -z "$color" ]; then
+      echo "$message"
+    else
+      echo -e "$color$message\e[00m"
+    fi
+  fi
+}
+#stop all Mock process and Controller Process if the exists
+
+for i in `seq 0 $(($machine_nb-1))`; do
+	echo "Stopping instance in ${MACHINE_TAB[$i]} "
+  ssh ${USER_TAB[$i]}@${MACHINE_TAB[$i]} "jps | egrep \"Mock|HelixControllerMain\" | awk '{print \$1}' | xargs kill -9" & 
+done
+
+pending=`jobs -l | grep "kill"  | awk '{print $2}'  | wc -l `
+while  [ $pending -gt 1 ]
+do
+  pending=`jobs -l | grep "mock-health-report-process"  | awk '{print $2}'  | wc -l `
+  echo "Pending stop=$pending"
+  sleep 3;
+done
+
+# zookeeper_server_ports="localhost:2188"
+# use the first machine as zookeeper and controller
+# zookeeper_address=eat1-app207.stg:12913,eat1-app208.stg:12913,eat1-app209.stg:12913
+zookeeper_address=eat1-app205.corp:2191,eat1-app206.corp:2191,eat1-app207.corp:2191
+
+# default datadir integration_test/var/work/zookeeper/data/1
+# start the zookeeper cluster
+# for i in `seq 0 2`; do
+# ssh ${USER_TAB[$i]}@${MACHINE_TAB[$i]} "${SCRIPT_DIR_TAB[$i]}/cm_driver.py -n ${TEST_NAME} -c zookeeper -o start --zookeeper_reset --zookeeper_server_ports=\"$zookeeper_address\" --zookeeper_server_ids=$i --cmdline_props=\"tickTime=2000;initLimit=5;syncLimit=2\""
+# done
+
+
+test_timestamps_file=$VIEW_ROOT/$LOG_DIR_FROM_ROOT/test_timestamps_`date +"%y%m%d_%H%M%S"`.log
+#echo `date +"%y%m%d_%H%M%S_%N"` >> ${test_timestamps_file}
+
+# drop cluster
+$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -dropCluster test-cluster"
+
+# create cluster
+$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -addCluster test-cluster"
+
+# add resource
+#$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -addResource test-cluster test-db 2400 MasterSlave"
+
+$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -addResource test-cluster test-db $num_partitions MasterSlave"
+
+# add nodes
+start_port=8900
+for j in `seq 0 $(($machine_nb-1))`; do
+	for i in `seq 1 $mocks_per_node`; do
+  	port=$(($start_port + $i))
+		$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -addNode test-cluster ${MACHINE_TAB[$j]}:${port}"
+	done
+done
+
+# rebalance
+$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -rebalance test-cluster test-db ${num_replicas}"
+
+# Launch mock health report process
+# for j in {0..1}; do
+for j in `seq 0 $(($machine_nb-1))`; do
+	for i in `seq 1 $mocks_per_node`; do
+  	port=$(($start_port + $i))
+  #${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o start -l \"integration-test/config/log4j-info.properties\" --save_process_id --component_id=$i --cmdline_args=\"-zkSvr ${zookeeper_address} -cluster test-cluster -host ${MACHINE_TAB[$j]} -port ${port}\""
+  ssh ${USER_TAB[$j]}@${MACHINE_TAB[$j]} "${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o start --jvm_args=\"-DmaxParallelTask=${parallelism}\" -l \"integration-test/config/log4j-info.properties\" --save_process_id --component_id=$i --cmdline_args=\"-zkSvr ${zookeeper_address} -cluster test-cluster -host ${MACHINE_TAB[$j]} -port ${port}\"" &
+  done
+done
+pending=`jobs -l | grep cmdline  | awk '{print $2}'  | wc -l `
+while  [ $pending -gt 1 ]
+do
+  pending=`jobs -l | grep cmdline  | awk '{print $2}'  | wc -l `
+  echo "Pending start=$pending"
+  sleep 3;
+done
+
+#sleep 10
+
+# record the start timestamp of the test
+# echo `date +"%y%m%d_%H%M%S_%N"` >> ${test_timestamps_file}
+
+# Launch cluster manager
+# -Djava.rmi.server.hostname=${MACHINE_TAB[$controller_idx]}
+  ssh ${USER_TAB[$controller_idx]}@${MACHINE_TAB[$controller_idx]} "${SCRIPT_DIR_TAB[$controller_idx]}/cm_driver.py -n ${TEST_NAME} -c cluster-manager -o start --jvm_args=\"-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=27960 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false\" -l \"integration-test/config/log4j-info.properties\" --cmdline_args=\"-zkSvr ${zookeeper_address} -cluster test-cluster\""
+
+#${SCRIPT_DIR_TAB[$controller_idx]}/cm_driver.py -n ${TEST_NAME} -c cluster-manager -o start --jvm_args="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=27960 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" -l "integration-test/config/log4j-info.properties" --cmdline_args="-zkSvr ${zookeeper_address} -cluster test-cluster"
+
+#verify cluster state
+verifier_output=$VIEW_ROOT/$LOG_DIR_FROM_ROOT/verifier_`date +"%y%m%d_%H%M%S"`.log
+
+$SCRIPT_DIR/cm_driver.py -n ${TEST_NAME} -c cluster-state-verifier -o start --logfile=$verifier_output -l "integration-test/config/log4j-info.properties" --cmdline_args="-zkSvr ${zookeeper_address} -cluster test-cluster -timeout 1200000"
+echo "verify cluster here------------"
+#$SCRIPT_DIR/cm_driver.py -n ${TEST_NAME} -c cluster-state-verifier -o start --logfile=$verifier_output -l "integration-test/config/log4j-info.properties" --cmdline_args="-zkSvr ${zookeeper_address} -cluster test-cluster -timeout 240000"
+
+echo "verifier_output=$verifier_output"
+verifier_result=`grep 'Successful\|fail' $verifier_output`
+cecho "$verifier_result" $red
+
+sleep 5
+
+# kill m random and restart
+
+n=$((${#MACHINE_TAB[*]} * ${mocks_per_node}))
+m=1
+
+# do kill m random and restart for r rounds
+for r in {0..0}; do
+# : <<'END'
+  # record the start timestamp of failing
+  echo `date +"%y%m%d_%H%M%S_%N"` >> ${test_timestamps_file}
+
+  to_kill=`shuf --input-range=1-$n | head -${m}`
+  for k in ${to_kill[*]}; do
+    j=$((($k - 1) / $mocks_per_node))
+    i=$((($k - 1) % $mocks_per_node + 1))
+	  port=$(($start_port + $i))
+    cecho "kill ${MACHINE_TAB[$j]}:$port" $red
+	  ssh ${USER_TAB[$j]}@${MACHINE_TAB[$j]} "${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o stop --component_id=$i"
+#	  ${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o stop --component_id=$i
+#    sleep 3
+  done
+#  sleep 10
+
+  # verify cluster state after kill
+  verifier_output=$VIEW_ROOT/$LOG_DIR_FROM_ROOT/verifier_`date +"%y%m%d_%H%M%S"`.log
+  echo "verify cluster here------------"
+  $SCRIPT_DIR/cm_driver.py -c cluster-state-verifier -o start --logfile=$verifier_output -l "integration-test/config/log4j-info.properties" --cmdline_args="-zkSvr ${zookeeper_address} -cluster test-cluster -timeout 60000"
+  echo "verifier_output=$verifier_output"
+  verifier_result=`grep 'Successful\|fail' $verifier_output`
+  cecho "$verifier_result" $red
+#  sleep 10
+# END
+
+: <<'END'
+  for k in ${to_kill[*]}; do
+    j=$((($k - 1) / 5))
+    i=$((($k - 1) % 5 + 1))
+  	port=$(($start_port + $i))
+    cecho "restart ${MACHINE_TAB[$j]}:$port" $green
+  	ssh ${USER_TAB[$j]}@${MACHINE_TAB[$j]} "${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o start -l \"integration-test/config/log4j-info.properties\" --save_process_id --component_id=$i --cmdline_args=\"-zkSvr ${zookeeper_address} -cluster test-cluster -host ${MACHINE_TAB[$j]} -port ${port}\""
+#    sleep 1
+  done
+#  sleep 3
+
+  #verify cluster state after restart
+  verifier_output=$VIEW_ROOT/$LOG_DIR_FROM_ROOT/verifier_`date +"%y%m%d_%H%M%S"`.log
+  $SCRIPT_DIR/cm_driver.py -c cluster-state-verifier -o start --logfile=$verifier_output -l "integration-test/config/log4j-info.properties" --cmdline_args="-zkSvr ${zookeeper_address} -cluster test-cluster -timeout 120000"
+  echo "verifier_output=$verifier_output"
+  verifier_result=`grep 'Successful\|fail' $verifier_output`
+  cecho "$verifier_result" $red  
+  sleep 10
+END
+
+done
+# END
+
+# clean up
+cecho "clean up..." $green
+# sleep 600
+# read ch
+
+ssh ${USER_TAB[$controller_idx]}@${MACHINE_TAB[$controller_idx]} "${SCRIPT_DIR_TAB[$controller_idx]}/cm_driver.py -n ${TEST_NAME} -c cluster-manager -o stop"
+#${SCRIPT_DIR_TAB[$controller_idx]}/cm_driver.py -n ${TEST_NAME} -c cluster-manager -o stop
+
+#for j in {0..1}; do
+for j in `seq 0 $(($machine_nb-1))`; do
+	for i in `seq 1 $mocks_per_node`; do
+		ssh ${USER_TAB[$j]}@${MACHINE_TAB[$j]} "${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o stop --component_id=$i" &
+		#${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o stop --component_id=$i
+	done
+done
+pending=`jobs -l | grep "mock-health-report-process"  | awk '{print $2}'  | wc -l `
+while  [ $pending -gt 1 ]
+do
+  pending=`jobs -l | grep "mock-health-report-process"  | awk '{print $2}'  | wc -l `
+  echo "Pending stop=$pending"
+  sleep 3;
+done
+
+# for i in {0..2}; do
+#  ssh ${USER_TAB[$i]}@${MACHINE_TAB[$i]} "${SCRIPT_DIR_TAB[$i]}/cm_driver.py -n ${TEST_NAME} -c zookeeper -o stop"
+# done
+
+echo == GREP SUCCEED ==
+grep Successful $verifier_output
+
+source report_pass_fail.inc
+exit $all_stat
+
+

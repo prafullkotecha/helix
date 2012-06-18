@@ -24,8 +24,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
 
 import com.linkedin.helix.DataAccessor;
@@ -34,30 +37,72 @@ import com.linkedin.helix.PropertyPathConfig;
 import com.linkedin.helix.PropertyType;
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.ZNRecordDecorator;
+import com.linkedin.helix.tools.GroupCommit;
+import com.linkedin.helix.tools.GroupCommit2;
+import com.linkedin.helix.tools.IStore;
 
 public class ZKDataAccessor implements DataAccessor
 {
-  private static Logger                            logger =
-                                                              Logger.getLogger(ZKDataAccessor.class);
+  private static Logger                            logger        =
+                                                                     Logger.getLogger(ZKDataAccessor.class);
 
   protected final String                           _clusterName;
   protected final ZkClient                         _zkClient;
 
+  private Stat                                     _latestCSStat = null;
+  private Map<String, ZNRecord>                    _csCache      =
+                                                                     new HashMap<String, ZNRecord>();
+  GroupCommit                                      commit        = new GroupCommit();
+
+  IStore                                           store;
   /**
    * If a PropertyType has children (e.g. CONFIGS), then the parent path is the first key
    * and child path is the second key; If a PropertyType has no child (e.g. LEADER), then
    * no cache
    */
-  private final Map<String, Map<String, ZNRecord>> _cache =
-                                                              new ConcurrentHashMap<String, Map<String, ZNRecord>>();
+  private final Map<String, Map<String, ZNRecord>> _cache        =
+                                                                     new ConcurrentHashMap<String, Map<String, ZNRecord>>();
 
-  
-
-  
   public ZKDataAccessor(String clusterName, ZkClient zkClient)
   {
     _clusterName = clusterName;
     _zkClient = zkClient;
+    store = new IStore()
+    {
+
+      @Override
+      public void write(String key, ZNRecord value)
+      {
+        try
+        {
+          //System.out.println(key);
+          //System.out.println(value);
+          _zkClient.writeData2(key, value, -1);
+        }
+        catch (NoNodeException e)
+        {
+         // e.printStackTrace();
+          _zkClient.createPersistent(key, true);
+          try
+          {
+            _latestCSStat =
+                _zkClient.writeData2(key, value, _latestCSStat == null ? -1
+                    : _latestCSStat.getVersion());
+          }
+          catch (NoNodeException e1)
+          {
+            e1.printStackTrace();
+          }
+        }
+      }
+
+      @Override
+      public ZNRecord get(String key)
+      {
+        // TODO Auto-generated method stub
+        return null;
+      }
+    };
   }
 
   @Override
@@ -146,6 +191,51 @@ public class ZKDataAccessor implements DataAccessor
       if (type.equals(PropertyType.MESSAGES))
       {
         _zkClient.asyncWriteData(path, value);
+        return true;
+      }
+
+      if (type.equals(PropertyType.CURRENTSTATES))
+      {
+        if (false)
+        {
+          try
+          {
+            synchronized (_csCache)
+            {
+              if (!_csCache.containsKey(path))
+              {
+                _csCache.put(path, value);
+              }
+              else
+              {
+                ZNRecord curRecord = _csCache.get(path);
+                curRecord.merge(value);
+                _csCache.put(path, curRecord);
+              }
+              _latestCSStat = _zkClient.writeData2(path, _csCache.get(path), -1);
+            }
+          }
+          catch (NoNodeException e)
+          {
+            // String parent = new File(path).getParent();
+            _zkClient.createPersistent(path, true);
+            try
+            {
+              _latestCSStat =
+                  _zkClient.writeData2(path, _csCache.get(path), _latestCSStat == null
+                      ? -1 : _latestCSStat.getVersion());
+            }
+            catch (NoNodeException e1)
+            {
+              // TODO Auto-generated catch block
+              e1.printStackTrace();
+            }
+          }
+        }
+        else
+        {
+          commit.commit3(store, path, value);
+        }
         return true;
       }
 
@@ -250,8 +340,8 @@ public class ZKDataAccessor implements DataAccessor
 
   {
     String path = PropertyPathConfig.getPath(type, _clusterName, keys);
-    
-    if (type == PropertyType.MESSAGES)
+
+    if (false && type == PropertyType.MESSAGES)
     {
       List<Stat> stats = new ArrayList<Stat>();
       List<ZNRecord> msgs = _zkClient.asyncReadChildData(path, null, null, stats);
@@ -266,7 +356,7 @@ public class ZKDataAccessor implements DataAccessor
       }
       return msgs;
     }
-    
+
     // if (path == null)
     // {
     // System.err.println("path is null");
@@ -388,4 +478,5 @@ public class ZKDataAccessor implements DataAccessor
     List<T> list = getChildValues(clazz, type, keys);
     return Collections.unmodifiableMap(ZNRecordDecorator.convertListToMap(list));
   }
+
 }

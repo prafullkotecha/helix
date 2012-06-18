@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +25,7 @@ import com.linkedin.helix.model.Message.MessageState;
 public class ZkLogAnalyzer
 {
   private static Logger           LOG           = Logger.getLogger(ZkLogAnalyzer.class);
+  private static boolean dump= false;;
   final static ZNRecordSerializer _deserializer = new ZNRecordSerializer();
 
   static class Stats
@@ -42,6 +44,7 @@ public class ZkLogAnalyzer
 
   static String getAttributeValue(String line, String attribute)
   {
+    if(line==null)return null;
     String[] parts = line.split("\\s");
     if (parts != null && parts.length > 0)
     {
@@ -146,7 +149,7 @@ public class ZkLogAnalyzer
       System.out.println(lastModified + ": "
           + (fileName.substring(fileName.lastIndexOf('/') + 1)));
 
-      String parsedFileName = "/tmp/zkLogAnalyzor_zklog.parsed" + i;
+      String parsedFileName = "zkLogAnalyzor_zklog.parsed" + i;
       i++;
       ZKLogFormatter.main(new String[] { "log", fileName, parsedFileName });
       parsedZkLogs.add(parsedFileName);
@@ -166,7 +169,7 @@ public class ZkLogAnalyzer
     System.out.println();
     Stats stats = new Stats();
     long lastTestStartTimestamp = Long.MAX_VALUE;
-
+    long controllerStartTime =0;
     for (String parsedZkLog : parsedZkLogs)
     {
 
@@ -176,6 +179,9 @@ public class ZkLogAnalyzer
       String inputLine;
       while ((inputLine = br.readLine()) != null)
       {
+        if(dump ==true ){
+          System.err.println(inputLine.replaceAll("data:.*", ""));
+        }
         String timestamp = getAttributeValue(inputLine, "time:");
         if (timestamp == null)
         {
@@ -186,21 +192,30 @@ public class ZkLogAnalyzer
         {
           continue;
         }
-
+        if (inputLine.indexOf("/start_disable") != -1){
+          dump =true;
+        }
         if (inputLine.indexOf("/" + clusterName + "/CONFIGS/CLUSTER/verify") != -1)
         {
           String type = getAttributeValue(inputLine, "type:");
           if (type.equals("delete"))
           {
             System.out.println(timestamp + ": verify done");
+            System.out.println("lastTestStartTimestamp:"+ lastTestStartTimestamp);
             String lastCSUpdateLine =
                 findLastCSUpdateBetween(csUpdateLines,
                                         lastTestStartTimestamp,
                                         timestampVal);
             long lastCSUpdateTimestamp =
                 Long.parseLong(getAttributeValue(lastCSUpdateLine, "time:"));
-            System.out.println("state transition latency: "
+            System.out.println("Last CS Update:"+ lastCSUpdateTimestamp);
+            
+            System.out.println("state transition latency: "+ 
                 + (lastCSUpdateTimestamp - lastTestStartTimestamp) + "ms");
+
+            System.out.println("state transition latency since controller start: "+ 
+                + (lastCSUpdateTimestamp - controllerStartTime) + "ms");
+            
             System.out.println("Create MSG\t" + stats.msgSentCount + "\t"
                 + stats.msgSentCount_O2S + "\t" + stats.msgSentCount_S2M + "\t"
                 + stats.msgSentCount_M2S);
@@ -220,6 +235,7 @@ public class ZkLogAnalyzer
         {
           if (timestampVal < lastTestStartTimestamp)
           {
+            System.out.println("SETTING lastTestStartTimestamp to "+timestampVal + " line:"+ inputLine);
             lastTestStartTimestamp = timestampVal;
           }
 
@@ -232,21 +248,22 @@ public class ZkLogAnalyzer
         }
         else if (inputLine.indexOf("closeSession") != -1)
         {
-          if (timestampVal < lastTestStartTimestamp)
-          {
-            lastTestStartTimestamp = timestampVal;
-          }
-
           // String timestamp = getAttributeValue(inputLine, "time:");
           String session = getAttributeValue(inputLine, "session:");
           if (sessionMap.containsKey(session))
           {
+            if (timestampVal < lastTestStartTimestamp)
+            {
+              System.out.println("SETTING lastTestStartTimestamp to "+timestampVal + " line:"+ inputLine);
+               lastTestStartTimestamp = timestampVal;
+            }
             String line = sessionMap.get(session);
             ZNRecord record = getZNRecord(line);
             LiveInstance liveInstance = new LiveInstance(record);
 
             System.out.println(timestamp + ": close session "
                 + liveInstance.getInstanceName());
+            dump =true;
           }
         }
         else if (inputLine.indexOf("/" + clusterName + "/CONTROLLER/LEADER") != -1)
@@ -256,7 +273,7 @@ public class ZkLogAnalyzer
           LiveInstance liveInstance = new LiveInstance(record);
           String session = getAttributeValue(inputLine, "session:");
           leaderSession = session;
-          // String timestamp = getAttributeValue(inputLine, "time:");
+          controllerStartTime = Long.parseLong(getAttributeValue(inputLine, "time:"));
           sessionMap.put(session, inputLine);
           System.out.println(timestamp + ": create LEADER "
               + liveInstance.getInstanceName());
@@ -271,8 +288,11 @@ public class ZkLogAnalyzer
           }
           else if (type.equals("setData"))
           {
+            String path = getAttributeValue(inputLine, "path:");
             csUpdateLines.add(inputLine);
             stats.curStateUpdateCount++;
+           // getAttributeValue(line, "data");
+            System.out.println("Update currentstate:"+ new Timestamp(Long.parseLong(timestamp)) + ":" + timestamp + " path:"+ path );
           }
         }
         else if (inputLine.indexOf("/" + clusterName + "/EXTERNALVIEW/") != -1)
@@ -342,6 +362,7 @@ public class ZkLogAnalyzer
               {
                 stats.msgSentCount_M2S++;
               }
+              System.out.println("Message create:"+new Timestamp(Long.parseLong(timestamp)));
             }
 
             // pos = inputLine.indexOf("MESSAGES");
