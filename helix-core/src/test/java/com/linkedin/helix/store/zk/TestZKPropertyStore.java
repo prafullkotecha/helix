@@ -16,13 +16,20 @@
 package com.linkedin.helix.store.zk;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.I0Itec.zkclient.DataUpdater;
+import org.I0Itec.zkclient.exception.ZkMarshallingError;
+import org.I0Itec.zkclient.serialize.ZkSerializer;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.data.Stat;
 import org.testng.Assert;
+import org.testng.annotations.Test;
 
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.ZkUnitTestBase;
@@ -31,6 +38,8 @@ import com.linkedin.helix.manager.zk.ZkClient;
 import com.linkedin.helix.store.PropertyJsonComparator;
 import com.linkedin.helix.store.PropertyJsonSerializer;
 import com.linkedin.helix.store.PropertyListener;
+import com.linkedin.helix.store.PropertySerializer;
+import com.linkedin.helix.store.PropertyStore;
 import com.linkedin.helix.store.PropertyStoreException;
 
 // TODO need to write performance test for zk-property store
@@ -73,7 +82,7 @@ public class TestZKPropertyStore extends ZkUnitTestBase
       
     }
   }
-
+  
   private class TestUpdater implements DataUpdater<ZNRecord>
   {
     @Override
@@ -114,7 +123,7 @@ public class TestZKPropertyStore extends ZkUnitTestBase
     return "/node_" + i;
   }
 
-  // @Test ()
+  //@Test
   public void testZKPropertyStore() throws Exception
   {
   	System.out.println("START " + className + " at " + new Date(System.currentTimeMillis()));
@@ -494,4 +503,204 @@ public class TestZKPropertyStore extends ZkUnitTestBase
       }
     }
   }
+  
+  @Test
+  public void testCallback() throws Exception
+  {
+	class CountingListener implements PropertyListener<String>
+	{
+		OperationRecorder opRecorder = new OperationRecorder();
+
+		@Override
+		public void onPropertyChange(String key) 
+		{
+			opRecorder.recordUpdate(key);
+		}
+
+		@Override
+		public void onPropertyCreate(String key) 
+		{
+			opRecorder.recordCreate(key);
+		}
+
+		@Override
+		public void onPropertyDelete(String key) 
+		{
+			opRecorder.recordDelete(key);
+		}
+	}
+	
+    ZkClient zkClient = new ZkClient(ZK_ADDR);
+    zkClient.setZkSerializer(new StringZKSerializer());
+    
+    // clean up zk
+    final String propertyStoreRoot = "/" + className;
+    if (zkClient.exists(propertyStoreRoot))
+    {
+    	zkClient.deleteRecursive(propertyStoreRoot);
+    }
+    
+    HashMap<String, String> properties = new HashMap<String, String>();
+    properties.put("/key1/key2/key3", "val1"); 
+    properties.put("/a/b/c", "val2"); 
+    properties.put("/xxx/yyy/zzz", "val3");
+    
+    ZKPropertyStore<String> store =
+            new ZKPropertyStore<String>(new ZkClient(ZK_ADDR), new PropertyStoreStringSerializer(), propertyStoreRoot);
+	store.subscribeForPropertyChange("/",  new CountingListener());
+
+    CountingListener countingListener = new CountingListener();
+
+    ZKPropertyStore<String> anotherStore =
+            new ZKPropertyStore<String>(new ZkClient(ZK_ADDR), new PropertyStoreStringSerializer(), propertyStoreRoot);
+    anotherStore.subscribeForPropertyChange("/", countingListener);
+
+    
+    //Test create
+    for(String key : properties.keySet())
+    {
+    	store.setProperty(key, properties.get(key));
+    }
+
+    // wait for cache being updated by zk callbacks
+    Thread.sleep(100);
+    
+    for(String key : properties.keySet())
+    {
+    	byte[] byteArray = (byte[]) anotherStore._cache.get(propertyStoreRoot + key, new Stat());
+    	Assert.assertEquals(new String(byteArray), properties.get(key));
+    }
+    
+    Assert.assertTrue(countingListener.opRecorder._createdKeys.size() != 0);
+    
+    
+    //test update
+    for(String key : properties.keySet())
+    {
+    	store.setProperty(key, "updated" + properties.get(key));
+    }
+
+    // wait for cache being updated by zk callbacks
+    Thread.sleep(100);
+    
+    for(String key : properties.keySet())
+    {
+    	byte[] byteArray = (byte[]) anotherStore._cache.get(propertyStoreRoot + key, new Stat());
+    	Assert.assertEquals(new String(byteArray), "updated"  + properties.get(key));
+    }
+    
+    Assert.assertTrue(countingListener.opRecorder._updateCounts.size() != 0);
+    
+    //test delete
+    for(String key : properties.keySet())
+    {
+    	store.removeProperty(key);
+    }
+    
+    // wait for cache being updated by zk callbacks
+    Thread.sleep(100);
+    
+    for(String key : properties.keySet())
+    {
+    	Assert.assertNull(anotherStore._cache.get(propertyStoreRoot + key, new Stat()));
+    }
+    
+    Assert.assertTrue(countingListener.opRecorder._deleteCounts.size() != 0);
+
+    System.out.println(countingListener.opRecorder);
+    
+    zkClient.close();
+  }
 }
+
+class OperationRecorder {
+	Map<String, Integer> _deleteCounts = new HashMap<String, Integer>();
+	Map<String, Integer> _updateCounts = new HashMap<String, Integer>();
+	Set<String> _createdKeys = new HashSet<String>();
+
+	public synchronized void recordDelete(String key) {
+		int prevCount = (_deleteCounts.containsKey(key) ? _deleteCounts
+				.get(key) : 0);
+		_deleteCounts.put(key, prevCount + 1);
+	}
+
+	public synchronized void recordUpdate(String key) {
+		int prevCount = (_updateCounts.containsKey(key) ? _updateCounts
+				.get(key) : 0);
+		_updateCounts.put(key, prevCount + 1);
+	}
+
+	public synchronized void recordCreate(String key) {
+				_createdKeys.add(key);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof OperationRecorder) {
+			OperationRecorder rhs = (OperationRecorder) obj;
+			return (_deleteCounts.keySet().equals(rhs._deleteCounts.keySet())
+					&& _updateCounts.keySet().equals(rhs._updateCounts.keySet()) && _createdKeys.equals(rhs._createdKeys));
+		}
+
+		return false;
+	}
+
+	public String toString() {
+		return _createdKeys.toString() + ":" + _updateCounts.toString() + ":"
+				+ _deleteCounts.toString();
+	}
+	
+	public void clear()
+	{
+		_createdKeys.clear();
+		_updateCounts.clear();
+		_deleteCounts.clear();
+	}
+}
+
+class PropertyStoreStringSerializer implements PropertySerializer<String> 
+{
+
+    @Override
+    public byte[] serialize(String data) throws PropertyStoreException {
+            // TODO Auto-generated method stub
+            String str = data;
+            if (str == null) {
+                    return null;
+            }
+
+            return str.getBytes();
+    }
+
+    @Override
+    public String deserialize(byte[] bytes) throws PropertyStoreException {
+            // TODO Auto-generated method stub
+            if (bytes == null) {
+                    return null;
+            }
+            return new String(bytes);
+    }
+}
+
+class StringZKSerializer implements ZkSerializer {
+
+    @Override
+    public byte[] serialize(Object data) throws ZkMarshallingError {
+            // TODO Auto-generated method stub
+            String str = (String) data;
+            if (str == null) {
+                    return null;
+            }
+
+            return str.getBytes();
+    }
+
+    @Override
+    public Object deserialize(byte[] bytes) throws ZkMarshallingError {
+            // TODO Auto-generated method stub
+            if (bytes == null) {
+                    return null;
+            }
+            return new String(bytes);
+    }
+};
