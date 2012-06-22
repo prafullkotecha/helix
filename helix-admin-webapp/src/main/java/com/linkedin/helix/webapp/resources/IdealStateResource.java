@@ -32,6 +32,7 @@ import com.linkedin.helix.webapp.RestAdminApplication;
 public class IdealStateResource extends Resource
 {
   public static final String _replicas = "replicas"; 
+  public static final String _resourceKeyPrefix = "key";
   public IdealStateResource(Context context,
       Request request,
       Response response) 
@@ -122,7 +123,14 @@ public class IdealStateResource extends Resource
       {
         int replicas = Integer.parseInt(paraMap.get(_replicas));
         ClusterSetup setupTool = new ClusterSetup(zkServer);
-        setupTool.rebalanceStorageCluster(clusterName, resourceName, replicas);
+        if(paraMap.containsKey(_resourceKeyPrefix))
+        {
+          setupTool.rebalanceStorageCluster(clusterName, resourceName, replicas, paraMap.get(_resourceKeyPrefix));
+        }
+        else
+        {
+          setupTool.rebalanceStorageCluster(clusterName, resourceName, replicas);
+        }
       }
       else
       {
