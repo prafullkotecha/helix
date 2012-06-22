@@ -657,6 +657,8 @@ public class ZKHelixManager implements HelixManager
       for (CallbackHandler handler : _handlers)
       {
         handler.reset();
+        logger.info("reset handler: " + handler.getPath() + " by " + Thread.currentThread().getName());
+
       }
     }
   }
@@ -677,7 +679,7 @@ public class ZKHelixManager implements HelixManager
     synchronized (this)
     {
       _handlers.add(handler);
-      logger.info("Total " + _handlers.size() + " handlers");
+      logger.info("add handler: " + handler.getPath() + " by " + Thread.currentThread().getName());
     }
   }
 
