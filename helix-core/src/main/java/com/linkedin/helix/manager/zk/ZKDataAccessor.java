@@ -118,8 +118,8 @@ public class ZKDataAccessor implements DataAccessor
   }
 
   @Override
-  public <T extends ZNRecordDecorator>
-    T getProperty(Class<T> clazz, PropertyType type, String... keys)
+  public <T extends ZNRecordDecorator> T getProperty(Class<T> clazz, PropertyType type,
+      String... keys)
   {
     return ZNRecordDecorator.convertToTypedInstance(clazz, getProperty(type, keys));
   }
@@ -169,8 +169,8 @@ public class ZKDataAccessor implements DataAccessor
   }
 
   @Override
-  public <T extends ZNRecordDecorator>
-    List<T> getChildValues(Class<T> clazz, PropertyType type, String... keys)
+  public <T extends ZNRecordDecorator> List<T> getChildValues(Class<T> clazz, PropertyType type,
+      String... keys)
   {
     List<ZNRecord> newChilds = getChildValues(type, keys);
     if (newChilds.size() > 0)
@@ -233,7 +233,7 @@ public class ZKDataAccessor implements DataAccessor
 
   /**
    * Read a zookeeper node only if it's data has been changed since last read
-   *
+   * 
    * @param parentPath
    * @param oldChildRecords
    * @return newChildRecords
@@ -267,13 +267,15 @@ public class ZKDataAccessor implements DataAccessor
         ZNRecord oldChild = oldChildRecords.get(child);
 
         int oldVersion = oldChild.getVersion();
+        long oldCtime = oldChild.getCreationTime();
+
         newStat = _zkClient.getStat(childPath);
         if (newStat != null)
         {
           // System.out.print(child + " oldStat:" + oldStat);
           // System.out.print(child + " newStat:" + newStat);
 
-          if (oldVersion < newStat.getVersion())
+          if (oldCtime < newStat.getCtime() || oldVersion < newStat.getVersion())
           {
             ZNRecord record = _zkClient.readDataAndStat(childPath, newStat, true);
             if (record != null)
@@ -295,8 +297,8 @@ public class ZKDataAccessor implements DataAccessor
   }
 
   @Override
-  public <T extends ZNRecordDecorator>
-    Map<String, T> getChildValuesMap(Class<T> clazz, PropertyType type, String... keys)
+  public <T extends ZNRecordDecorator> Map<String, T> getChildValuesMap(Class<T> clazz,
+      PropertyType type, String... keys)
   {
     List<T> list = getChildValues(clazz, type, keys);
     return Collections.unmodifiableMap(ZNRecordDecorator.convertListToMap(list));
