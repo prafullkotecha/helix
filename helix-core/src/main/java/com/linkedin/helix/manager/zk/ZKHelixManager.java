@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Timer;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.I0Itec.zkclient.serialize.ZkSerializer;
 import org.apache.log4j.Logger;
@@ -67,31 +66,31 @@ import com.linkedin.helix.util.HelixUtil;
 
 public class ZKHelixManager implements HelixManager
 {
-  private static Logger                                  logger                  =
-                                                                                     Logger.getLogger(ZKHelixManager.class);
-  private static final int                               RETRY_LIMIT             = 3;
-  private static final int                               CONNECTIONTIMEOUT       = 10000;
-  private final String                                   _clusterName;
-  private final String                                   _instanceName;
-  private final String                                   _zkConnectString;
-  private static final int                               DEFAULT_SESSION_TIMEOUT = 30000;
-  private ZKDataAccessor                                 _accessor;
-  private ConfigAccessor                                 _configAccessor;
-  protected ZkClient                                     _zkClient;
-  private final List<CallbackHandler>                    _handlers;
-  private final ZkStateChangeListener                    _zkStateChangeListener;
-  private final InstanceType                             _instanceType;
-  private String                                         _sessionId;
-  private Timer                                          _timer;
-  private CallbackHandler                                _leaderElectionHandler;
-  private ParticipantHealthReportCollectorImpl           _participantHealthCheckInfoCollector;
-  private final DefaultMessagingService                  _messagingService;
-  private ZKHelixAdmin                                   _managementTool;
-  private final String                                   _version;
-  private final StateMachineEngine                       _stateMachEngine;
-  private int                                            _sessionTimeout;
-  private final AtomicReference<PropertyStore<ZNRecord>> _propertyStoreRef;
-  private final List<HelixTimerTask>                     _controllerTimerTasks;
+  private static Logger                        logger                  =
+                                                                           Logger.getLogger(ZKHelixManager.class);
+  private static final int                     RETRY_LIMIT             = 3;
+  private static final int                     CONNECTIONTIMEOUT       = 10000;
+  private final String                         _clusterName;
+  private final String                         _instanceName;
+  private final String                         _zkConnectString;
+  private static final int                     DEFAULT_SESSION_TIMEOUT = 30000;
+  private ZKDataAccessor                       _accessor;
+  private ConfigAccessor                       _configAccessor;
+  protected ZkClient                           _zkClient;
+  private final List<CallbackHandler>          _handlers;
+  private final ZkStateChangeListener          _zkStateChangeListener;
+  private final InstanceType                   _instanceType;
+  private String                               _sessionId;
+  private Timer                                _timer;
+  private CallbackHandler                      _leaderElectionHandler;
+  private ParticipantHealthReportCollectorImpl _participantHealthCheckInfoCollector;
+  private final DefaultMessagingService        _messagingService;
+  private ZKHelixAdmin                         _managementTool;
+  private final String                         _version;
+  private final StateMachineEngine             _stateMachEngine;
+  private int                                  _sessionTimeout;
+  private PropertyStore<ZNRecord>              _propertyStore;
+  private final List<HelixTimerTask>           _controllerTimerTasks;
 
   public ZKHelixManager(String clusterName,
                         String instanceName,
@@ -154,8 +153,6 @@ public class ZKHelixManager implements HelixManager
 
     _stateMachEngine = new HelixStateMachineEngine(this);
 
-    _propertyStoreRef = new AtomicReference<PropertyStore<ZNRecord>>(); 
-        
     // add all timer tasks
     _controllerTimerTasks = new ArrayList<HelixTimerTask>();
     if (_instanceType == InstanceType.CONTROLLER)
@@ -856,25 +853,23 @@ public class ZKHelixManager implements HelixManager
   }
 
   @Override
-  public PropertyStore<ZNRecord> getPropertyStore()
+  public synchronized PropertyStore<ZNRecord> getPropertyStore()
   {
     checkConnected();
 
-    synchronized (_propertyStoreRef)
+    if (_propertyStore == null)
     {
-      if (_propertyStoreRef.get() == null)
-      {
-        String path =
-            PropertyPathConfig.getPath(PropertyType.PROPERTYSTORE, _clusterName);
-        // property store uses a different serializer
-        ZkClient zkClient = new ZkClient(_zkConnectString, CONNECTIONTIMEOUT);
+      String path = PropertyPathConfig.getPath(PropertyType.PROPERTYSTORE, _clusterName);
+      // property store uses a different serializer
+      ZkClient zkClient = new ZkClient(_zkConnectString, CONNECTIONTIMEOUT);
 
-        PropertyStore<ZNRecord>_propertyStore =
-            new ZKPropertyStore<ZNRecord>(zkClient, new ZNRecordJsonSerializer(), path);
-        _propertyStoreRef.set(_propertyStore);
-      }
+      _propertyStore =
+          new ZKPropertyStore<ZNRecord>(zkClient, new ZNRecordJsonSerializer(), path);
+
     }
-    return _propertyStoreRef.get();  }
+
+    return _propertyStore;
+  }
 
   @Override
   public synchronized HelixAdmin getClusterManagmentTool()
