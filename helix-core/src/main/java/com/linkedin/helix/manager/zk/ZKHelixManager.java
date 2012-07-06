@@ -566,12 +566,14 @@ public class ZKHelixManager implements HelixManager
       }
       catch (HelixException e)
       {
+        logger.error("fail to createClient.", e);
         throw e;
       }
       catch (Exception e)
       {
         retryCount++;
-        // log
+
+        logger.error("fail to createClient. retry " + retryCount, e);
         if (retryCount == RETRY_LIMIT)
         {
           throw e;
@@ -817,6 +819,12 @@ public class ZKHelixManager implements HelixManager
           logger.info("Carrying over old session:" + previousSessionId + " resource "
               + previousCurrentState.getId() + " to new session:" + _sessionId);
           String stateModelDefRef = previousCurrentState.getStateModelDefRef();
+          if (stateModelDefRef == null)
+          {
+            logger.error("pervious current state doesn't have a state model def. skip it. prevCS: "
+                + previousCurrentState);
+            continue;
+          }
           StateModelDefinition stateModel =
               _accessor.getProperty(StateModelDefinition.class,
                                     PropertyType.STATEMODELDEFS,
