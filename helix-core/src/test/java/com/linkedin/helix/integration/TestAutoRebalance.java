@@ -9,21 +9,17 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import com.linkedin.helix.DataAccessor;
 import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.PropertyKey.Builder;
-import com.linkedin.helix.PropertyType;
 import com.linkedin.helix.TestHelper;
-import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.TestHelper.StartCMResult;
+import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.controller.HelixControllerMain;
 import com.linkedin.helix.controller.stages.ClusterDataCache;
-import com.linkedin.helix.manager.zk.ZKDataAccessor;
 import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
 import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.manager.zk.ZkClient;
-import com.linkedin.helix.model.IdealState;
 import com.linkedin.helix.model.IdealState.IdealStateModeProperty;
 import com.linkedin.helix.tools.ClusterSetup;
 import com.linkedin.helix.tools.ClusterStateVerifier;
@@ -33,6 +29,7 @@ public class TestAutoRebalance extends ZkStandAloneCMTestBase
 {
   private static final Logger LOG = Logger.getLogger(TestAutoRebalance.class.getName());
   
+  @Override
   @BeforeClass
   public void beforeClass() throws Exception
   {
@@ -51,7 +48,7 @@ public class TestAutoRebalance extends ZkStandAloneCMTestBase
 
     // setup storage cluster
     _setupTool.addCluster(CLUSTER_NAME, true);
-    _setupTool.addResourceToCluster(CLUSTER_NAME, TEST_DB, _PARTITIONS, STATE_MODEL, IdealStateModeProperty.AUTO_REBALANCE+"");
+    _setupTool.addResourceToCluster(CLUSTER_NAME, TEST_DB, _PARTITIONS, STATE_MODEL, IdealStateModeProperty.AUTO_REBALANCE+"", 0);
     for (int i = 0; i < NODE_NR; i++)
     {
       String storageNodeName = PARTICIPANT_PREFIX + ":" + (START_PORT + i);

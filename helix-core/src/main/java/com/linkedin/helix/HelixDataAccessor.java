@@ -21,31 +21,35 @@ import java.util.Map;
 import org.I0Itec.zkclient.DataUpdater;
 
 /**
- * Interface used to interact with Helix Data Types like IdealState, Config,
- * LiveInstance, Message, ExternalView etc PropertyKey represent the HelixData
- * type. See {@link Builder} to get more information on building a propertyKey.
+ * Interface used to interact with Helix Data Types like IdealState, Config, LiveInstance,
+ * Message, ExternalView etc PropertyKey represent the HelixData type. See {@link Builder}
+ * to get more information on building a propertyKey.
  * 
  * @author kgopalak
  * 
  */
 public interface HelixDataAccessor
 {
+  public static class Option
+  {
+    public static int BUCKETIZED = 0x1;
+  }
+
   /**
    * Create a helix property only if it does not exist.
    * 
    * @param key
    * @param value
-   * @return true if creation was successful. False if already exists or if it
-   *         failed to create
+   * @return true if creation was successful. False if already exists or if it failed to
+   *         create
    */
 
   <T extends HelixProperty> boolean createProperty(PropertyKey key, T value);
 
   /**
-   * Set a property, overwrite if it exists and creates if not exists. This api
-   * assumes the node exists and only tries to update it only if the call fail
-   * it will create the node. So there is a performance cost if always ends up
-   * creating the node.
+   * Set a property, overwrite if it exists and creates if not exists. This api assumes
+   * the node exists and only tries to update it only if the call fail it will create the
+   * node. So there is a performance cost if always ends up creating the node.
    * 
    * @param key
    * @param value
@@ -72,17 +76,55 @@ public interface HelixDataAccessor
   <T extends HelixProperty> T getProperty(PropertyKey key);
 
   /**
+   * Return the property values which must be refer to a single Helix Property. Property
+   * might be bucketized
+   * 
+   * @param keys
+   * @return
+   */
+  <T extends HelixProperty> T getProperty(PropertyKey key, Assembler<ZNRecord> assembler);
+
+  /**
+   * Return a list of property values, each of which must be refer to a single Helix
+   * Property.
+   * 
+   * @param keys
+   * @return
+   */
+  public <T extends HelixProperty> List<T> getProperty(List<PropertyKey> keys);
+
+  /**
+   * Return a list of property values, each of which must be refer to a single Helix
+   * Property. Property might be bucketized
+   * 
+   * @param keys
+   * @return
+   */
+  <T extends HelixProperty> List<T> getProperty(List<PropertyKey> keys,
+                                                List<Assembler<ZNRecord>> assemblers);
+
+  /**
+   * Return a map of property values, each of which must be refer to a single Helix
+   * Property. Property might be bucketized
+   * 
+   * @param keys
+   * @return
+   */
+  <T extends HelixProperty> Map<String, T> getPropertyMap(List<PropertyKey> keys,
+                                                          List<Assembler<ZNRecord>> assemblers);
+
+  /**
    * Removes the property
    * 
    * @param key
-   * @return true if removal was successful or node does not exist. false if the
-   *         node existed and failed to remove it
+   * @return true if removal was successful or node does not exist. false if the node
+   *         existed and failed to remove it
    */
   boolean removeProperty(PropertyKey key);
 
   /**
-   * Return the child names for a property. PropertyKey needs to refer to a
-   * collection like instances, resources. PropertyKey.isLeaf must be false
+   * Return the child names for a property. PropertyKey needs to refer to a collection
+   * like instances, resources. PropertyKey.isLeaf must be false
    * 
    * @param type
    * @return SubPropertyNames
@@ -90,8 +132,8 @@ public interface HelixDataAccessor
   List<String> getChildNames(PropertyKey key);
 
   /**
-   * Get the child values for a property. PropertyKey needs to refer to just one
-   * level above the non leaf. PropertyKey.isCollection must be true.
+   * Get the child values for a property. PropertyKey needs to refer to just one level
+   * above the non leaf. PropertyKey.isCollection must be true.
    * 
    * @param type
    * @return subPropertyValues
@@ -99,8 +141,8 @@ public interface HelixDataAccessor
   <T extends HelixProperty> List<T> getChildValues(PropertyKey key);
 
   /**
-   * Same as getChildValues except that it converts list into a map using the id
-   * of the HelixProperty
+   * Same as getChildValues except that it converts list into a map using the id of the
+   * HelixProperty
    * 
    * @param key
    * @return
@@ -116,7 +158,7 @@ public interface HelixDataAccessor
    * @return
    */
   <T extends HelixProperty> boolean[] createChildren(List<PropertyKey> keys,
-      List<T> children);
+                                                     List<T> children);
 
   /**
    * Sets multiple children under one parent
@@ -125,7 +167,7 @@ public interface HelixDataAccessor
    * @param views
    */
   <T extends HelixProperty> boolean[] setChildren(List<PropertyKey> keys, List<T> children);
-  
+
   /**
    * Updates multiple children under one parent
    * 
@@ -133,9 +175,9 @@ public interface HelixDataAccessor
    * @param views
    */
   <T extends HelixProperty> boolean[] updateChildren(List<String> paths,
-      List<DataUpdater<ZNRecord>> updaters,
-      int options);
-  
+                                                     List<DataUpdater<ZNRecord>> updaters,
+                                                     int options);
+
   /**
    * 
    * @return

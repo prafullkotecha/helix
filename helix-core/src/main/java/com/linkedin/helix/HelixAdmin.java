@@ -43,7 +43,7 @@ public interface HelixAdmin
                         String stateModelRef);
 
   void addResource(String clusterName, String resourceName, int numResources,
-                        String stateModelRef, String idealStateMode);
+                        String stateModelRef, String idealStateMode, int bucketSize);
 
   void addInstance(String clusterName, InstanceConfig instanceConfig);
 

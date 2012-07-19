@@ -24,11 +24,14 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.linkedin.helix.Bucketizer;
 import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.PropertyKey.Builder;
+import com.linkedin.helix.ZNRecord;
+import com.linkedin.helix.ZNRecordBucketizer;
 import com.linkedin.helix.ZNRecordDelta;
 import com.linkedin.helix.ZNRecordDelta.MERGEOPERATION;
 import com.linkedin.helix.model.CurrentState;
@@ -116,10 +119,24 @@ public class HelixStateTransitionHandler extends MessageHandler
       String resource = message.getResourceName();
       String instanceName = manager.getInstanceName();
 
-      CurrentState currentState =
-          accessor.getProperty(keyBuilder.currentState(instanceName,
-                                                       manager.getSessionId(),
-                                                       resource));
+      int bucketSize = message.getBucketSize();
+
+      CurrentState currentState = null;
+      if (bucketSize <= 0)
+      {
+        accessor.getProperty(keyBuilder.currentState(instanceName,
+                                                     manager.getSessionId(),
+                                                     resource));
+      }
+      else
+      {
+        Bucketizer<ZNRecord> bucketizer = new ZNRecordBucketizer(bucketSize);
+        accessor.getProperty(keyBuilder.currentState(instanceName,
+                                                     manager.getSessionId(),
+                                                     resource,
+                                                     bucketizer.getBucketName(partitionKey)));
+
+      }
 
       if (currentState == null)
       {
@@ -170,11 +187,24 @@ public class HelixStateTransitionHandler extends MessageHandler
 
       }
 
-      // based on task result update the current state of the node.
-      accessor.updateProperty(keyBuilder.currentState(instanceName,
-                                                      manager.getSessionId(),
-                                                      resource),
-                              _currentStateDelta);
+      // based on task result update the current state of the node
+      if (bucketSize <= 0)
+      {
+        accessor.updateProperty(keyBuilder.currentState(instanceName,
+                                                        manager.getSessionId(),
+                                                        resource),
+                                _currentStateDelta);
+
+      }
+      else
+      {
+        Bucketizer<ZNRecord> bucketizer = new ZNRecordBucketizer(bucketSize);
+        accessor.updateProperty(keyBuilder.currentState(instanceName,
+                                                        manager.getSessionId(),
+                                                        resource,
+                                                        bucketizer.getBucketName(partitionKey)),
+                                _currentStateDelta);
+      }
     }
     catch (Exception e)
     {

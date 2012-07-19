@@ -32,7 +32,7 @@ import com.linkedin.helix.ZNRecord;
 public class IdealState extends HelixProperty
 {
   public enum IdealStateProperty {
-    NUM_PARTITIONS, STATE_MODEL_DEF_REF, STATE_MODEL_FACTORY_NAME, REPLICAS, IDEAL_STATE_MODE
+    NUM_PARTITIONS, STATE_MODEL_DEF_REF, STATE_MODEL_FACTORY_NAME, REPLICAS, IDEAL_STATE_MODE, BUCKET_SIZE
   }
 
   public enum IdealStateModeProperty {
@@ -183,6 +183,22 @@ public class IdealState extends HelixProperty
     return _record.getSimpleField(IdealStateProperty.STATE_MODEL_FACTORY_NAME.toString());
   }
 
+  public void setBucketSize(int bucketSize)
+  {
+    _record.setSimpleField(IdealStateProperty.BUCKET_SIZE.toString(), "" + bucketSize);
+  }
+
+  public int getBucketSize()
+  {
+    int bucketSize = 0;
+    String bucketSizeStr = _record.getSimpleField(IdealStateProperty.BUCKET_SIZE.toString());
+    if (bucketSizeStr != null)
+    {
+      bucketSize = Integer.parseInt(bucketSizeStr);
+    }
+    return bucketSize;
+  }
+  
   @Override
   public boolean isValid()
   {

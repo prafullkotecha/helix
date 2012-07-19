@@ -215,7 +215,7 @@ public class ZKHelixManager implements HelixManager
   }
 
   @Override
-  public void addIdealStateChangeListener(final IdealStateChangeListener listener) throws Exception
+  public void addIdealStateChangeListener(final IdealStateChangeListener listener)
   {
     logger.info("ClusterManager.addIdealStateChangeListener()");
     checkConnected();
@@ -756,7 +756,7 @@ public class ZKHelixManager implements HelixManager
     }
     addLiveInstance();
     carryOverPreviousCurrentState();
-
+    
     // In case the cluster manager is running as a participant, setup message
     // listener
     addMessageListener(_messagingService.getExecutor(), _instanceName);

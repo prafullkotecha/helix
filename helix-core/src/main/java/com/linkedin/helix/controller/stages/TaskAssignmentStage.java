@@ -81,6 +81,7 @@ public class TaskAssignmentStage extends AbstractBaseStage
       logger.info("Sending message " + message.getMsgId() + " to " + message.getTgtName() + " transition "
           + message.getPartitionName() + " from:" + message.getFromState()
           + " to:" + message.getToState());
+      
       keys.add(keyBuilder.message(message.getTgtName(),message.getId()));
     }
     dataAccessor.createChildren(keys, messages);

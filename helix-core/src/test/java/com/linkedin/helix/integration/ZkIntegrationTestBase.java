@@ -54,7 +54,7 @@ public class ZkIntegrationTestBase
   protected static ClusterSetup _gSetupTool;
 
 
-  public static final String ZK_ADDR = "localhost:2183"; 
+  public static final String ZK_ADDR = "localhost:2183";
   protected static final String CLUSTER_PREFIX = "CLUSTER";
   protected static final String CONTROLLER_CLUSTER_PREFIX = "CONTROLLER_CLUSTER";
 

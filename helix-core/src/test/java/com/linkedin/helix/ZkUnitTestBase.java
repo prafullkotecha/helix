@@ -388,4 +388,16 @@ public class ZkUnitTestBase
     return msg;
   }
 
+  protected String getTestMethodName()
+  {
+    StackTraceElement[] calls = Thread.currentThread().getStackTrace();
+    return calls[2].getMethodName();
+  }
+  
+  protected String getTestClassName()
+  {
+    StackTraceElement[] calls = Thread.currentThread().getStackTrace();
+    String fullClassName = calls[2].getClassName();
+    return fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
+  }
 }

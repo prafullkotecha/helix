@@ -1,6 +1,7 @@
 package com.linkedin.helix.manager.zk;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +10,7 @@ import org.I0Itec.zkclient.DataUpdater;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.apache.log4j.Logger;
 
+import com.linkedin.helix.Assembler;
 import com.linkedin.helix.BaseDataAccessor;
 import com.linkedin.helix.GroupCommit;
 import com.linkedin.helix.HelixDataAccessor;
@@ -61,13 +63,12 @@ public class ZKHelixDataAccessor implements HelixDataAccessor
   }
 
   @Override
-  public <T extends HelixProperty> boolean updateProperty(PropertyKey key,
-      T value)
+  public <T extends HelixProperty> boolean updateProperty(PropertyKey key, T value)
   {
     PropertyType type = key.getType();
     String path = key.getPath();
     int options = constructOptions(type);
-    
+
     boolean success;
     switch (type)
     {
@@ -75,19 +76,20 @@ public class ZKHelixDataAccessor implements HelixDataAccessor
       success = _groupCommit.commit(_baseDataAccessor, path, value.getRecord());
       break;
     default:
-      success = _baseDataAccessor.update(path, new ZNRecordUpdater(value.getRecord()), options);
+      success =
+          _baseDataAccessor.update(path, new ZNRecordUpdater(value.getRecord()), options);
       break;
     }
     return success;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public <T extends HelixProperty> T getProperty(PropertyKey key)
   {
     PropertyType type = key.getType();
     String path = key.getPath();
     int options = constructOptions(type);
+
     ZNRecord record = null;
     try
     {
@@ -97,7 +99,140 @@ public class ZKHelixDataAccessor implements HelixDataAccessor
     {
       // OK
     }
-    return (T) HelixProperty.convertToTypedInstance(key.getTypeClass(), record);
+
+    @SuppressWarnings("unchecked")
+    T t = (T) HelixProperty.convertToTypedInstance(key.getTypeClass(), record);
+    return t;
+  }
+
+  @Override
+  public <T extends HelixProperty> List<T> getProperty(List<PropertyKey> keys)
+  {
+    if (keys == null || keys.size() == 0)
+    {
+      return Collections.emptyList();
+    }
+
+    List<T> childValues = new ArrayList<T>();
+
+    List<String> paths = new ArrayList<String>();
+    for (PropertyKey key : keys)
+    {
+      paths.add(key.getPath());
+    }
+
+    List<ZNRecord> children = _baseDataAccessor.get(paths, null, 0);
+
+    for (int i = 0; i < keys.size(); i++)
+    {
+      PropertyKey key = keys.get(i);
+      ZNRecord record = children.get(i);
+      if (record != null)
+      {
+        @SuppressWarnings("unchecked")
+        T t = (T) HelixProperty.convertToTypedInstance(key.getTypeClass(), record);
+        childValues.add(t);
+      }
+      else
+      {
+        childValues.add(null);
+      }
+    }
+
+    return childValues;
+  }
+
+  @Override
+  public <T extends HelixProperty> Map<String, T> getPropertyMap(List<PropertyKey> keys,
+                                                          List<Assembler<ZNRecord>> assemblers)
+  {
+    if (keys == null || keys.size() == 0)
+    {
+      return Collections.emptyMap();
+    }
+
+    List<T> children = getProperty(keys, assemblers);
+    Map<String, T> childValuesMap = new HashMap<String, T>();
+    for (T t : children)
+    {
+      if (t != null)
+      {
+        childValuesMap.put(t.getRecord().getId(), t);
+      }
+    }
+
+    return childValuesMap;
+  }
+
+  @Override
+  public <T extends HelixProperty> T getProperty(PropertyKey key,
+                                                 Assembler<ZNRecord> assembler)
+  {
+    PropertyType type = key.getType();
+    String path = key.getPath();
+    int options = constructOptions(type);
+    ZNRecord record = null;
+
+    if (assembler != null)
+    {
+      List<String> childNames = _baseDataAccessor.getChildNames(path, options);
+      List<String> paths = new ArrayList<String>();
+      for (String childName : childNames)
+      {
+        String childPath = path + "/" + childName;
+        paths.add(childPath);
+      }
+
+      List<ZNRecord> records = _baseDataAccessor.get(paths, null, options);
+      Map<String, ZNRecord> recordsMap = new HashMap<String, ZNRecord>();
+      for (int i = 0; i < childNames.size(); i++)
+      {
+        ZNRecord bucketizedRecord = records.get(i);
+        if (bucketizedRecord != null)
+        {
+          recordsMap.put(childNames.get(i), bucketizedRecord);
+        }
+      }
+
+      record = assembler.assemble(recordsMap);
+
+      @SuppressWarnings("unchecked")
+      T t = (T) HelixProperty.convertToTypedInstance(key.getTypeClass(), record);
+      return t;
+    }
+    else
+    {
+      return getProperty(key);
+    }
+  }
+
+  @Override
+  public <T extends HelixProperty> List<T> getProperty(List<PropertyKey> keys,
+                                                       List<Assembler<ZNRecord>> assemblers)
+  {
+    if (keys == null || keys.size() == 0)
+    {
+      return Collections.emptyList();
+    }
+
+    List<T> childValues = new ArrayList<T>();
+
+    if (assemblers != null)
+    {
+      for (int i = 0; i < keys.size(); i++)
+      {
+        PropertyKey key = keys.get(i);
+        Assembler<ZNRecord> assembler = assemblers.get(i);
+
+        T t = getProperty(key, assembler);
+        childValues.add(t);
+      }
+      return childValues;
+    }
+    else
+    {
+      return getProperty(keys);
+    }
   }
 
   @Override
@@ -117,22 +252,24 @@ public class ZKHelixDataAccessor implements HelixDataAccessor
     return _baseDataAccessor.getChildNames(parentPath, options);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public <T extends HelixProperty> List<T> getChildValues(PropertyKey key)
   {
     PropertyType type = key.getType();
     String parentPath = key.getPath();
     int options = constructOptions(type);
+    List<T> childValues = new ArrayList<T>();
+
     List<ZNRecord> children = _baseDataAccessor.getChildren(parentPath, null, options);
-    List<HelixProperty> childValues = new ArrayList<HelixProperty>();
+
     for (ZNRecord record : children)
     {
-      HelixProperty typedInstance =
-          HelixProperty.convertToTypedInstance(key.getTypeClass(), record);
-      childValues.add(typedInstance);
+      // HelixProperty typedInstance =
+      @SuppressWarnings("unchecked")
+      T t = (T) HelixProperty.convertToTypedInstance(key.getTypeClass(), record);
+      childValues.add(t);
     }
-    return (List<T>) childValues;
+    return childValues;
   }
 
   @Override
@@ -141,13 +278,15 @@ public class ZKHelixDataAccessor implements HelixDataAccessor
     PropertyType type = key.getType();
     String parentPath = key.getPath();
     int options = constructOptions(type);
-    List<ZNRecord> children = _baseDataAccessor.getChildren(parentPath, null, options);
+    // List<ZNRecord> children = _baseDataAccessor.getChildren(parentPath, null, options);
+    List<T> children = getChildValues(key);
     Map<String, T> childValuesMap = new HashMap<String, T>();
-    for (ZNRecord record : children)
+    // for (ZNRecord record : children)
+    for (T t : children)
     {
-      @SuppressWarnings("unchecked")
-      T t = (T) HelixProperty.convertToTypedInstance(key.getTypeClass(), record);
-      childValuesMap.put(record.getId(), t);
+      // @SuppressWarnings("unchecked")
+      // T t = (T) HelixProperty.convertToTypedInstance(key.getTypeClass(), record);
+      childValuesMap.put(t.getRecord().getId(), t);
     }
     return childValuesMap;
   }

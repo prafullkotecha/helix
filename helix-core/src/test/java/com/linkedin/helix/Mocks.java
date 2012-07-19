@@ -17,6 +17,7 @@ package com.linkedin.helix;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -351,28 +352,12 @@ public class Mocks
     Map<String, ZNRecord> map = new HashMap<String, ZNRecord>();
 
     @Override
-//    public boolean setProperty(PropertyType type, HelixProperty value, String... keys)
     public boolean setProperty(PropertyKey key, HelixProperty value)
     {
-//      return setProperty(type, value.getRecord(), keys);
       String path = key.getPath();
       data.put(path, value.getRecord());
       return true;
     }
-
-//    @Override
-//    public boolean setProperty(PropertyType type, ZNRecord value, String... keys)
-//    {
-//      String path = PropertyPathConfig.getPath(type, _clusterName, keys);
-//      data.put(path, value);
-//      return true;
-//    }
-
-//    @Override
-//    public boolean updateProperty(PropertyType type, HelixProperty value, String... keys)
-//    {
-//      return updateProperty(type, value.getRecord(), keys);
-//    }
 
     @Override
     public <T extends HelixProperty> boolean updateProperty(PropertyKey key, T value)
@@ -416,43 +401,27 @@ public class Mocks
       return true;
     }
 
-//    @Override
-//    public <T extends HelixProperty> T getProperty(Class<T> clazz, PropertyType type,
-//        String... keys)
-//    {
-//      ZNRecord record = getProperty(type, keys);
-//      if (record == null)
-//      {
-//        return null;
-//      }
-//      return HelixProperty.convertToTypedInstance(clazz, record);
-//    }
-
     @SuppressWarnings("unchecked")
     @Override
     public <T extends HelixProperty> T getProperty(PropertyKey key)
-//    public ZNRecord getProperty(PropertyType type, String... keys)
     {
-      // String path = PropertyPathConfig.getPath(type, _clusterName, keys);
       String path = key.getPath();
       return (T) HelixProperty.convertToTypedInstance(key.getTypeClass(), data.get(path));
     }
 
     @Override
     public boolean removeProperty(PropertyKey key)
-//    public boolean removeProperty(PropertyType type, String... keys)
     {
-      String path = key.getPath();  // PropertyPathConfig.getPath(type, _clusterName, keys);
+      String path = key.getPath();
       data.remove(path);
       return true;
     }
 
     @Override
     public List<String> getChildNames(PropertyKey propertyKey)
-//    public List<String> getChildNames(PropertyType type, String... keys)
     {
       List<String> child = new ArrayList<String>();
-      String path = propertyKey.getPath();  // PropertyPathConfig.getPath(type, _clusterName, keys);
+      String path = propertyKey.getPath();
       for (String key : data.keySet())
       {
         if (key.startsWith(path))
@@ -468,18 +437,9 @@ public class Mocks
       return child;
     }
 
-//    @Override
-//    public <T extends HelixProperty> List<T> getChildValues(Class<T> clazz, PropertyType type,
-//        String... keys)
-//    {
-//      List<ZNRecord> list = getChildValues(type, keys);
-//      return HelixProperty.convertToTypedList(clazz, list);
-//    }
-
     @SuppressWarnings("unchecked")
     @Override
     public <T extends HelixProperty> List<T> getChildValues(PropertyKey propertyKey)
-//    public List<ZNRecord> getChildValues(PropertyType type, String... keys)
     {
       List<ZNRecord> childs = new ArrayList<ZNRecord>();
       String path = propertyKey.getPath();  // PropertyPathConfig.getPath(type, _clusterName, keys);
@@ -508,8 +468,6 @@ public class Mocks
 
     @Override
     public <T extends HelixProperty> Map<String, T> getChildValuesMap(PropertyKey key)
-//    public <T extends HelixProperty> Map<String, T> getChildValuesMap(Class<T> clazz,
-//       PropertyType type, String... keys)
     {
       List<T> list = getChildValues(key);
       return HelixProperty.convertListToMap(list);
@@ -557,6 +515,55 @@ public class Mocks
     {
       // TODO Auto-generated method stub
       return null;
+    }
+
+    @Override
+    public <T extends HelixProperty> T getProperty(PropertyKey key,
+                                                   Assembler<ZNRecord> assembler)
+    {
+      return getProperty(key);
+    }
+
+    @Override
+    public <T extends HelixProperty> List<T> getProperty(List<PropertyKey> keys)
+    {
+      List<T> list = new ArrayList<T>();
+      for (PropertyKey key : keys)
+      {
+        T t = getProperty(key);
+        list.add(t);
+      }
+      return list;
+    }
+
+    @Override
+    public <T extends HelixProperty> List<T> getProperty(List<PropertyKey> keys,
+                                                         List<Assembler<ZNRecord> > assemblers)
+    {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public <T extends HelixProperty> Map<String, T> getPropertyMap(List<PropertyKey> keys,
+                                                                   List<Assembler<ZNRecord> > assemblers)
+    {
+      if (keys == null || keys.size() == 0)
+      {
+        return Collections.emptyMap();
+      }
+
+      List<T> children = getProperty(keys, assemblers);
+      Map<String, T> childValuesMap = new HashMap<String, T>();
+      for (T t : children)
+      {
+        if (t != null)
+        {
+          childValuesMap.put(t.getRecord().getId(), t);
+        }
+      }
+
+      return childValuesMap;
     }
   }
 

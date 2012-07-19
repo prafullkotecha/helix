@@ -83,6 +83,7 @@ public class ClusterSetup
   public static final String dropInstance = "dropNode";
   public static final String rebalance = "rebalance";
   public static final String mode = "mode";
+  public static final String bucketSize = "bucketSize";
   public static final String resourceKeyPrefix = "key";
 
   // Query info (TBD in V2)
@@ -259,14 +260,14 @@ public class ClusterSetup
       String stateModelRef)
   {
     addResourceToCluster(clusterName, resourceName, numResources, stateModelRef,
-        IdealStateModeProperty.AUTO.toString());
+        IdealStateModeProperty.AUTO.toString(), 0);
   }
 
   public void addResourceToCluster(String clusterName, String resourceName, int numResources,
-      String stateModelRef, String idealStateMode)
+      String stateModelRef, String idealStateMode, int bucketSize)
   {
     _admin.addResource(clusterName, resourceName, numResources, stateModelRef,
-        idealStateMode);
+        idealStateMode, bucketSize);
   }
 
   public void dropResourceFromCluster(String clusterName, String resourceName)
@@ -526,6 +527,12 @@ public class ClusterSetup
     resourceModeOption.setArgs(1);
     resourceModeOption.setRequired(false);
     resourceModeOption.setArgName("IdealState mode");
+
+    Option resourceBucketSizeOption = OptionBuilder.withLongOpt(bucketSize)
+        .withDescription("Specify number of bucket, used with addResourceGroup command").create();
+    resourceBucketSizeOption.setArgs(1);
+    resourceBucketSizeOption.setRequired(false);
+    resourceBucketSizeOption.setArgName("Number of buckets for a resource");
     
     Option resourceKeyOption = OptionBuilder.withLongOpt(resourceKeyPrefix)
         .withDescription("Specify resource key prefix, used with rebalance command").create();
@@ -643,6 +650,7 @@ public class ClusterSetup
     group.addOption(rebalanceOption);
     group.addOption(addResourceOption);
     group.addOption(resourceModeOption);
+    group.addOption(resourceBucketSizeOption);
     group.addOption(resourceKeyOption);
     group.addOption(addClusterOption);
     group.addOption(addClusterOption2);
@@ -778,6 +786,7 @@ public class ClusterSetup
 
     if (cmd.hasOption(addResource))
     {
+      String[] params = cmd.getOptionValues(addResource);
       String clusterName = cmd.getOptionValues(addResource)[0];
       String resourceName = cmd.getOptionValues(addResource)[1];
       int partitions = Integer.parseInt(cmd.getOptionValues(addResource)[2]);
@@ -787,7 +796,14 @@ public class ClusterSetup
       {
         modeValue = cmd.getOptionValues(mode)[0];
       }
-      setupTool.addResourceToCluster(clusterName, resourceName, partitions, stateModelRef, modeValue);
+      
+      int bucketsVal = 0;
+      if(cmd.hasOption(bucketSize))
+      {
+        bucketsVal = Integer.parseInt(cmd.getOptionValues(bucketSize)[0]);
+      }
+      
+      setupTool.addResourceToCluster(clusterName, resourceName, partitions, stateModelRef, modeValue, bucketsVal);
       return 0;
     }
 

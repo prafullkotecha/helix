@@ -185,7 +185,7 @@ public class UnitTestDynFileClusterMgr
     try
     {
       tool.addResource(clusterName, "resource", 10, "MasterSlave",
-          IdealStateModeProperty.AUTO.toString());
+          IdealStateModeProperty.AUTO.toString(), 0);
     } catch (UnsupportedOperationException e)
     {
       exceptionCaught = true;

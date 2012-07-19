@@ -15,17 +15,23 @@
  */
 package com.linkedin.helix.controller.stages;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.linkedin.helix.Assembler;
 import com.linkedin.helix.HelixConstants.StateModelToken;
 import com.linkedin.helix.HelixDataAccessor;
+import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
+import com.linkedin.helix.ZNRecord;
+import com.linkedin.helix.ZNRecordAssembler;
 import com.linkedin.helix.model.ClusterConstraints;
 import com.linkedin.helix.model.ClusterConstraints.ConstraintType;
 import com.linkedin.helix.model.CurrentState;
@@ -76,8 +82,7 @@ public class ClusterDataCache
 
     _stateModelDefMap = accessor.getChildValuesMap(keyBuilder.stateModelDefs());
     _instanceConfigMap = accessor.getChildValuesMap(keyBuilder.instanceConfigs());
-    _constraintMap =
-        accessor.getChildValuesMap(keyBuilder.constraints());
+    _constraintMap = accessor.getChildValuesMap(keyBuilder.constraints());
 
     Map<String, Map<String, Message>> msgMap =
         new HashMap<String, Map<String, Message>>();
@@ -101,9 +106,35 @@ public class ClusterDataCache
       }
       Map<String, Map<String, CurrentState>> curStateMap =
           allCurStateMap.get(instanceName);
+
       Map<String, CurrentState> map =
           accessor.getChildValuesMap(keyBuilder.currentStates(instanceName, sessionId));
-      curStateMap.put(sessionId, map);
+      List<PropertyKey> bucketizeKeys = new ArrayList<PropertyKey>();
+      List<Assembler<ZNRecord>> assemblers = new ArrayList<Assembler<ZNRecord>>();
+      for (String resource : map.keySet())
+      {
+        CurrentState curState = map.get(resource);
+        if (curState.getBucketSize() > 0)
+        {
+          bucketizeKeys.add(keyBuilder.currentState(instanceName, sessionId, resource));
+          assemblers.add(new ZNRecordAssembler());
+        }
+      }
+
+      Map<String, CurrentState> bucketizeMap =
+          accessor.getPropertyMap(bucketizeKeys, assemblers);
+      Map<String, CurrentState> mergeMap = new HashMap<String, CurrentState>();
+      if (map != null)
+      {
+        mergeMap.putAll(map);
+      }
+
+      if (bucketizeMap != null)
+      {
+        mergeMap.putAll(bucketizeMap);
+      }
+
+      curStateMap.put(sessionId, mergeMap);
     }
 
     for (String instance : allCurStateMap.keySet())

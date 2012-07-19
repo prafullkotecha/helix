@@ -53,6 +53,7 @@ public class MessageGenerationPhase extends AbstractBaseStage
         event.getAttribute(AttributeName.CURRENT_STATE.toString());
     BestPossibleStateOutput bestPossibleStateOutput =
         event.getAttribute(AttributeName.BEST_POSSIBLE_STATE.toString());
+    
     if (manager == null || cache == null || resourceMap == null
         || currentStateOutput == null || bestPossibleStateOutput == null)
     {
@@ -73,6 +74,15 @@ public class MessageGenerationPhase extends AbstractBaseStage
     for (String resourceName : resourceMap.keySet())
     {
       Resource resource = resourceMap.get(resourceName);
+//      IdealState idealState = cache._idealStateMap.get(resourceName);
+      int bucketSize = resource.getBucketSize();
+//      Bucketizer<ZNRecord> bucketizer = null;
+//      int buckets = idealState.getBuckets();
+      
+//      if (buckets > 0)
+//      {
+//        bucketizer = new ZNRecordBucketizer(bucketSize);
+//      }
 
       StateModelDefinition stateModelDef =
           cache.getStateModelDef(resource.getStateModelDefRef());
@@ -135,6 +145,9 @@ public class MessageGenerationPhase extends AbstractBaseStage
           }
           else
           {
+            // partitions/buckets
+
+//            String bucketName = bucketizer == null? null : bucketizer.getBucketName(partition.getPartitionName());
             Message message =
                 createMessage(manager,
                               resourceName,
@@ -144,7 +157,8 @@ public class MessageGenerationPhase extends AbstractBaseStage
                               nextState,
                               sessionIdMap.get(instanceName),
                               stateModelDef.getId(),
-                              resource.getStateModelFactoryname());
+                              resource.getStateModelFactoryname(),
+                              bucketSize);
 
             output.addMessage(resourceName, partition, message);
           }
@@ -162,7 +176,8 @@ public class MessageGenerationPhase extends AbstractBaseStage
                                 String nextState,
                                 String sessionId,
                                 String stateModelDefName,
-                                String stateModelFactoryName)
+                                String stateModelFactoryName,
+                                int bucketSize)
   {
     String uuid = UUID.randomUUID().toString();
     Message message = new Message(MessageType.STATE_TRANSITION, uuid);
@@ -177,6 +192,7 @@ public class MessageGenerationPhase extends AbstractBaseStage
     message.setSrcSessionId(manager.getSessionId());
     message.setStateModelDef(stateModelDefName);
     message.setStateModelFactoryName(stateModelFactoryName);
+    message.setBucketSize(bucketSize);
     return message;
   }
 }

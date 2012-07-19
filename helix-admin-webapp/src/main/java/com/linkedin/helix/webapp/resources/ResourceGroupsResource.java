@@ -54,26 +54,31 @@ public class ResourceGroupsResource extends Resource
     getVariants().add(new Variant(MediaType.APPLICATION_JSON));
   }
 
+  @Override
   public boolean allowGet()
   {
     return true;
   }
   
+  @Override
   public boolean allowPost()
   {
     return true;
   }
   
+  @Override
   public boolean allowPut()
   {
     return false;
   }
   
+  @Override
   public boolean allowDelete()
   {
     return false;
   }
   
+  @Override
   public Representation represent(Variant variant)
   {
     StringRepresentation presentation = null;
@@ -107,6 +112,7 @@ public class ResourceGroupsResource extends Resource
     return representation;
   }
   
+  @Override
   public void acceptRepresentation(Representation entity)
   {
     try
@@ -141,7 +147,7 @@ public class ResourceGroupsResource extends Resource
       }
       
       ClusterSetup setupTool = new ClusterSetup(zkServer);
-      setupTool.addResourceToCluster(clusterName, entityName, partitions,stateModelDefRef, mode);
+      setupTool.addResourceToCluster(clusterName, entityName, partitions,stateModelDefRef, mode, 0);
       // add cluster
       getResponse().setEntity(getHostedEntitiesRepresentation(zkServer, clusterName));
       getResponse().setStatus(Status.SUCCESS_OK);

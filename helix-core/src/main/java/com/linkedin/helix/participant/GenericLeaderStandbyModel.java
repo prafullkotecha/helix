@@ -55,10 +55,12 @@ public class GenericLeaderStandbyModel extends StateModel
   {
     LOG.info("Become LEADER from STANDBY");
     HelixManager manager = context.getManager();
+    
     if (manager == null)
     {
       throw new IllegalArgumentException("Require HelixManager in notification conext");
     }
+    
     for (ChangeType notificationType : _notificationTypes)
     {
       if (notificationType == ChangeType.LIVE_INSTANCE)

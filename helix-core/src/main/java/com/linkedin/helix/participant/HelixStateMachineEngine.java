@@ -189,6 +189,7 @@ public class HelixStateMachineEngine implements StateMachineEngine
     String partitionKey = message.getPartitionName();
     String stateModelName = message.getStateModelDef();
     String resourceName = message.getResourceName();
+    int bucketSize = message.getBucketSize();
     if (stateModelName == null)
     {
       logger.error("message does not contain stateModelDef");
@@ -238,6 +239,7 @@ public class HelixStateMachineEngine implements StateMachineEngine
     currentStateDelta.setSessionId(manager.getSessionId());
     currentStateDelta.setStateModelDefRef(stateModelName);
     currentStateDelta.setStateModelFactoryName(factoryName);
+    currentStateDelta.setBucketSize(bucketSize);
 
     currentStateDelta.setState(partitionKey, (stateModel.getCurrentState() == null)
                                ? initState : stateModel.getCurrentState());

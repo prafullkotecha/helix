@@ -36,7 +36,7 @@ public class TestHelixTaskExecutor
   @Test ()
   public void testCMTaskExecutor() throws Exception
   {
-    System.out.println("START TestCMTaskExecutor");
+    System.out.println("START TestHelixTaskExecutor");
     String msgId = "TestMessageId";
     Message message = new Message(MessageType.TASK_REPLY,msgId);
 
@@ -75,7 +75,7 @@ public class TestHelixTaskExecutor
       Thread.sleep(500);
     }
     AssertJUnit.assertTrue(stateModel.stateModelInvoked);
-    System.out.println("END TestCMTaskExecutor");
+    System.out.println("END TestHelixTaskExecutor");
   }
 
 }

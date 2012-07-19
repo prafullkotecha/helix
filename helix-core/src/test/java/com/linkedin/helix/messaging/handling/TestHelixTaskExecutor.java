@@ -220,6 +220,7 @@ public class TestHelixTaskExecutor
       msg.setTgtSessionId(manager.getSessionId());
       msg.setTgtName("Localhost_1123");
       msg.setSrcName("127.101.1.23_2234");
+      msg.setResourceName("TestDB");
       msg.setCorrelationId(UUID.randomUUID().toString());
       msgList.add(msg);
     }
@@ -232,6 +233,7 @@ public class TestHelixTaskExecutor
       msg.setTgtSessionId(manager.getSessionId());
       msg.setTgtName("Localhost_1123");
       msg.setSrcName("127.101.1.23_2234");
+      msg.setResourceName("TestDB");
       msg.setCorrelationId(UUID.randomUUID().toString());
       msgList.add(msg);
     }
@@ -274,6 +276,7 @@ public class TestHelixTaskExecutor
       msg.setTgtSessionId(manager.getSessionId());
       msg.setTgtName("Localhost_1123");
       msg.setSrcName("127.101.1.23_2234");
+      msg.setResourceName("TestDB");
       msgList.add(msg);
     }
 
@@ -285,6 +288,7 @@ public class TestHelixTaskExecutor
       msg.setTgtSessionId(manager.getSessionId());
       msg.setTgtName("Localhost_1123");
       msg.setSrcName("127.101.1.23_2234");
+      msg.setResourceName("TestDB");
       msgList.add(msg);
     }
     executor.onMessage("someInstance", msgList, changeContext);
@@ -327,6 +331,7 @@ public class TestHelixTaskExecutor
       Message msg = new Message(factory.getMessageType(), UUID.randomUUID().toString());
       msg.setTgtSessionId("*");
       msg.setTgtName("");
+      msg.setResourceName("TestDB");
       msgList.add(msg);
     }
 
@@ -337,6 +342,7 @@ public class TestHelixTaskExecutor
       Message msg = new Message(factory2.getMessageType(), UUID.randomUUID().toString());
       msg.setTgtSessionId("some other session id");
       msg.setTgtName("");
+      msg.setResourceName("TestDB");
       msgList.add(msg);
     }
     executor.onMessage("someInstance", msgList, changeContext);
@@ -378,6 +384,7 @@ public class TestHelixTaskExecutor
       msg.setTgtSessionId(manager.getSessionId());
       msg.setTgtName("Localhost_1123");
       msg.setSrcName("127.101.1.23_2234");
+      msg.setResourceName("TestDB");
       msg.setCorrelationId(UUID.randomUUID().toString());
       msgList.add(msg);
     }
@@ -386,6 +393,7 @@ public class TestHelixTaskExecutor
     exceptionMsg.setMsgSubType("EXCEPTION");
     exceptionMsg.setTgtName("Localhost_1123");
     exceptionMsg.setSrcName("127.101.1.23_2234");
+    exceptionMsg.setResourceName("TestDB");
     exceptionMsg.setCorrelationId(UUID.randomUUID().toString());
     msgList.add(exceptionMsg);
     
@@ -419,6 +427,7 @@ public class TestHelixTaskExecutor
       msg.setTgtSessionId("*");
       msg.setTgtName("Localhost_1123");
       msg.setSrcName("127.101.1.23_2234");
+      msg.setResourceName("TestDB");
       msgList.add(msg);
     }
 
@@ -431,6 +440,7 @@ public class TestHelixTaskExecutor
       msgList.add(msg);
       msg.setTgtName("Localhost_1123");
       msg.setSrcName("127.101.1.23_2234");
+      msg.setResourceName("TestDB");
       msgListToCancel.add(msg);
     }
     executor.onMessage("someInstance", msgList, changeContext);
@@ -480,6 +490,7 @@ public class TestHelixTaskExecutor
         msg.setTgtSessionId("*");
         msg.setTgtName("Localhost_1123");
         msg.setSrcName("127.101.1.23_2234");
+        msg.setResourceName("TestDB");
         msgList.add(msg);
       }
 
@@ -490,6 +501,7 @@ public class TestHelixTaskExecutor
         msgList.add(msg);
         msg.setTgtName("Localhost_1123");
         msg.setSrcName("127.101.1.23_2234");
+        msg.setResourceName("TestDB");
         msgList.add(msg);
       }
 
@@ -500,6 +512,7 @@ public class TestHelixTaskExecutor
         msgList.add(msg);
         msg.setTgtName("Localhost_1123");
         msg.setSrcName("127.101.1.23_2234");
+        msg.setResourceName("TestDB");
         msgList.add(msg);
       }
       NotificationContext changeContext = new NotificationContext(manager);
@@ -540,6 +553,7 @@ public class TestHelixTaskExecutor
       msg.setTgtSessionId("*");
       msg.setTgtName("Localhost_1123");
       msg.setSrcName("127.101.1.23_2234");
+      msg.setResourceName("TestDB");
       msg.setExecutionTimeout((i+1) * 600);
       msgList.add(msg);
     }
@@ -568,6 +582,7 @@ public class TestHelixTaskExecutor
       msg.setTgtSessionId("*");
       msg.setTgtName("Localhost_1123");
       msg.setSrcName("127.101.1.23_2234");
+      msg.setResourceName("TestDB");
       msg.setExecutionTimeout((i+1) * 600);
       msg.setRetryCount(1);
       msgList.add(msg);

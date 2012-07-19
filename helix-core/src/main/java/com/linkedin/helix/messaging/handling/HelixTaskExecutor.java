@@ -20,8 +20,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import com.linkedin.helix.HelixConstants;
 import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixManager;
@@ -39,6 +42,7 @@ import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.NotificationContext.Type;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
+import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.MessageState;
 import com.linkedin.helix.model.Message.MessageType;
@@ -235,6 +239,7 @@ public class HelixTaskExecutor implements MessageListener
     HelixManager manager = changeContext.getManager();
     HelixDataAccessor accessor = manager.getHelixDataAccessor();
     Builder keyBuilder = accessor.keyBuilder();
+    String sessionId = manager.getSessionId();
 
     if (messages == null || messages.size() == 0)
     {
@@ -256,6 +261,12 @@ public class HelixTaskExecutor implements MessageListener
     List<PropertyKey> readMsgKeys = new ArrayList<PropertyKey>();
     List<MessageHandler> readMsgHandlers = new ArrayList<MessageHandler>();
 
+
+    List<String> curResourceNames = accessor.getChildNames(keyBuilder.currentStates(instanceName, sessionId));
+    List<PropertyKey> createCurStateKeys = new ArrayList<PropertyKey>();
+    List<CurrentState> metaCurStates = new ArrayList<CurrentState>(); 
+    Set<String> createCurStateNames = new HashSet<String>();
+    
     for (Message message : messages)
     {
       // NO_OP messages are removed with nothing done. It is used to trigger the
@@ -274,7 +285,14 @@ public class HelixTaskExecutor implements MessageListener
         continue;
       }
 
-      String sessionId = manager.getSessionId();
+      // debug
+//      if (message.getResourceName().startsWith("PARTICIPANT_LEADER"))
+//      {
+//        System.err.println("Recving message " + message.getMsgId() + " to " + message.getTgtName() + " transition "
+//            + message.getPartitionName() + " from:" + message.getFromState()
+//            + " to:" + message.getToState());
+//      }
+      
       String tgtSessionId = message.getTgtSessionId();
       if (sessionId.equals(tgtSessionId) || tgtSessionId.equals("*"))
       {
@@ -316,8 +334,35 @@ public class HelixTaskExecutor implements MessageListener
             else
             {
               readMsgKeys.add(keyBuilder.message(instanceName, message.getMsgId()));
+              
+              // batch all creation of current state meta data for state transition messages only
+              if (message.getMsgType().equals(Message.MessageType.STATE_TRANSITION.toString()))
+              {
+                String resourceName = message.getResourceName();
+                if (!curResourceNames.contains(resourceName) && !createCurStateNames.contains(resourceName))
+                {
+                  createCurStateNames.add(resourceName);
+                  createCurStateKeys.add(keyBuilder.currentState(instanceName, sessionId, resourceName));
+                  
+                  CurrentState metaCurState = new CurrentState(resourceName);
+                  metaCurState.setBucketSize(message.getBucketSize());
+                  metaCurState.setStateModelDefRef(message.getStateModelDef());
+                  String ftyName = message.getStateModelFactoryName(); 
+                  if (ftyName != null)
+                  {
+                    metaCurState.setStateModelFactoryName(ftyName);
+                  } else
+                  {
+                    metaCurState.setStateModelFactoryName(HelixConstants.DEFAULT_STATE_MODEL_FACTORY);
+                  }
+                  
+                  metaCurStates.add(metaCurState);
+                }
+              }
             }
             readMsgHandlers.add(handler);
+            
+        
           }
           catch (Exception e)
           {
@@ -374,6 +419,18 @@ public class HelixTaskExecutor implements MessageListener
       }
     }
 
+    // batch create curState meta
+    if (createCurStateKeys.size() > 0)
+    {
+      try
+      {
+        accessor.createChildren(createCurStateKeys, metaCurStates);
+      } catch (Exception e)
+      {
+        System.out.println(e);
+      }
+    }
+    
     // update messages in batch and schedule all read messages
     if (readMsgs.size() > 0)
     {
@@ -436,6 +493,26 @@ public class HelixTaskExecutor implements MessageListener
     logger.info("shutdown finished");
   }
 
+  // add current state parent nodes
+//  @Override
+//  public void onIdealStateChange(List<IdealState> idealStates,
+//                                 NotificationContext changeContext)
+//  {
+//    HelixManager manager = changeContext.getManager();
+//    HelixDataAccessor accessor = manager.getHelixDataAccessor();
+//    Builder keyBuilder = accessor.keyBuilder();
+//
+//    // set up current state nodes
+//    for (IdealState idealState : idealStates)
+//    {
+//      String resourceName = idealState.getResourceName();
+//      CurrentState curState = new CurrentState(resourceName);
+//      curState.setBucketSize(idealState.getBucketSize());
+//      curState.setStateModelDefRef(idealState.getStateModelDefRef());
+//      accessor.updateProperty(keyBuilder.currentState(manager.getInstanceName(), manager.getSessionId(), resourceName), curState);
+//    } 
+//  }
+  
   // TODO: remove this
   public static void main(String[] args) throws Exception
   {
