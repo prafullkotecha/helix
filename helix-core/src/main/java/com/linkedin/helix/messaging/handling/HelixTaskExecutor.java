@@ -284,14 +284,6 @@ public class HelixTaskExecutor implements MessageListener
         }
         continue;
       }
-
-      // debug
-//      if (message.getResourceName().startsWith("PARTICIPANT_LEADER"))
-//      {
-//        System.err.println("Recving message " + message.getMsgId() + " to " + message.getTgtName() + " transition "
-//            + message.getPartitionName() + " from:" + message.getFromState()
-//            + " to:" + message.getToState());
-//      }
       
       String tgtSessionId = message.getTgtSessionId();
       if (sessionId.equals(tgtSessionId) || tgtSessionId.equals("*"))
@@ -335,7 +327,8 @@ public class HelixTaskExecutor implements MessageListener
             {
               readMsgKeys.add(keyBuilder.message(instanceName, message.getMsgId()));
               
-              // batch all creation of current state meta data for state transition messages only
+              // batch all creation of current state meta data
+              // do it for state transition messages only
               if (message.getMsgType().equals(Message.MessageType.STATE_TRANSITION.toString()))
               {
                 String resourceName = message.getResourceName();
@@ -347,6 +340,7 @@ public class HelixTaskExecutor implements MessageListener
                   CurrentState metaCurState = new CurrentState(resourceName);
                   metaCurState.setBucketSize(message.getBucketSize());
                   metaCurState.setStateModelDefRef(message.getStateModelDef());
+                  metaCurState.setSessionId(sessionId);
                   String ftyName = message.getStateModelFactoryName(); 
                   if (ftyName != null)
                   {

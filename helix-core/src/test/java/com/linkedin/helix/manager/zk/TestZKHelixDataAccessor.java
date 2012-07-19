@@ -3,16 +3,14 @@ package com.linkedin.helix.manager.zk;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.testng.annotations.Test;
 
-import com.linkedin.helix.Assembler;
 import com.linkedin.helix.BaseDataAccessor;
-import com.linkedin.helix.Bucketizer;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.ZNRecord;
-import com.linkedin.helix.ZNRecordAssembler;
 import com.linkedin.helix.ZNRecordBucketizer;
 import com.linkedin.helix.ZkUnitTestBase;
 import com.linkedin.helix.model.CurrentState;
@@ -32,8 +30,20 @@ public class TestZKHelixDataAccessor extends ZkUnitTestBase
     ZKHelixDataAccessor accessor = new ZKHelixDataAccessor(clusterName, baseAccessor);
 
     Builder keyBuilder = new Builder(clusterName);
-    Bucketizer<ZNRecord> bucketizer = new ZNRecordBucketizer(1);
-    Assembler<ZNRecord> assembler = new ZNRecordAssembler();
+    ZNRecordBucketizer bucketizer = new ZNRecordBucketizer(1);
+//    ZNRecordAssembler assembler = new ZNRecordAssembler();
+
+    // set TestDB cs meta data
+    CurrentState csMeta = new CurrentState("TestDB");
+    csMeta.setStateModelDefRef("MasterSlave");
+    csMeta.setBucketSize(1);
+    csMeta.setSessionId("session_0");
+
+
+    accessor.setProperty(keyBuilder.currentState("host_0",
+                                                 "session_0",
+                                                 "TestDB"),
+                         csMeta);
 
 
     // set TestDB_0 in bucket 0
@@ -70,8 +80,7 @@ public class TestZKHelixDataAccessor extends ZkUnitTestBase
 
     // get cs
     cs =
-        accessor.getProperty(keyBuilder.currentState("host_0", "session_0", "TestDB"),
-                             assembler);
+        accessor.getProperty(keyBuilder.currentState("host_0", "session_0", "TestDB"));
     System.out.println(cs);
     List<PropertyKey> keys = new ArrayList<PropertyKey>();
     keys.add(keyBuilder.currentState("host_0",
@@ -82,15 +91,26 @@ public class TestZKHelixDataAccessor extends ZkUnitTestBase
                                      "session_0",
                                      "TestDB",
                                      bucketizer.getBucketName("TestDB_1")));
-    List<CurrentState> csList = accessor.getProperty(keys, null);
+    List<CurrentState> csList = accessor.getProperty(keys);
     System.out.println(csList);
 
 
+    // set cs meta data
+    csMeta = new CurrentState("MyDB");
+    csMeta.setStateModelDefRef("MasterSlave");
+    csMeta.setBucketSize(1);
+    csMeta.setSessionId("session_0");
+
+
+    accessor.setProperty(keyBuilder.currentState("host_0",
+                                                 "session_0",
+                                                 "MyDB"),
+                                                 csMeta);
     // set MyDB_0 in bucket 0
     cs = new CurrentState("MyDB");
     cs.setStateModelDefRef("MasterSlave");
     cs.setSessionId("session_0");
-    cs.setState("My_0", "MASTER");
+    cs.setState("MyDB_0", "MASTER");
 
     accessor.setProperty(keyBuilder.currentState("host_0",
                                                  "session_0",
@@ -102,7 +122,7 @@ public class TestZKHelixDataAccessor extends ZkUnitTestBase
     cs = new CurrentState("MyDB");
     cs.setStateModelDefRef("MasterSlave");
     cs.setSessionId("session_0");
-    cs.setState("My_1", "SLAVE");
+    cs.setState("MyDB_1", "SLAVE");
 
     accessor.setProperty(keyBuilder.currentState("host_0",
                                                  "session_0",
@@ -118,12 +138,16 @@ public class TestZKHelixDataAccessor extends ZkUnitTestBase
     keys.add(keyBuilder.currentState("host_0",
                                      "session_0",
                                      "MyDB"));
-    List<Assembler<ZNRecord>> assemblers = new ArrayList<Assembler<ZNRecord>>(2);
-    assemblers.add(assembler);
-    assemblers.add(assembler);
+//    List<Assembler<ZNRecord>> assemblers = new ArrayList<Assembler<ZNRecord>>(2);
+//    assemblers.add(assembler);
+//    assemblers.add(assembler);
 
-    csList = accessor.getProperty(keys, assemblers);
+    csList = accessor.getProperty(keys);
     System.out.println(csList);
+    
+    Map<String, CurrentState> csMap = accessor.getChildValuesMap(keyBuilder.currentStates("host_0", "session_0"));
+    System.out.println(csMap);
+
 
     System.out.println("END " + getTestMethodName() + " at "
             + new Date(System.currentTimeMillis()));

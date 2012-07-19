@@ -1,33 +1,32 @@
 package com.linkedin.helix;
 
-import java.util.Map;
+import java.util.List;
 
-public class ZNRecordAssembler implements Assembler<ZNRecord>
+public class ZNRecordAssembler // implements Assembler<ZNRecord>
 {
 
-  @Override
-  public ZNRecord assemble(Map<String, ZNRecord> values)
+//  @Override
+  public ZNRecord assemble(List<ZNRecord> records)
   {
-    ZNRecord record = null;
-    if (values != null && values.size() > 0)
+    ZNRecord assembledRecord = null;
+    if (records != null && records.size() > 0)
     {
-      for (String key : values.keySet())
+      for (ZNRecord record : records)
       {
-        ZNRecord bucketizedRecord = values.get(key);
-        if (bucketizedRecord == null)
+        if (record == null)
         {
           continue;
         }
 
-        if (record == null)
+        if (assembledRecord == null)
         {
-          record = new ZNRecord(bucketizedRecord.getId());
+          assembledRecord = new ZNRecord(record.getId());
         }
 
-        record.merge(bucketizedRecord);
+        assembledRecord.merge(record);
       }
     }
-    return record;
+    return assembledRecord;
   }
 
 }

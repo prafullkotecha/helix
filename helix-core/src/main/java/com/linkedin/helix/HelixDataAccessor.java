@@ -75,43 +75,15 @@ public interface HelixDataAccessor
    */
   <T extends HelixProperty> T getProperty(PropertyKey key);
 
-  /**
-   * Return the property values which must be refer to a single Helix Property. Property
-   * might be bucketized
-   * 
-   * @param keys
-   * @return
-   */
-  <T extends HelixProperty> T getProperty(PropertyKey key, Assembler<ZNRecord> assembler);
 
   /**
    * Return a list of property values, each of which must be refer to a single Helix
-   * Property.
+   * Property. Property may be bucketized.
    * 
    * @param keys
    * @return
    */
   public <T extends HelixProperty> List<T> getProperty(List<PropertyKey> keys);
-
-  /**
-   * Return a list of property values, each of which must be refer to a single Helix
-   * Property. Property might be bucketized
-   * 
-   * @param keys
-   * @return
-   */
-  <T extends HelixProperty> List<T> getProperty(List<PropertyKey> keys,
-                                                List<Assembler<ZNRecord>> assemblers);
-
-  /**
-   * Return a map of property values, each of which must be refer to a single Helix
-   * Property. Property might be bucketized
-   * 
-   * @param keys
-   * @return
-   */
-  <T extends HelixProperty> Map<String, T> getPropertyMap(List<PropertyKey> keys,
-                                                          List<Assembler<ZNRecord>> assemblers);
 
   /**
    * Removes the property

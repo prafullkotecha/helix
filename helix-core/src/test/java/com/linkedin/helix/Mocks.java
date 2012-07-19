@@ -17,7 +17,6 @@ package com.linkedin.helix;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -327,7 +326,7 @@ public class Mocks
     public void addPreConnectCallback(PreConnectCallback callback)
     {
       // TODO Auto-generated method stub
-      
+
     }
 
   }
@@ -442,7 +441,8 @@ public class Mocks
     public <T extends HelixProperty> List<T> getChildValues(PropertyKey propertyKey)
     {
       List<ZNRecord> childs = new ArrayList<ZNRecord>();
-      String path = propertyKey.getPath();  // PropertyPathConfig.getPath(type, _clusterName, keys);
+      String path = propertyKey.getPath(); // PropertyPathConfig.getPath(type,
+                                           // _clusterName, keys);
       for (String key : data.keySet())
       {
         if (key.startsWith(path))
@@ -482,15 +482,14 @@ public class Mocks
 
     @Override
     public <T extends HelixProperty> boolean[] createChildren(List<PropertyKey> keys,
-                                                              List<T> children)
+        List<T> children)
     {
       // TODO Auto-generated method stub
       return null;
     }
 
     @Override
-    public <T extends HelixProperty> boolean[] setChildren(List<PropertyKey> keys,
-                                                           List<T> children)
+    public <T extends HelixProperty> boolean[] setChildren(List<PropertyKey> keys, List<T> children)
     {
       // TODO Auto-generated method stub
       return null;
@@ -510,18 +509,11 @@ public class Mocks
     }
 
     @Override
-    public <T extends HelixProperty> boolean[] updateChildren(
-        List<String> paths, List<DataUpdater<ZNRecord>> updaters, int options)
+    public <T extends HelixProperty> boolean[] updateChildren(List<String> paths,
+        List<DataUpdater<ZNRecord>> updaters, int options)
     {
       // TODO Auto-generated method stub
       return null;
-    }
-
-    @Override
-    public <T extends HelixProperty> T getProperty(PropertyKey key,
-                                                   Assembler<ZNRecord> assembler)
-    {
-      return getProperty(key);
     }
 
     @Override
@@ -534,36 +526,6 @@ public class Mocks
         list.add(t);
       }
       return list;
-    }
-
-    @Override
-    public <T extends HelixProperty> List<T> getProperty(List<PropertyKey> keys,
-                                                         List<Assembler<ZNRecord> > assemblers)
-    {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public <T extends HelixProperty> Map<String, T> getPropertyMap(List<PropertyKey> keys,
-                                                                   List<Assembler<ZNRecord> > assemblers)
-    {
-      if (keys == null || keys.size() == 0)
-      {
-        return Collections.emptyMap();
-      }
-
-      List<T> children = getProperty(keys, assemblers);
-      Map<String, T> childValuesMap = new HashMap<String, T>();
-      for (T t : children)
-      {
-        if (t != null)
-        {
-          childValuesMap.put(t.getRecord().getId(), t);
-        }
-      }
-
-      return childValuesMap;
     }
   }
 
@@ -581,7 +543,6 @@ public class Mocks
     public void resetStats()
     {
       // TODO Auto-generated method stub
-
     }
 
   }

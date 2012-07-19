@@ -1,10 +1,8 @@
 package com.linkedin.helix;
 
-import java.util.Map;
-
 import org.apache.log4j.Logger;
 
-public class ZNRecordBucketizer implements Bucketizer<ZNRecord>
+public class ZNRecordBucketizer // implements Bucketizer<ZNRecord>
 {
   private static Logger LOG = Logger.getLogger(ZNRecordBucketizer.class);
   final int             _bucketSize;
@@ -20,7 +18,7 @@ public class ZNRecordBucketizer implements Bucketizer<ZNRecord>
     _bucketSize = bucketSize;
   }
 
-  @Override
+//  @Override
   public String getBucketName(String key)
   {
     int idx = key.lastIndexOf('_');
@@ -42,38 +40,6 @@ public class ZNRecordBucketizer implements Bucketizer<ZNRecord>
           + key.substring(idx + 1) + ") in " + key);
     }
   }
-
-  @Override
-  public Map<String, ZNRecord> bucketize(ZNRecord value)
-  {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  // @Override
-  // public ZNRecord unbucketize(Map<String, ZNRecord> bucketizedValue)
-  // {
-  // ZNRecord record = null;
-  // if (bucketizedValue != null && bucketizedValue.size() > 0)
-  // {
-  // for (String key : bucketizedValue.keySet())
-  // {
-  // ZNRecord bucketizedRecord = bucketizedValue.get(key);
-  // if (bucketizedRecord == null)
-  // {
-  // continue;
-  // }
-  //
-  // if (record == null)
-  // {
-  // record = new ZNRecord(bucketizedRecord.getId());
-  // }
-  //
-  // record.merge(bucketizedRecord);
-  // }
-  // }
-  // return record;
-  // }
 
   public static void main(String[] args)
   {
