@@ -522,7 +522,8 @@ public class Mocks
       List<T> list = new ArrayList<T>();
       for (PropertyKey key : keys)
       {
-        T t = getProperty(key);
+        @SuppressWarnings("unchecked")
+        T t = (T)getProperty(key);
         list.add(t);
       }
       return list;
