@@ -89,63 +89,62 @@ public class PropertyKey
     return path;
   }
 
-//  /**
-//   * return true if propertyKey refers to a
-//   * leaf. e.g. CURRENTSTATE/sessionId/resouceName/bucketName
-//   */
-//  public boolean isLeaf()
-//  {
-//    boolean ret = false;
-//    if (_params.length == _type.getMaxKeyNb())
-//    {
-//      ret = true;
-//    }
-//    return ret;
-//  }
-//  
-//  /**
-//   * return true if type is bucketized and propertyKey refers to just one level above a
-//   * leaf. e.g. CURRENTSTATE/sessionId/resouceName
-//   */
-//  public boolean isBucketized()
-//  {
-//    boolean ret = false;
-//    switch (_type)
-//    {
-//    case CURRENTSTATES:
-//      if (_params.length == _type.getMaxKeyNb() - 1)
-//      {
-//        ret = true;
-//      }
-//      break;
-//    default:
-//      break;
-//    }
-//    return ret;
-//  }
-//
-//  /**
-//   * return true if type is bucketized and propertyKey refers to just one level above a
-//   * bucketized propertyKey (i.e. 2 levels above a leaf). e.g. CURRENTSTATE/sessionId
-//   */
-//  public boolean isBucketizedCollection()
-//  {
-//    boolean ret = false;
-//    switch (_type)
-//    {
-//    case CURRENTSTATES:
-//      if (_params.length == _type.getMaxKeyNb() - 2)
-//      {
-//        ret = true;
-//      }
-//      break;
-//    default:
-//      break;
-//    }
-//    return ret;
-//  }
+  // /**
+  // * return true if propertyKey refers to a
+  // * leaf. e.g. CURRENTSTATE/sessionId/resouceName/bucketName
+  // */
+  // public boolean isLeaf()
+  // {
+  // boolean ret = false;
+  // if (_params.length == _type.getMaxKeyNb())
+  // {
+  // ret = true;
+  // }
+  // return ret;
+  // }
+  //
+  // /**
+  // * return true if type is bucketized and propertyKey refers to just one level above a
+  // * leaf. e.g. CURRENTSTATE/sessionId/resouceName
+  // */
+  // public boolean isBucketized()
+  // {
+  // boolean ret = false;
+  // switch (_type)
+  // {
+  // case CURRENTSTATES:
+  // if (_params.length == _type.getMaxKeyNb() - 1)
+  // {
+  // ret = true;
+  // }
+  // break;
+  // default:
+  // break;
+  // }
+  // return ret;
+  // }
+  //
+  // /**
+  // * return true if type is bucketized and propertyKey refers to just one level above a
+  // * bucketized propertyKey (i.e. 2 levels above a leaf). e.g. CURRENTSTATE/sessionId
+  // */
+  // public boolean isBucketizedCollection()
+  // {
+  // boolean ret = false;
+  // switch (_type)
+  // {
+  // case CURRENTSTATES:
+  // if (_params.length == _type.getMaxKeyNb() - 2)
+  // {
+  // ret = true;
+  // }
+  // break;
+  // default:
+  // break;
+  // }
+  // return ret;
+  // }
 
-  
   public static class Builder
   {
     private final String _clusterName;
@@ -324,13 +323,26 @@ public class PropertyKey
                                     String resourceName,
                                     String bucketName)
     {
-      return new PropertyKey(CURRENTSTATES,
-                             CurrentState.class,
-                             _clusterName,
-                             instanceName,
-                             sessionId,
-                             resourceName,
-                             bucketName);
+      if (bucketName == null)
+      {
+        return new PropertyKey(CURRENTSTATES,
+                               CurrentState.class,
+                               _clusterName,
+                               instanceName,
+                               sessionId,
+                               resourceName);
+
+      }
+      else
+      {
+        return new PropertyKey(CURRENTSTATES,
+                               CurrentState.class,
+                               _clusterName,
+                               instanceName,
+                               sessionId,
+                               resourceName,
+                               bucketName);
+      }
     }
 
     // addEntry(PropertyType.STATUSUPDATES, 2,

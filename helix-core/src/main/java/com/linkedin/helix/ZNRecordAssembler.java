@@ -2,10 +2,8 @@ package com.linkedin.helix;
 
 import java.util.List;
 
-public class ZNRecordAssembler // implements Assembler<ZNRecord>
+public class ZNRecordAssembler
 {
-
-//  @Override
   public ZNRecord assemble(List<ZNRecord> records)
   {
     ZNRecord assembledRecord = null;

@@ -118,23 +118,13 @@ public class HelixStateTransitionHandler extends MessageHandler
       String instanceName = manager.getInstanceName();
 
       int bucketSize = message.getBucketSize();
+      ZNRecordBucketizer bucketizer = new ZNRecordBucketizer(bucketSize);
 
       CurrentState currentState = null;
-      if (bucketSize <= 0)
-      {
-        accessor.getProperty(keyBuilder.currentState(instanceName,
-                                                     manager.getSessionId(),
-                                                     resource));
-      }
-      else
-      {
-        ZNRecordBucketizer bucketizer = new ZNRecordBucketizer(bucketSize);
-        accessor.getProperty(keyBuilder.currentState(instanceName,
-                                                     manager.getSessionId(),
-                                                     resource,
-                                                     bucketizer.getBucketName(partitionKey)));
-
-      }
+      accessor.getProperty(keyBuilder.currentState(instanceName,
+                                                   manager.getSessionId(),
+                                                   resource,
+                                                   bucketizer.getBucketName(partitionKey)));
 
       if (currentState == null)
       {
@@ -185,24 +175,12 @@ public class HelixStateTransitionHandler extends MessageHandler
 
       }
 
-      // based on task result update the current state of the node
-      if (bucketSize <= 0)
-      {
-        accessor.updateProperty(keyBuilder.currentState(instanceName,
-                                                        manager.getSessionId(),
-                                                        resource),
-                                _currentStateDelta);
+      accessor.updateProperty(keyBuilder.currentState(instanceName,
+                                                      manager.getSessionId(),
+                                                      resource,
+                                                      bucketizer.getBucketName(partitionKey)),
+                              _currentStateDelta);
 
-      }
-      else
-      {
-        ZNRecordBucketizer bucketizer = new ZNRecordBucketizer(bucketSize);
-        accessor.updateProperty(keyBuilder.currentState(instanceName,
-                                                        manager.getSessionId(),
-                                                        resource,
-                                                        bucketizer.getBucketName(partitionKey)),
-                                _currentStateDelta);
-      }
     }
     catch (Exception e)
     {

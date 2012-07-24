@@ -2,7 +2,7 @@ package com.linkedin.helix;
 
 import org.apache.log4j.Logger;
 
-public class ZNRecordBucketizer // implements Bucketizer<ZNRecord>
+public class ZNRecordBucketizer
 {
   private static Logger LOG = Logger.getLogger(ZNRecordBucketizer.class);
   final int             _bucketSize;
@@ -11,14 +11,20 @@ public class ZNRecordBucketizer // implements Bucketizer<ZNRecord>
   {
     if (bucketSize <= 0)
     {
-      throw new IllegalArgumentException("bucketSize should be > 0 (was " + bucketSize
-          + ")");
+      LOG.info("bucketSize <= 0 (was " + bucketSize
+          + "). Set to 0 to use non-bucketized HelixProperty.");
+      bucketSize = 0;
     }
 
     _bucketSize = bucketSize;
   }
 
-//  @Override
+  /**
+   * Calculate bucketName in form of "resourceName_p{startPartition}-p{endPartition}
+   * 
+   * @param partitionName
+   * @return
+   */
   public String getBucketName(String key)
   {
     int idx = key.lastIndexOf('_');
@@ -31,8 +37,15 @@ public class ZNRecordBucketizer // implements Bucketizer<ZNRecord>
     try
     {
       int partitionNb = Integer.parseInt(key.substring(idx + 1));
+      if (_bucketSize == 0)
+      {
+        // no bucketize
+        return null;
+      }
       int bucketNb = partitionNb / _bucketSize;
-      return key.substring(0, idx) + "_bucket" + bucketNb;
+      int startPartition = bucketNb * _bucketSize;
+      int endPartition = bucketNb * _bucketSize + (_bucketSize - 1);
+      return key.substring(0, idx) + "_p" + startPartition + "-p" + endPartition;
     }
     catch (NumberFormatException e)
     {
