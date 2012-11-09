@@ -480,6 +480,7 @@ public class ZKHelixDataAccessor implements HelixDataAccessor, ControllerChangeL
         }
         else
         {
+          _baseDataAccessor.remove(path, options);
           ZNRecord metaRecord = new ZNRecord(value.getId());
           metaRecord.setSimpleFields(value.getRecord().getSimpleFields());
           records.add(metaRecord);

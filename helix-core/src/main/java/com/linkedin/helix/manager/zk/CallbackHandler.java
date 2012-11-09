@@ -227,15 +227,18 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
                                    boolean watchChild)
   {
     NotificationContext.Type type = context.getType();
-    if (watchParent && type == NotificationContext.Type.INIT)
+    if (watchParent)
     {
-      logger.info(_manager.getInstanceName() + " subscribe child change@" + path);
-      _zkClient.subscribeChildChanges(path, this);
-    }
-    else if (watchParent && type == NotificationContext.Type.FINALIZE)
-    {
-      logger.info(_manager.getInstanceName() + " UNsubscribe child change@" + path);
-      _zkClient.unsubscribeChildChanges(path, this);
+      if (type == NotificationContext.Type.INIT || type == NotificationContext.Type.CALLBACK)
+      {
+        logger.info(_manager.getInstanceName() + " subscribe child change@" + path);
+        _zkClient.subscribeChildChanges(path, this);
+      }
+      else if (watchParent && type == NotificationContext.Type.FINALIZE)
+      {
+        logger.info(_manager.getInstanceName() + " UNsubscribe child change@" + path);
+        _zkClient.unsubscribeChildChanges(path, this);
+      }
     }
 
     if (watchChild)
@@ -256,14 +259,14 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
           {
             if (logger.isDebugEnabled())
             {
-              logger.debug(_manager.getInstanceName() + " subscribe data change@" + path);
+              logger.debug(_manager.getInstanceName() + " subscribe data change@" + childPath);
             }
             _zkClient.subscribeDataChanges(childPath, this);
 
           }
           else if (type == NotificationContext.Type.FINALIZE)
           {
-            logger.info(_manager.getInstanceName() + " UNsubscribe data change@" + path);
+            logger.info(_manager.getInstanceName() + " UNsubscribe data change@" + childPath);
             _zkClient.unsubscribeDataChanges(childPath, this);
           }
 

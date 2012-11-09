@@ -63,9 +63,17 @@ public class ExternalViewComputeStage extends AbstractBaseStage
     for (String resourceName : resourceMap.keySet())
     {
       ExternalView view = new ExternalView(resourceName);
-      view.setBucketSize(currentStateOutput.getBucketSize(resourceName));
-      
+      // if resource ideal state has bucket size, set it
+      // otherwise resource has been dropped, use bucket size from current state instead
       Resource resource = resourceMap.get(resourceName);
+      if (resource.getBucketSize() > 0)
+      {
+        view.setBucketSize(resource.getBucketSize());
+      } else
+      {
+        view.setBucketSize(currentStateOutput.getBucketSize(resourceName));
+      }
+      
       for (Partition partition : resource.getPartitions())
       {
         Map<String, String> currentStateMap =

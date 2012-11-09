@@ -1,6 +1,5 @@
 package com.linkedin.helix;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -67,7 +66,7 @@ public class ZNRecordBucketizer
       map.put(record.getId(), record);
       return map;
     }
-    
+        
     // bucketize list field
     for (String partitionName : record.getListFields().keySet())
     {
