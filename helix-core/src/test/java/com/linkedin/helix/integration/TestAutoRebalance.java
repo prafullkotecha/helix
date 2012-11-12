@@ -98,7 +98,7 @@ public class TestAutoRebalance extends ZkStandAloneCMTestBaseWithPropertyServerC
 
     // kill 1 node
 
-    String instanceName = PARTICIPANT_PREFIX + "_" + (START_PORT + 0);
+    String instanceName = PARTICIPANT_PREFIX + "_" + (START_PORT + 3);
     HelixDataAccessor _accessor = _startCMResultMap.get(instanceName)._manager.getHelixDataAccessor();
     ExternalView ev = _accessor.getProperty(_accessor.keyBuilder().externalView(TEST_DB));
 
