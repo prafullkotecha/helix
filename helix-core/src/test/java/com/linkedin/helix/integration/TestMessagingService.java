@@ -18,11 +18,14 @@ package com.linkedin.helix.integration;
 import java.util.HashSet;
 import java.util.UUID;
 
+import org.testng.Assert;
 import org.testng.AssertJUnit;
 import org.testng.annotations.Test;
 
 import com.linkedin.helix.Criteria;
 import com.linkedin.helix.Criteria.DataSource;
+import com.linkedin.helix.HelixDataAccessor;
+import com.linkedin.helix.HelixException;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.messaging.AsyncCallback;
@@ -57,7 +60,6 @@ public class TestMessagingService extends ZkStandAloneCMTestBaseWithPropertyServ
     public void reset()
     {
       // TODO Auto-generated method stub
-
     }
 
     public static class TestMessagingHandler extends MessageHandler
@@ -87,6 +89,51 @@ public class TestMessagingService extends ZkStandAloneCMTestBaseWithPropertyServ
       {
         // TODO Auto-generated method stub
 
+      }
+    }
+  }
+
+  public static class TestMessagingHandlerFactoryException implements
+    MessageHandlerFactory
+  {
+    public static HashSet<String> _processedMsgIds = new HashSet<String>();
+
+    @Override
+    public MessageHandler createHandler(Message message,
+        NotificationContext context)
+    {
+      throw new HelixException("Exception");
+    }
+
+    @Override
+    public String getMessageType()
+    {
+      return "TestException";
+    }
+
+    @Override
+    public void reset()
+    {
+      // TODO Auto-generated method stub
+    }
+
+    public static class TestMessagingHandler extends MessageHandler
+    {
+      public TestMessagingHandler(Message message, NotificationContext context)
+      {
+        super(message, context);
+      }
+
+      @Override
+      public HelixTaskResult handleMessage() throws InterruptedException
+      {
+        HelixTaskResult result = new HelixTaskResult();
+        return result;
+      }
+
+      @Override
+      public void onError( Exception e, ErrorCode code, ErrorType type)
+      {
       }
     }
   }
@@ -121,7 +168,7 @@ public class TestMessagingService extends ZkStandAloneCMTestBaseWithPropertyServ
     // Thread.currentThread().join();
     AssertJUnit.assertTrue(TestMessagingHandlerFactory._processedMsgIds
         .contains(para));
-    
+
     cr = new Criteria();
     cr.setInstanceName(hostDest);
     cr.setRecipientInstanceType(InstanceType.PARTICIPANT);
@@ -199,6 +246,80 @@ public class TestMessagingService extends ZkStandAloneCMTestBaseWithPropertyServ
   }
 
   @Test()
+  public void TestUnprocessableMessage() throws InterruptedException
+  {
+    String hostSrc = "localhost_" + (START_PORT + 3);
+    String hostDest = "localhost_" + (START_PORT + 4);
+
+    TestMessagingHandlerFactory factory = new TestMessagingHandlerFactory();
+    _startCMResultMap.get(hostDest)._manager.getMessagingService()
+        .registerMessageHandlerFactory(factory.getMessageType(), factory);
+
+    _startCMResultMap.get(hostSrc)._manager.getMessagingService()
+        .registerMessageHandlerFactory(factory.getMessageType(), factory);
+
+    TestMessagingHandlerFactoryException factoryE = new TestMessagingHandlerFactoryException();
+    _startCMResultMap.get(hostDest)._manager.getMessagingService()
+    .registerMessageHandlerFactory(factoryE.getMessageType(), factoryE);
+
+    String msgId = new UUID(123, 456).toString();
+    Message msg = new Message(factoryE.getMessageType(),msgId);
+    msg.setMsgId(msgId);
+    msg.setSrcName(hostSrc);
+
+    msg.setTgtSessionId("*");
+    msg.setMsgState(MessageState.NEW);
+    String para = "Testing messaging para";
+    msg.getRecord().setSimpleField("TestMessagingPara", para);
+
+    Criteria cr = new Criteria();
+    cr.setInstanceName(hostDest);
+    cr.setRecipientInstanceType(InstanceType.PARTICIPANT);
+    cr.setSessionSpecific(false);
+
+    int nMsgs = _startCMResultMap.get(hostSrc)._manager.getMessagingService().send(cr, msg);
+    AssertJUnit.assertTrue(nMsgs == 1);
+
+    msg.setMsgId(UUID.randomUUID().toString());
+    AsyncCallback asyncCallback = new MockAsyncCallback();
+    int messagesSent = _startCMResultMap.get(hostSrc)._manager.getMessagingService()
+        .sendAndWait(cr, msg, asyncCallback, 3000);
+    Assert.assertTrue(messagesSent == 1);
+    Assert.assertTrue(asyncCallback.isTimedOut());
+    HelixDataAccessor accessor = _startCMResultMap.get(hostDest)._manager.getHelixDataAccessor();
+
+    Assert.assertTrue(accessor.getChildNames(accessor.keyBuilder().messages(hostDest)).size() == 0);
+
+    msg = new Message(factory.getMessageType(),msgId);
+    msg.setMsgId(msgId);
+    msg.setSrcName(hostSrc);
+    msg.setTgtSessionId("*");
+    msg.setMsgState(MessageState.NEW);
+    para = "Testing messaging para";
+    msg.getRecord().setSimpleField("TestMessagingPara", para);
+
+    cr = new Criteria();
+    cr.setInstanceName(hostDest);
+    cr.setRecipientInstanceType(InstanceType.PARTICIPANT);
+    cr.setSessionSpecific(false);
+
+    nMsgs = _startCMResultMap.get(hostSrc)._manager.getMessagingService().send(cr, msg);
+    AssertJUnit.assertTrue(nMsgs == 1);
+    for(int i = 0; i< 5; i++)
+    {
+      Thread.sleep(2500);
+      if(TestMessagingHandlerFactory._processedMsgIds
+          .contains(para))
+      {
+        break;
+      }
+    }
+    AssertJUnit.assertTrue(TestMessagingHandlerFactory._processedMsgIds
+        .contains(para));
+    Assert.assertTrue(accessor.getChildNames(accessor.keyBuilder().messages(hostDest)).size() == 0);
+  }
+
+  @Test()
   public void TestMessageSimpleSendReceiveAsync() throws Exception
   {
     String hostSrc = "localhost_" + START_PORT;
@@ -242,7 +363,7 @@ public class TestMessagingService extends ZkStandAloneCMTestBaseWithPropertyServ
     Thread.sleep(3000);
     // Thread.currentThread().join();
     AssertJUnit.assertTrue(callback2.isTimedOut());
-    
+
     cr = new Criteria();
     cr.setInstanceName(hostDest);
     cr.setRecipientInstanceType(InstanceType.PARTICIPANT);
@@ -363,13 +484,19 @@ public class TestMessagingService extends ZkStandAloneCMTestBaseWithPropertyServ
     int messageSent4 = _startCMResultMap.get(hostSrc)._manager.getMessagingService()
         .sendAndWait(cr, msg, callback4, 2000);
     AssertJUnit.assertTrue(callback4.getMessageReplied().size() == _replica);
-    
+
+    cr.setPartitionState("%");
+    AsyncCallback callback7 = new MockAsyncCallback();
+    int messageSent7 = _startCMResultMap.get(hostSrc)._manager.getMessagingService()
+        .sendAndWait(cr, msg, callback7, 4000);
+    AssertJUnit.assertTrue(callback7.getMessageReplied().size() == _replica);
+
     cr.setPartitionState("SLAVE");
     AsyncCallback callback5 = new MockAsyncCallback();
     int messageSent5 = _startCMResultMap.get(hostSrc)._manager.getMessagingService()
         .sendAndWait(cr, msg, callback5, 2000);
     AssertJUnit.assertTrue(callback5.getMessageReplied().size() == _replica - 1);
-    
+
     cr.setDataSource(DataSource.IDEALSTATES);
     AsyncCallback callback6 = new MockAsyncCallback();
     int messageSent6 = _startCMResultMap.get(hostSrc)._manager.getMessagingService()
@@ -475,4 +602,6 @@ public class TestMessagingService extends ZkStandAloneCMTestBaseWithPropertyServ
 
     AssertJUnit.assertTrue(callback3.getMessageReplied().size() == 1);
   }
+
+
 }

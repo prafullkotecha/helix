@@ -15,25 +15,24 @@
  */
 package com.linkedin.helix.messaging.handling;
 
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig;
 
 import com.linkedin.helix.ConfigAccessor;
 import com.linkedin.helix.ConfigScope;
@@ -47,7 +46,6 @@ import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.NotificationContext.Type;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
-import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.Attributes;
@@ -174,7 +172,7 @@ public class HelixTaskExecutor implements MessageListener
   /**
    * Find the executor service for the message. A message can have a per-statemodelfactory
    * executor service, or per-message type executor service.
-   * 
+   *
    **/
   ExecutorService findExecutorServiceForMsg(Message message)
   {
@@ -435,7 +433,6 @@ public class HelixTaskExecutor implements MessageListener
       }
       catch (Exception e)
       {
-        LOG.error("Failed to create message handler for " + message.getMsgId(), e);
         String error =
             "Failed to create message handler for " + message.getMsgId()
                 + ", exception: " + e;
@@ -446,10 +443,22 @@ public class HelixTaskExecutor implements MessageListener
                                    error,
                                    accessor);
 
-        // Mark message state UNPROCESSABLE if we hit an exception in creating
-        // message handler. The message will stay on zookeeper but will not be processed
         message.setMsgState(MessageState.UNPROCESSABLE);
-        accessor.updateProperty(message.getKey(keyBuilder, instanceName), message);
+        accessor.removeProperty(message.getKey(keyBuilder, instanceName));
+        ObjectMapper mapper = new ObjectMapper();
+        SerializationConfig serializationConfig = mapper.getSerializationConfig();
+        serializationConfig.set(SerializationConfig.Feature.INDENT_OUTPUT, true);
+
+        StringWriter sw = new StringWriter();
+        try
+        {
+          mapper.writeValue(sw, message.getRecord());
+          LOG.error("Message cannot be processed:" + sw.toString(), e);
+        }
+        catch (Exception ex)
+        {
+          LOG.error("", ex);
+        }
         continue;
       }
 
