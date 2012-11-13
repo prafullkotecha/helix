@@ -440,27 +440,27 @@ public class PropertyKey
       return new PropertyKey(ERRORS_CONTROLLER, StatusUpdate.class, _clusterName);
     }
 
-    public PropertyKey controllerTaskError(String subPath, String recordName)
+    public PropertyKey controllerTaskError(String messageType, String messageId)
     {
-      return new PropertyKey(ERRORS_CONTROLLER, Error.class, _clusterName, subPath,
-          recordName);
+      return new PropertyKey(ERRORS_CONTROLLER, Error.class, _clusterName, messageType,
+          messageId);
     }
 
-    public PropertyKey controllerTaskStatuses(String subPath)
+    public PropertyKey controllerTaskStatuses(String messageType)
     {
       return new PropertyKey(STATUSUPDATES_CONTROLLER,
                              StatusUpdate.class,
                              _clusterName,
-                             subPath);
+                             messageType);
     }
 
-    public PropertyKey controllerTaskStatus(String subPath, String recordName)
+    public PropertyKey controllerTaskStatus(String messageType, String messageId)
     {
       return new PropertyKey(STATUSUPDATES_CONTROLLER,
                              StatusUpdate.class,
                              _clusterName,
-                             subPath,
-                             recordName);
+                             messageType,
+                             messageId);
     }
 
     public PropertyKey controllerMessages()
