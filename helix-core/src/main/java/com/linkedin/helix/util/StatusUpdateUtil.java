@@ -45,8 +45,8 @@ import com.linkedin.helix.model.StatusUpdate;
  * Util class to create statusUpdates ZK records and error ZK records. These message
  * records are for diagnostics only, and they are stored on the "StatusUpdates" and
  * "errors" ZNodes in the zookeeper instances.
- * 
- * 
+ *
+ *
  * */
 public class StatusUpdateUtil
 {
@@ -280,7 +280,7 @@ public class StatusUpdateUtil
 
   /**
    * Creates an empty ZNRecord as the statusUpdate/error record
-   * 
+   *
    * @param id
    */
   public ZNRecord createEmptyStatusUpdateRecord(String id)
@@ -319,7 +319,7 @@ public class StatusUpdateUtil
 
   /**
    * Create a statusupdate that is related to a cluster manager message.
-   * 
+   *
    * @param message
    *          the related cluster manager message
    * @param level
@@ -370,7 +370,7 @@ public class StatusUpdateUtil
   /**
    * Create a statusupdate that is related to a cluster manager message, then record it to
    * the zookeeper store.
-   * 
+   *
    * @param message
    *          the related cluster manager message
    * @param level
@@ -451,7 +451,7 @@ public class StatusUpdateUtil
 
   /**
    * Write a status update record to zookeeper to the zookeeper store.
-   * 
+   *
    * @param record
    *          the status update record
    * @param message
@@ -492,7 +492,7 @@ public class StatusUpdateUtil
       }
       else
       {
-        
+
         PropertyKey propertyKey =
             keyBuilder.stateTransitionStatus(instanceName,
                                              sessionId,
@@ -501,13 +501,13 @@ public class StatusUpdateUtil
 
         ZNRecord statusUpdateRecord = createMessageLogRecord(message);
 
-        // For now write participant StatusUpdates to log4j. 
+        // For now write participant StatusUpdates to log4j.
         // we are using restlet as another data channel to report to controller.
-        
+
         _logger.info("StatusUpdate path:" + propertyKey.getPath() + ", updates:"
               + statusUpdateRecord);
         accessor.updateProperty(propertyKey, new StatusUpdate(statusUpdateRecord));
-        
+
       }
       _recordedMessages.put(message.getMsgId(), message.getMsgId());
     }
@@ -520,13 +520,13 @@ public class StatusUpdateUtil
     }
     else
     {
-      
+
       PropertyKey propertyKey =
           keyBuilder.stateTransitionStatus(instanceName,
                                            sessionId,
                                            statusUpdateSubPath,
                                            statusUpdateKey);
-      // For now write participant StatusUpdates to log4j. 
+      // For now write participant StatusUpdates to log4j.
       // we are using restlet as another data channel to report to controller.
       _logger.info("StatusUpdate path:" + propertyKey.getPath() + ", updates:" + record);
       accessor.updateProperty(propertyKey, new StatusUpdate(record));
@@ -550,7 +550,7 @@ public class StatusUpdateUtil
 
   /**
    * Generate the sub-path under STATUSUPDATE or ERROR path for a status update
-   * 
+   *
    */
   String getStatusUpdateSubPath(Message message)
   {
@@ -575,7 +575,7 @@ public class StatusUpdateUtil
 
   /**
    * Write an error record to zookeeper to the zookeeper store.
-   * 
+   *
    * @param record
    *          the status update record
    * @param message
@@ -603,12 +603,9 @@ public class StatusUpdateUtil
     // TODO remove the hard code: "controller"
     if (instanceName.equalsIgnoreCase("controller"))
     {
-      // TODO need to fix: ERRORS_CONTROLLER doesn't have a form of
-      // ../{sessionId}/{subPath}
-      // accessor.setProperty(PropertyType.ERRORS_CONTROLLER, record,
-      // statusUpdateSubPath);
-      accessor.setProperty(keyBuilder.controllerTaskError(statusUpdateSubPath),
-                           new Error(record));
+      accessor.setProperty(keyBuilder.controllerTaskError(statusUpdateSubPath,
+                                                          statusUpdateKey),
+                                                          new Error(record));
     }
     else
     {

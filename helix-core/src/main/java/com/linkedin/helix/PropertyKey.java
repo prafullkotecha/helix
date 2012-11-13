@@ -334,7 +334,7 @@ public class PropertyKey
 
     /**
      * Used to get status update for a NON STATE TRANSITION type
-     * 
+     *
      * @param instanceName
      * @param sessionId
      * @param msgType
@@ -383,7 +383,7 @@ public class PropertyKey
 
     /**
      * Used to get status update for a NON STATE TRANSITION type
-     * 
+     *
      * @param instanceName
      * @param sessionId
      * @param msgType
@@ -440,9 +440,10 @@ public class PropertyKey
       return new PropertyKey(ERRORS_CONTROLLER, StatusUpdate.class, _clusterName);
     }
 
-    public PropertyKey controllerTaskError(String errorId)
+    public PropertyKey controllerTaskError(String subPath, String recordName)
     {
-      return new PropertyKey(ERRORS_CONTROLLER, Error.class, _clusterName, errorId);
+      return new PropertyKey(ERRORS_CONTROLLER, Error.class, _clusterName, subPath,
+          recordName);
     }
 
     public PropertyKey controllerTaskStatuses(String subPath)
