@@ -17,8 +17,6 @@ package com.linkedin.helix.integration;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
-
 import org.apache.log4j.Logger;
 import org.testng.Assert;
 import org.testng.annotations.Test;

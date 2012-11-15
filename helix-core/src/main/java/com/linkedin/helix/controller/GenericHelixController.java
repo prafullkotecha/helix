@@ -25,10 +25,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.log4j.Logger;
 
-import com.linkedin.helix.ConfigAccessor;
 import com.linkedin.helix.ConfigChangeListener;
-import com.linkedin.helix.ConfigScope;
-import com.linkedin.helix.ConfigScopeBuilder;
 import com.linkedin.helix.ControllerChangeListener;
 import com.linkedin.helix.CurrentStateChangeListener;
 import com.linkedin.helix.ExternalViewChangeListener;
@@ -64,7 +61,6 @@ import com.linkedin.helix.model.LiveInstance;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.PauseSignal;
 import com.linkedin.helix.monitoring.mbeans.ClusterStatusMonitor;
-import com.linkedin.helix.monitoring.mbeans.MessageQueueMonitor;
 
 /**
  * Cluster Controllers main goal is to keep the cluster state as close as possible to

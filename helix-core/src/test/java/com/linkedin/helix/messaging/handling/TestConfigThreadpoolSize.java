@@ -11,17 +11,12 @@ import com.linkedin.helix.ConfigScope;
 import com.linkedin.helix.ConfigScopeBuilder;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.NotificationContext;
-import com.linkedin.helix.TestHelper;
-import com.linkedin.helix.TestHelper.StartCMResult;
 import com.linkedin.helix.integration.ZkStandAloneCMTestBase;
-import com.linkedin.helix.integration.TestMessagingService.TestMessagingHandlerFactory.TestMessagingHandler;
+
 import com.linkedin.helix.messaging.DefaultMessagingService;
 import com.linkedin.helix.messaging.handling.HelixTaskExecutor;
-import com.linkedin.helix.messaging.handling.HelixTaskResult;
 import com.linkedin.helix.messaging.handling.MessageHandler;
 import com.linkedin.helix.messaging.handling.MessageHandlerFactory;
-import com.linkedin.helix.messaging.handling.MessageHandler.ErrorCode;
-import com.linkedin.helix.messaging.handling.MessageHandler.ErrorType;
 import com.linkedin.helix.model.Message;
 
 public class TestConfigThreadpoolSize extends ZkStandAloneCMTestBase

@@ -23,7 +23,6 @@ import java.util.UUID;
 import org.testng.AssertJUnit;
 import org.testng.annotations.Test;
 
-import com.linkedin.helix.DataAccessor;
 import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixProperty;
 import com.linkedin.helix.Mocks;

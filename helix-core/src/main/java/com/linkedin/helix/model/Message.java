@@ -22,7 +22,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixProperty;

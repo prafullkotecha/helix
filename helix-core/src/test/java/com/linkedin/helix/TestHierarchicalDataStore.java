@@ -19,8 +19,6 @@ import org.testng.annotations.Test;
 import org.testng.AssertJUnit;
 import java.io.FileFilter;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.controller.HierarchicalDataHolder;

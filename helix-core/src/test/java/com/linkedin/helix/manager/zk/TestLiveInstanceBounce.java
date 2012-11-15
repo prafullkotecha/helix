@@ -20,7 +20,6 @@ import org.testng.annotations.Test;
 
 import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.TestHelper.StartCMResult;
-import com.linkedin.helix.integration.ZkStandAloneCMTestBase;
 import com.linkedin.helix.integration.ZkStandAloneCMTestBaseWithPropertyServerCheck;
 import com.linkedin.helix.tools.ClusterStateVerifier;
 

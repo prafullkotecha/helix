@@ -16,7 +16,6 @@
 package com.linkedin.helix.participant;
 
 import org.testng.annotations.Test;
-import org.testng.annotations.Test;
 
 import com.linkedin.helix.ZkUnitTestBase;
 import com.linkedin.helix.participant.DistClusterControllerStateModel;

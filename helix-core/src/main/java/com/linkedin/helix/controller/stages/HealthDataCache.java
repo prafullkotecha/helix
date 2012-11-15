@@ -21,7 +21,6 @@ import java.util.Map;
 
 import com.linkedin.helix.DataAccessor;
 import com.linkedin.helix.HelixDataAccessor;
-import com.linkedin.helix.HelixProperty;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.PropertyType;
 import com.linkedin.helix.model.AlertStatus;

@@ -15,8 +15,6 @@
  */
 package com.linkedin.helix.messaging.handling;
 import com.linkedin.helix.NotificationContext;
-import com.linkedin.helix.messaging.handling.MessageHandler.ErrorCode;
-import com.linkedin.helix.messaging.handling.MessageHandler.ErrorType;
 import com.linkedin.helix.model.Message;
 
 /**

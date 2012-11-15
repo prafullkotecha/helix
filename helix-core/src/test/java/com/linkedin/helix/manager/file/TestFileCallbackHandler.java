@@ -18,8 +18,6 @@ package com.linkedin.helix.manager.file;
 import org.testng.annotations.Test;
 import org.testng.AssertJUnit;
 import org.apache.zookeeper.Watcher.Event.EventType;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.ZNRecord;

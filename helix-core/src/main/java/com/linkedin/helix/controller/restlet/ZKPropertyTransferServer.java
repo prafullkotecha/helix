@@ -15,7 +15,6 @@ import org.restlet.Context;
 import org.restlet.data.Protocol;
 
 import com.linkedin.helix.AccessOption;
-import com.linkedin.helix.BaseDataAccessor;
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;

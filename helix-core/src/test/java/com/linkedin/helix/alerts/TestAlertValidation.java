@@ -17,8 +17,6 @@ package com.linkedin.helix.alerts;
 
 import org.testng.annotations.Test;
 import org.testng.AssertJUnit;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 import com.linkedin.helix.HelixException;
 import com.linkedin.helix.alerts.AlertParser;

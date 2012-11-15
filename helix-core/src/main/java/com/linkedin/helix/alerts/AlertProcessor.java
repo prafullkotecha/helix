@@ -18,16 +18,13 @@ package com.linkedin.helix.alerts;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import com.linkedin.helix.HelixException;
-import com.linkedin.helix.healthcheck.StatHealthReportProvider;
 
 public class AlertProcessor
 {

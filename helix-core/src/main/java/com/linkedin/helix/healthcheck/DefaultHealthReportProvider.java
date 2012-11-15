@@ -23,8 +23,6 @@ import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
-import com.linkedin.helix.ZNRecord;
-
 class DefaultHealthReportProvider extends HealthReportProvider
 {
   private static final Logger _logger = Logger

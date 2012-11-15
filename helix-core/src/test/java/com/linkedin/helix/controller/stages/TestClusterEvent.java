@@ -17,8 +17,6 @@ package com.linkedin.helix.controller.stages;
 
 import org.testng.annotations.Test;
 import org.testng.AssertJUnit;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 import com.linkedin.helix.controller.stages.ClusterEvent;
 @Test

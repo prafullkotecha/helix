@@ -17,8 +17,6 @@ package com.linkedin.helix;
 
 import org.testng.annotations.Test;
 import org.testng.AssertJUnit;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 import com.linkedin.helix.PropertyPathConfig;
 import com.linkedin.helix.PropertyType;

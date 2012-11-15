@@ -17,10 +17,7 @@ package com.linkedin.helix.alerts;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.StringTokenizer;
-import java.util.Vector;
 
 public class Tuple<T> {
 	List<T> elements;

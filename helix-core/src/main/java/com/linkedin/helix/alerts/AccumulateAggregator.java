@@ -15,8 +15,6 @@
  */
 package com.linkedin.helix.alerts;
 
-import java.util.Iterator;
-
 import com.linkedin.helix.HelixException;
 
 public class AccumulateAggregator extends Aggregator {

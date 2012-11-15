@@ -1,6 +1,5 @@
 package com.linkedin.helix.examples;
 
-import java.io.File;
 
 import com.linkedin.helix.controller.HelixControllerMain;
 import com.linkedin.helix.manager.zk.ZKHelixAdmin;
@@ -9,7 +8,6 @@ import com.linkedin.helix.manager.zk.ZkClient;
 import com.linkedin.helix.model.InstanceConfig;
 import com.linkedin.helix.model.StateModelDefinition;
 import com.linkedin.helix.model.IdealState.IdealStateModeProperty;
-import com.linkedin.helix.tools.ClusterSetup;
 import com.linkedin.helix.tools.StateModelConfigGenerator;
 
 /**

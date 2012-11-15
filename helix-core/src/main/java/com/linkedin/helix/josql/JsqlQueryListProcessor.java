@@ -5,7 +5,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.linkedin.helix.HelixDataAccessor;
-import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.ZNRecord;
 
 /**

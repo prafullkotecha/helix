@@ -18,7 +18,6 @@ package com.linkedin.helix.monitoring.mbeans;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.management.AttributeNotFoundException;
@@ -30,11 +29,9 @@ import javax.management.ReflectionException;
 
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.alerts.AlertValueAndStatus;
 import com.linkedin.helix.alerts.Tuple;
 import com.linkedin.helix.healthcheck.TestWildcardAlert.TestClusterMBeanObserver;

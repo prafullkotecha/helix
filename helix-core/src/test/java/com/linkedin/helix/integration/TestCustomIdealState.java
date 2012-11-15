@@ -54,12 +54,18 @@ public class TestCustomIdealState extends ZkIntegrationTestBase
     int numInstance = 5;
     int replica = 3;
 
-    String uniqClusterName = "TestCustomIS_" + "rg" + numResources + "_p" + numPartitionsPerResource
-        + "_n" + numInstance + "_r" + replica + "_basic";
-    System.out.println("START " + uniqClusterName + " at " + new Date(System.currentTimeMillis()));
+    String uniqClusterName =
+        "TestCustomIS_" + "rg" + numResources + "_p" + numPartitionsPerResource + "_n"
+            + numInstance + "_r" + replica + "_basic";
+    System.out.println("START " + uniqClusterName + " at "
+        + new Date(System.currentTimeMillis()));
 
-    TestDriver.setupClusterWithoutRebalance(uniqClusterName, ZK_ADDR, numResources,
-        numPartitionsPerResource, numInstance, replica);
+    TestDriver.setupClusterWithoutRebalance(uniqClusterName,
+                                            ZK_ADDR,
+                                            numResources,
+                                            numPartitionsPerResource,
+                                            numInstance,
+                                            replica);
 
     for (int i = 0; i < numInstance; i++)
     {
@@ -72,7 +78,8 @@ public class TestCustomIdealState extends ZkIntegrationTestBase
 
     TestDriver.stopCluster(uniqClusterName);
 
-    System.out.println("STOP " + uniqClusterName + " at " + new Date(System.currentTimeMillis()));
+    System.out.println("STOP " + uniqClusterName + " at "
+        + new Date(System.currentTimeMillis()));
   }
 
   @Test
@@ -83,12 +90,18 @@ public class TestCustomIdealState extends ZkIntegrationTestBase
     int numInstance = 5;
     int replica = 3;
 
-    String uniqClusterName = "TestCustomIS_" + "rg" + numResources + "_p" + numPartitionsPerResource
-        + "_n" + numInstance + "_r" + replica + "_nonalive";
-    System.out.println("START " + uniqClusterName + " at " + new Date(System.currentTimeMillis()));
+    String uniqClusterName =
+        "TestCustomIS_" + "rg" + numResources + "_p" + numPartitionsPerResource + "_n"
+            + numInstance + "_r" + replica + "_nonalive";
+    System.out.println("START " + uniqClusterName + " at "
+        + new Date(System.currentTimeMillis()));
 
-    TestDriver.setupClusterWithoutRebalance(uniqClusterName, ZK_ADDR, numResources,
-        numPartitionsPerResource, numInstance, replica);
+    TestDriver.setupClusterWithoutRebalance(uniqClusterName,
+                                            ZK_ADDR,
+                                            numResources,
+                                            numPartitionsPerResource,
+                                            numInstance,
+                                            replica);
 
     for (int i = 0; i < numInstance / 2; i++)
     {
@@ -111,7 +124,8 @@ public class TestCustomIdealState extends ZkIntegrationTestBase
 
     TestDriver.stopCluster(uniqClusterName);
 
-    System.out.println("STOP " + uniqClusterName + " at " + new Date(System.currentTimeMillis()));
+    System.out.println("STOP " + uniqClusterName + " at "
+        + new Date(System.currentTimeMillis()));
 
   }
 
@@ -123,12 +137,18 @@ public class TestCustomIdealState extends ZkIntegrationTestBase
     int numInstance = 5;
     int replica = 3;
 
-    String uniqClusterName = "TestCustomIS_" + "rg" + numResources + "_p" + numPartitionsPerResource
-        + "_n" + numInstance + "_r" + replica + "_drop";
+    String uniqClusterName =
+        "TestCustomIS_" + "rg" + numResources + "_p" + numPartitionsPerResource + "_n"
+            + numInstance + "_r" + replica + "_drop";
 
-    System.out.println("START " + uniqClusterName + " at " + new Date(System.currentTimeMillis()));
-    TestDriver.setupClusterWithoutRebalance(uniqClusterName, ZK_ADDR, numResources,
-        numPartitionsPerResource, numInstance, replica);
+    System.out.println("START " + uniqClusterName + " at "
+        + new Date(System.currentTimeMillis()));
+    TestDriver.setupClusterWithoutRebalance(uniqClusterName,
+                                            ZK_ADDR,
+                                            numResources,
+                                            numPartitionsPerResource,
+                                            numInstance,
+                                            replica);
 
     for (int i = 0; i < numInstance; i++)
     {
@@ -142,12 +162,20 @@ public class TestCustomIdealState extends ZkIntegrationTestBase
     ClusterSetup setup = new ClusterSetup(ZK_ADDR);
     setup.dropResourceFromCluster(uniqClusterName, "TestDB0");
 
-    TestHelper.verifyWithTimeout("verifyEmptyCurStateAndExtView", uniqClusterName, "TestDB0",
-        TestHelper.<String> setOf("localhost_12918", "localhost_12919", "localhost_12920",
-            "localhost_12921", "localhost_12922"), ZK_ADDR);
+    TestHelper.verifyWithTimeout("verifyEmptyCurStateAndExtView",
+                                 30 * 1000,
+                                 uniqClusterName,
+                                 "TestDB0",
+                                 TestHelper.<String> setOf("localhost_12918",
+                                                           "localhost_12919",
+                                                           "localhost_12920",
+                                                           "localhost_12921",
+                                                           "localhost_12922"),
+                                 ZK_ADDR);
 
     TestDriver.stopCluster(uniqClusterName);
-    System.out.println("STOP " + uniqClusterName + " at " + new Date(System.currentTimeMillis()));
+    System.out.println("STOP " + uniqClusterName + " at "
+        + new Date(System.currentTimeMillis()));
   }
 
   // TODO add a test case that verify (in case of node failure) best possible

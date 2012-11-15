@@ -20,8 +20,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
@@ -30,8 +28,6 @@ import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
-import com.linkedin.helix.PropertyType;
-import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.controller.stages.HealthDataCache;
 import com.linkedin.helix.model.PersistentStats;
 

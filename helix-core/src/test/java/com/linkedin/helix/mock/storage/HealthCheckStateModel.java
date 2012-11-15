@@ -15,7 +15,6 @@
  */
 package com.linkedin.helix.mock.storage;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.CountDownLatch;
@@ -25,8 +24,6 @@ import org.apache.log4j.Logger;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.healthcheck.StatHealthReportProvider;
-import com.linkedin.helix.manager.zk.ZKHelixManager;
-import com.linkedin.helix.mock.consumer.ConsumerAdapter;
 import com.linkedin.helix.mock.consumer.RelayConfig;
 import com.linkedin.helix.mock.consumer.RelayConsumer;
 import com.linkedin.helix.model.Message;

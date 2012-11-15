@@ -10,7 +10,6 @@ import org.I0Itec.zkclient.IZkChildListener;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.HelixAdmin;
 import com.linkedin.helix.PropertyPathConfig;
 import com.linkedin.helix.PropertyType;
@@ -21,8 +20,6 @@ import com.linkedin.helix.manager.zk.ZKHelixAdmin;
 import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.mock.storage.MockParticipant;
-import com.linkedin.helix.model.ClusterConstraints;
-import com.linkedin.helix.model.ClusterConstraints.ConstraintType;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.tools.ClusterStateVerifier;
 import com.linkedin.helix.tools.ClusterStateVerifier.BestPossAndExtViewZkVerifier;

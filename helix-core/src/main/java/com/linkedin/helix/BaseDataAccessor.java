@@ -5,7 +5,6 @@ import java.util.List;
 import org.I0Itec.zkclient.DataUpdater;
 import org.I0Itec.zkclient.IZkChildListener;
 import org.I0Itec.zkclient.IZkDataListener;
-import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 
 public interface BaseDataAccessor<T>

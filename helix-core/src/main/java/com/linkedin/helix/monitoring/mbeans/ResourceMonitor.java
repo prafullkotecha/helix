@@ -19,9 +19,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.linkedin.helix.DataAccessor;
-import com.linkedin.helix.HelixManager;
-import com.linkedin.helix.PropertyType;
 import com.linkedin.helix.model.ExternalView;
 import com.linkedin.helix.model.IdealState;
 

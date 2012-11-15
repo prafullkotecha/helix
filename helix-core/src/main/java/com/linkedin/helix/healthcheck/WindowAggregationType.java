@@ -15,8 +15,6 @@
  */
 package com.linkedin.helix.healthcheck;
 
-import java.util.TimerTask;
-
 import org.apache.log4j.Logger;
 
 public class WindowAggregationType implements AggregationType

@@ -31,7 +31,6 @@ import com.linkedin.helix.HelixProperty;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.healthcheck.HealthStatsAggregationTask;
-import com.linkedin.helix.integration.ZkStandAloneCMTestBase;
 import com.linkedin.helix.integration.ZkStandAloneCMTestBaseWithPropertyServerCheck;
 import com.linkedin.helix.model.AlertHistory;
 import com.linkedin.helix.model.HealthStat;

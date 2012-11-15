@@ -16,10 +16,8 @@
 package com.linkedin.helix.mock.consumer;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.Map.Entry;
 
 public class RelayConfig

@@ -18,8 +18,6 @@ package com.linkedin.helix.monitoring.mbeans;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-
 import com.linkedin.helix.monitoring.StatCollector;
 import com.linkedin.helix.monitoring.StateTransitionContext;
 import com.linkedin.helix.monitoring.StateTransitionDataPoint;

@@ -16,25 +16,14 @@
 package com.linkedin.helix.messaging;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.josql.Query;
-import org.josql.QueryExecutionException;
-import org.josql.QueryParseException;
-import org.josql.QueryResults;
 
-import com.linkedin.helix.DataAccessor;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.Criteria;
-import com.linkedin.helix.PropertyType;
-import com.linkedin.helix.ZNRecord;
-import com.linkedin.helix.Criteria.DataSource;
 import com.linkedin.helix.josql.ClusterJosqlQueryProcessor;
 import com.linkedin.helix.josql.ZNRecordRow;
 

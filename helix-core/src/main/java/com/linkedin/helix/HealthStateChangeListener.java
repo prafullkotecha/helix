@@ -18,7 +18,6 @@ package com.linkedin.helix;
 import java.util.List;
 
 import com.linkedin.helix.model.HealthStat;
-import com.linkedin.helix.model.Message;
 
 public interface HealthStateChangeListener
 {

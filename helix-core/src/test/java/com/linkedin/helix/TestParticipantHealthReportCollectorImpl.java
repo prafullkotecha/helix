@@ -17,9 +17,6 @@ package com.linkedin.helix;
 
 import org.testng.annotations.Test;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Test;
-import org.testng.AssertJUnit;
 
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.Mocks.MockHealthReportProvider;

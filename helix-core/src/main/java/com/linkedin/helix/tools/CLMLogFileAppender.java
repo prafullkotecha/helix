@@ -15,14 +15,9 @@
  */
 package com.linkedin.helix.tools;
 
-import java.io.File;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;

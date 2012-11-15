@@ -24,9 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.HelixException;
 import com.linkedin.helix.Mocks;
@@ -34,7 +31,6 @@ import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.messaging.AsyncCallback;
 import com.linkedin.helix.messaging.handling.AsyncCallbackService;
 import com.linkedin.helix.messaging.handling.MessageHandler;
-import com.linkedin.helix.messaging.handling.TestHelixTaskExecutor.MockClusterManager;
 import com.linkedin.helix.model.Message;
 
 public class TestAsyncCallbackSvc
