@@ -386,8 +386,11 @@ public class ZkBaseDataAccessor<T> implements BaseDataAccessor<T>
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("getData_async, size: " + paths.size() + ", paths: " + paths.get(0)
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("getData_async, size: " + paths.size() + ", paths: " + paths.get(0)
           + ",... time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -651,8 +654,11 @@ public class ZkBaseDataAccessor<T> implements BaseDataAccessor<T>
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("create_async, size: " + paths.size() + ", paths: " + paths.get(0)
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("create_async, size: " + paths.size() + ", paths: " + paths.get(0)
           + ",... time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -815,8 +821,11 @@ public class ZkBaseDataAccessor<T> implements BaseDataAccessor<T>
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("setData_async, size: " + paths.size() + ", paths: " + paths.get(0)
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("setData_async, size: " + paths.size() + ", paths: " + paths.get(0)
           + ",... time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -1005,8 +1014,11 @@ public class ZkBaseDataAccessor<T> implements BaseDataAccessor<T>
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("setData_async, size: " + paths.size() + ", paths: " + paths.get(0)
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("setData_async, size: " + paths.size() + ", paths: " + paths.get(0)
           + ",... time: " + (endT - startT) + " ns");
+      }
     }
 
   }
@@ -1068,8 +1080,11 @@ public class ZkBaseDataAccessor<T> implements BaseDataAccessor<T>
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("exists_async, size: " + paths.size() + ", paths: " + paths.get(0)
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("exists_async, size: " + paths.size() + ", paths: " + paths.get(0)
           + ",... time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -1112,8 +1127,11 @@ public class ZkBaseDataAccessor<T> implements BaseDataAccessor<T>
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("delete_async, size: " + paths.size() + ", paths: " + paths.get(0)
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("delete_async, size: " + paths.size() + ", paths: " + paths.get(0)
           + ",... time: " + (endT - startT) + " ns");
+      }
     }
   }
 

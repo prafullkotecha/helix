@@ -164,7 +164,10 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("exists, path: " + path + ", time: " + (endT - startT) + " ns");
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("exists, path: " + path + ", time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -188,7 +191,10 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("exists, path: " + path + ", time: " + (endT - startT) + " ns");
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("exists, path: " + path + ", time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -212,7 +218,10 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("getChildren, path: " + path + ", time: " + (endT - startT) + " ns");
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("getChildren, path: " + path + ", time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -250,7 +259,10 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("getData, path: " + path + ", time: " + (endT - startT) + " ns");
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("getData, path: " + path + ", time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -306,7 +318,10 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("setData, path: " + path + ", time: " + (endT - startT) + " ns");
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("setData, path: " + path + ", time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -330,7 +345,10 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long end = System.nanoTime();
-      LOG.info("setData, path: " + path + ", time: " + (end - start) + " ns");
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("setData, path: " + path + ", time: " + (end - start) + " ns");
+      }
     }
   }
   
@@ -363,7 +381,10 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("create, path: " + path + ", time: " + (endT - startT) + " ns");
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("create, path: " + path + ", time: " + (endT - startT) + " ns");
+      }
     }
   }
 
@@ -396,7 +417,10 @@ public class ZkClient extends org.I0Itec.zkclient.ZkClient
     finally
     {
       long endT = System.nanoTime();
-      LOG.info("delete, path: " + path + ", time: " + (endT - startT) + " ns");
+      if (LOG.isDebugEnabled())
+      {
+        LOG.debug("delete, path: " + path + ", time: " + (endT - startT) + " ns");
+      }
     }
   }
 
