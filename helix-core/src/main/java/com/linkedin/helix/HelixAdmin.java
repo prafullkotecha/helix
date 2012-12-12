@@ -113,13 +113,15 @@ public interface HelixAdmin
    * @param stateModelRef
    * @param idealStateMode
    * @param bucketSize
+   * @param groupMsgMode
    */
   void addResource(String clusterName,
                    String resourceName,
                    int numResources,
                    String stateModelRef,
                    String idealStateMode,
-                   int bucketSize);
+                   int bucketSize,
+                   boolean groupMsgMode);
 
   /**
    * Add an instance to a cluster

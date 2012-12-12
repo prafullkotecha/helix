@@ -32,9 +32,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.Timer;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 
 import org.I0Itec.zkclient.ZkConnection;
@@ -588,7 +586,7 @@ public class ZKHelixManager implements HelixManager
     // store which expects raw byte[] serialization/deserialization
     PathBasedZkSerializer zkSerializer =
         ChainedPathZkSerializer.builder(new ZNRecordStreamingSerializer())
-                               .serialize(propertyStorePath, new ByteArraySerializer())
+                               // .serialize(propertyStorePath, new ByteArraySerializer())
                                .build();
 
     _zkClient = new ZkClient(zkServers, _sessionTimeout, CONNECTIONTIMEOUT, zkSerializer);
@@ -1095,4 +1093,5 @@ public class ZKHelixManager implements HelixManager
       task.stop();
     }
   }
+ 
 }

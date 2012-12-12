@@ -122,6 +122,7 @@ public class CurrentStateComputationStage extends AbstractBaseStage
       String clientSessionId = instance.getSessionId();
       Map<String, CurrentState> currentStateMap =
           cache.getCurrentState(instanceName, clientSessionId);
+      // System.out.println("curStateMap: " + currentStateMap);
       for (CurrentState currentState : currentStateMap.values())
       {
 

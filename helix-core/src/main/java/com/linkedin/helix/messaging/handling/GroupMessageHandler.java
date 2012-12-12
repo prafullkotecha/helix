@@ -7,6 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.log4j.Logger;
+
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
@@ -14,6 +16,8 @@ import com.linkedin.helix.model.Message.Attributes;
 
 public class GroupMessageHandler
 {
+    private static Logger LOG = Logger.getLogger(GroupMessageHandler.class);
+
   class CurrentStateUpdate
   {
     final PropertyKey  _key;
@@ -41,7 +45,9 @@ public class GroupMessageHandler
     {
       _message = message;
       List<String> partitionNames = message.getPartitionNames();
-      _countDown = new AtomicInteger(partitionNames.size());
+      int partitionNb = partitionNames.size();
+      int exeBatchSize = message.getExeBatchSize();
+      _countDown = new AtomicInteger( (partitionNb + exeBatchSize - 1) / exeBatchSize);	// round up
       _curStateUpdateList = new ConcurrentLinkedQueue<CurrentStateUpdate>();
     }
     
@@ -74,6 +80,7 @@ public class GroupMessageHandler
   }
 
   final ConcurrentHashMap<String, GroupMessageInfo> _groupMsgMap;
+//  final ConcurrentLinkedQueue<ZkItem<ZNRecord>> _zkItemList = new ConcurrentLinkedQueue<ZkItem<ZNRecord>>();
 
   public GroupMessageHandler()
   {
@@ -104,6 +111,7 @@ public class GroupMessageHandler
 
   void addCurStateUpdate(Message subMessage, PropertyKey key, CurrentState delta)
   {
+    // System.out.println("\tadd curState update: " + key + ", " + delta);
     String parentMid = subMessage.getAttribute(Attributes.PARENT_MSG_ID);
     GroupMessageInfo info = _groupMsgMap.get(parentMid);
     if (info != null)
@@ -112,4 +120,29 @@ public class GroupMessageHandler
     }
 
   }
+  
+//  public void addZkItem(ZkItem<ZNRecord> item)
+//  {
+//    LOG.info("addZkItem: " + item._path);
+//    _zkItemList.add(item);
+//  }
+
+//  public void addZkItems(Queue<ZkItem<ZNRecord>> list)
+//  {
+//    LOG.info("addZkItems: " + list.size() + ", " + list);
+//    _zkItemList.addAll(list);
+//  }
+//
+//  public List<ZkItem<ZNRecord>> getZkItems()
+//  {
+//    List<ZkItem<ZNRecord>> list = new ArrayList<ZkItem<ZNRecord>>();
+//    Iterator<ZkItem<ZNRecord>> it = _zkItemList.iterator();
+//    while (it.hasNext())
+//    {
+//      list.add(it.next());
+//      it.remove();
+//    }
+//    LOG.info("getZkItem: " + list.size());
+//    return list;
+//  }
 }

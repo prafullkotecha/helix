@@ -130,7 +130,7 @@ public class MessageGenerationPhase extends AbstractBaseStage
           {
             Message message = createMessage(manager, resourceName, partition.getPartitionName(),
                 instanceName, currentState, nextState, sessionIdMap.get(instanceName),
-                stateModelDef.getId(), resource.getStateModelFactoryname(), bucketSize);
+                stateModelDef.getId(), resource.getStateModelFactoryname(), bucketSize, resource.getExeBatchSize());
             IdealState idealState = cache.getIdealState(resourceName);
             // Set timeout of needed
             String stateTransition = currentState + "-" + nextState + "_"
@@ -162,7 +162,7 @@ public class MessageGenerationPhase extends AbstractBaseStage
 
   private Message createMessage(HelixManager manager, String resourceName, String partitionName,
       String instanceName, String currentState, String nextState, String sessionId,
-      String stateModelDefName, String stateModelFactoryName, int bucketSize)
+      String stateModelDefName, String stateModelFactoryName, int bucketSize, int exeBatchSize)
   {
     String uuid = UUID.randomUUID().toString();
     Message message = new Message(MessageType.STATE_TRANSITION, uuid);
@@ -178,7 +178,7 @@ public class MessageGenerationPhase extends AbstractBaseStage
     message.setStateModelDef(stateModelDefName);
     message.setStateModelFactoryName(stateModelFactoryName);
     message.setBucketSize(bucketSize);
-
+    message.setExeBatchSize(exeBatchSize);
     return message;
   }
 }

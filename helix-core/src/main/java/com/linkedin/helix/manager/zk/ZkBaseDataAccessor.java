@@ -797,7 +797,7 @@ public class ZkBaseDataAccessor<T> implements BaseDataAccessor<T>
         else if (rc == Code.NONODE)
         {
           CreateCallbackHandler createCb = createCbList[i];
-          if (Code.get(createCb.getRc()) == Code.OK)
+          if (createCb != null && Code.get(createCb.getRc()) == Code.OK)
           {
             success[i] = true;
           }

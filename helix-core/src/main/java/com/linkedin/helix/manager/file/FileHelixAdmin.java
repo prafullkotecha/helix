@@ -215,9 +215,10 @@ public class FileHelixAdmin implements HelixAdmin
                           int numResources,
                           String stateModelRef,
                           String idealStateMode,
-                          int bucketSize)
+                          int bucketSize,
+                          boolean groupMsgMode)
   {
-    throw new UnsupportedOperationException("bucketize not supported in file-based cluster manager");
+    throw new UnsupportedOperationException("bucketize/groupMessage not supported in file-based cluster manager");
   }
 
   @Override

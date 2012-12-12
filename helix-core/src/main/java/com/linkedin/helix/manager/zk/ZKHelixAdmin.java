@@ -626,7 +626,8 @@ public class ZKHelixAdmin implements HelixAdmin
                 partitions,
                 stateModelRef,
                 IdealStateModeProperty.AUTO.toString(),
-                0);
+                0,
+                false);
   }
 
   @Override
@@ -636,7 +637,7 @@ public class ZKHelixAdmin implements HelixAdmin
                           String stateModelRef,
                           String idealStateMode)
   {
-    addResource(clusterName, resourceName, partitions, stateModelRef, idealStateMode, 0);
+    addResource(clusterName, resourceName, partitions, stateModelRef, idealStateMode, 0, false);
   }
 
   @Override
@@ -645,7 +646,8 @@ public class ZKHelixAdmin implements HelixAdmin
                           int partitions,
                           String stateModelRef,
                           String idealStateMode,
-                          int bucketSize)
+                          int bucketSize,
+                          boolean groupMsgMode)
   {
     if (!ZKUtil.isClusterSetup(clusterName, _zkClient))
     {
@@ -661,12 +663,14 @@ public class ZKHelixAdmin implements HelixAdmin
     {
       logger.error("", e);
     }
+    
     IdealState idealState = new IdealState(resourceName);
     idealState.setNumPartitions(partitions);
     idealState.setStateModelDefRef(stateModelRef);
     idealState.setIdealStateMode(mode.toString());
     idealState.setReplicas("" + 0);
     idealState.setStateModelFactoryName(HelixConstants.DEFAULT_STATE_MODEL_FACTORY);
+    idealState.setGroupMessageMode(groupMsgMode);
 
     if (bucketSize > 0)
     {
@@ -1212,6 +1216,7 @@ public class ZKHelixAdmin implements HelixAdmin
     return bytes;
   }
 
+  @Override
   public void addStateModelDef(String clusterName,
                                String stateModelDefName,
                                String stateModelDefFile) throws IOException
@@ -1227,6 +1232,7 @@ public class ZKHelixAdmin implements HelixAdmin
 
   }
 
+  @Override
   public void addMessageConstraint(String clusterName,
                                    final String constraintId,
                                    final Map<String, String> constraints)

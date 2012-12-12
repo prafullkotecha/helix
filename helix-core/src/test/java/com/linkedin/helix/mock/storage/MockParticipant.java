@@ -26,7 +26,6 @@ import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.apache.log4j.Logger;
 
 import com.linkedin.helix.AccessOption;
-import com.linkedin.helix.BaseDataAccessor;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.HelixManagerFactory;
 import com.linkedin.helix.InstanceType;
@@ -348,8 +347,13 @@ public class MockParticipant extends Thread
         }
         catch (ZkNoNodeException e)
         {
-          record = new ZNRecord(setPath);
+            // OK
         }
+        if (record == null)
+        {
+            record = new ZNRecord(setPath);
+        }
+        
         record.setSimpleField("setTimestamp", "" + System.currentTimeMillis());
         store.set(setPath, record, AccessOption.PERSISTENT);
 
@@ -386,6 +390,7 @@ public class MockParticipant extends Thread
     @Override
     public void doTransition(Message message, NotificationContext context) throws InterruptedException
     {
+      // System.out.println("do store access transition for " + message.getPartitionName());
       HelixManager manager = context.getManager();
       ZkHelixPropertyStore<ZNRecord> store = manager.getHelixPropertyStore();
       final String setPath = "/TEST_PERF/set/" + message.getPartitionName();
@@ -395,34 +400,45 @@ public class MockParticipant extends Thread
       {
         // get/set once
         ZNRecord record = null;
-        try
+//        try
+//        {
+//          record = store.get(setPath, null, 0);
+//        }
+//        catch (ZkNoNodeException e)
+//        {
+//          // OK we create one
+//        }
+        
+        if (record == null)
         {
-          record = store.get(setPath, null, 0);
+            record = new ZNRecord(setPath);
         }
-        catch (ZkNoNodeException e)
-        {
-          record = new ZNRecord(setPath);
-        }
+        
+        LOG.info("setPropertyStore: " + setPath);
         record.setSimpleField("setTimestamp", "" + System.currentTimeMillis());
         store.set(setPath, record, AccessOption.PERSISTENT);
+        store.get(setPath, null, 0);
+//        context.add(NotificationContext.ZK_WRITE_KEY, 
+//        	new ZkItem<ZNRecord>("/" + manager.getClusterName() + "/" + PropertyType.HELIX_PROPERTYSTORE + setPath, record));
 
-        // update once
-        store.update(updatePath, new DataUpdater<ZNRecord>()
-        {
 
-          @Override
-          public ZNRecord update(ZNRecord currentData)
-          {
-            if (currentData == null)
-            {
-              currentData = new ZNRecord(updatePath);
-            }
-            currentData.setSimpleField("updateTimestamp", "" + System.currentTimeMillis());
-
-            return currentData;
-          }
-
-        }, AccessOption.PERSISTENT);
+//        // update once
+//        store.update(updatePath, new DataUpdater<ZNRecord>()
+//        {
+//
+//          @Override
+//          public ZNRecord update(ZNRecord currentData)
+//          {
+//            if (currentData == null)
+//            {
+//              currentData = new ZNRecord(updatePath);
+//            }
+//            currentData.setSimpleField("updateTimestamp", "" + System.currentTimeMillis());
+//
+//            return currentData;
+//          }
+//
+//        }, AccessOption.PERSISTENT);
       }
       catch (Exception e)
       {

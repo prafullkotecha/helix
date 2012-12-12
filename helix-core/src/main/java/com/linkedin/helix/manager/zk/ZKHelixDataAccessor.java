@@ -144,6 +144,8 @@ public class ZKHelixDataAccessor implements HelixDataAccessor, ControllerChangeL
     {
     case CURRENTSTATES:
       success = _groupCommit.commit(_baseDataAccessor, options, path, value.getRecord());
+//      success =
+//        _baseDataAccessor.update(path, new ZNRecordUpdater(value.getRecord()), options);
       break;
     default:
       if (type.usePropertyTransferServer())

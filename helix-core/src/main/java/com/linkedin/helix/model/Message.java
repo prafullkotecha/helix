@@ -16,13 +16,13 @@
 package com.linkedin.helix.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixProperty;
@@ -76,7 +76,8 @@ public class Message extends HelixProperty
     RETRY_COUNT,
     STATE_MODEL_FACTORY_NAME,
     BUCKET_SIZE,
-    PARENT_MSG_ID   // used for group message mode
+    PARENT_MSG_ID,   // used for group message mode
+    BATCH_PARTITION_NAMES		// list of partition names executed in batch
   }
 
   public enum MessageState
@@ -553,6 +554,26 @@ public class Message extends HelixProperty
     {
       return keyBuilder.message(instanceName, getId());
     }
+  }
+  
+  public List<String> getBatchPartitionNames()
+  {
+      return _record.getListField(Attributes.BATCH_PARTITION_NAMES.toString());
+  }
+  
+  public void setBatchPartitionNames(List<String> batchPartitionNames)
+  {
+      _record.setListField(Attributes.BATCH_PARTITION_NAMES.toString(), batchPartitionNames);
+  }
+  
+  public List<String> getExePartitionNames()
+  {
+      List<String> list = getBatchPartitionNames();
+      if (list == null) {
+	  list = Arrays.asList(getPartitionName());
+      }
+      Collections.sort(list);
+      return list;
   }
   
   // TODO replace with util from espresso or linkedin

@@ -15,6 +15,7 @@
  */
 package com.linkedin.helix.participant;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -191,7 +192,9 @@ public class HelixStateMachineEngine implements StateMachineEngine
           + " type:" + message.getMsgType());
     }
 
-    String partitionKey = message.getPartitionName();
+    // String partitionKey = message.getPartitionName();
+    List<String> partitionKeys = message.getExePartitionNames();
+    
     String stateModelName = message.getStateModelDef();
     String resourceName = message.getResourceName();
     String sessionId = message.getTgtSessionId();
@@ -235,26 +238,38 @@ public class HelixStateMachineEngine implements StateMachineEngine
 
     // create currentStateDelta for this partition
     String initState = _stateModelDefs.get(message.getStateModelDef()).getInitialState();
-    StateModel stateModel = stateModelFactory.getStateModel(partitionKey);
-    if (stateModel == null)
-    {
-      stateModelFactory.createAndAddStateModel(partitionKey);
-      stateModel = stateModelFactory.getStateModel(partitionKey);
-      stateModel.updateState(initState);
-    }
-
+    
     CurrentState currentStateDelta = new CurrentState(resourceName);
     currentStateDelta.setSessionId(sessionId);
     currentStateDelta.setStateModelDefRef(stateModelName);
     currentStateDelta.setStateModelFactoryName(factoryName);
     currentStateDelta.setBucketSize(bucketSize);
 
-    currentStateDelta.setState(partitionKey, (stateModel.getCurrentState() == null)
-        ? initState : stateModel.getCurrentState());
+    // StateModel stateModel = stateModelFactory.getStateModel(partitionKey);
+    List<StateModel> stateModels = stateModelFactory.getStateModel(partitionKeys);
+    for (int i = 0; i < partitionKeys.size(); i++)
+    {
+	StateModel stateModel = stateModels.get(i);
+	String partitionKey = partitionKeys.get(i);
+        if (stateModel == null)
+        {
+          stateModelFactory.createAndAddStateModel(partitionKey);
+          stateModel = stateModelFactory.getStateModel(partitionKey);
+          stateModel.updateState(initState);
+        }
+        
+        currentStateDelta.setState(partitionKey, (stateModel.getCurrentState() == null)
+                ? initState : stateModel.getCurrentState());
+    }
+
+    stateModels = stateModelFactory.getStateModel(partitionKeys);
+    
+//    currentStateDelta.setState(partitionKey, (stateModel.getCurrentState() == null)
+//        ? initState : stateModel.getCurrentState());
 
     HelixTaskExecutor executor = (HelixTaskExecutor) context.get(NotificationContext.TASK_EXECUTOR_KEY);
     
-    return new HelixStateTransitionHandler(stateModel,
+    return new HelixStateTransitionHandler(stateModels,
                                            message,
                                            context,
                                            currentStateDelta,

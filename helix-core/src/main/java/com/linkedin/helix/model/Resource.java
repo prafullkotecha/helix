@@ -36,6 +36,7 @@ public class Resource
   private String _stateModelFactoryName;
   private int _bucketSize = 0;
   private boolean _groupMessageMode = false;
+  private int _exeBatchSize = 1;
 
   public Resource(String resourceName)
   {
@@ -107,6 +108,16 @@ public class Resource
   public boolean getGroupMessageMode()
   {
     return _groupMessageMode;
+  }
+  
+  public void setExeBatchSize(int n)
+  {
+      _exeBatchSize = n;
+  }
+  
+  public int getExeBatchSize()
+  {
+      return _exeBatchSize;
   }
   
   @Override

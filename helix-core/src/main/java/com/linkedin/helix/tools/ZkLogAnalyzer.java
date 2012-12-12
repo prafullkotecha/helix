@@ -138,6 +138,12 @@ public class ZkLogAnalyzer
       }
     });
 
+    if (zkLogs == null)
+    {
+      System.err.println("fail to list files under: " + dir);
+      System.exit(1);
+    }
+    
     // lastModified time -> zkLog
     TreeMap<Long, String> lastZkLogs = new TreeMap<Long, String>();
     for (File file : zkLogs)
@@ -221,15 +227,16 @@ public class ZkLogAnalyzer
                 findLastCSUpdateBetween(csUpdateLines,
                                         lastTestStartTimestamp,
                                         timestampVal);
+            System.out.println("lastCSUpdateLine: " + lastCSUpdateLine);
             long lastCSUpdateTimestamp =
                 Long.parseLong(getAttributeValue(lastCSUpdateLine, "time:"));
             System.out.println("Last CS Update:" + lastCSUpdateTimestamp);
 
             System.out.println("state transition latency: "
-                + +(lastCSUpdateTimestamp - lastTestStartTimestamp) + "ms");
+                +(lastCSUpdateTimestamp - lastTestStartTimestamp) + "ms");
 
             System.out.println("state transition latency since controller start: "
-                + +(lastCSUpdateTimestamp - controllerStartTime) + "ms");
+                +(lastCSUpdateTimestamp - controllerStartTime) + "ms");
 
             System.out.println("Create MSG\t" + stats.msgSentCount + "\t"
                 + stats.msgSentCount_O2S + "\t" + stats.msgSentCount_S2M + "\t"

@@ -128,10 +128,12 @@ public class TaskAssignmentStage extends AbstractBaseStage
     List<PropertyKey> keys = new ArrayList<PropertyKey>();
     for (Message message : messages)
     {
-      logger.info("Sending Message " + message.getMsgId() + " to " + message.getTgtName()
-          + " transit " + message.getPartitionName() + "|" + message.getPartitionNames()
+//      logger.info("Sending Message " + message.getMsgId() + " to " + message.getTgtName()
+//          + " transit " + message.getPartitionName() + "|" + message.getPartitionNames()
+//          + " from:" + message.getFromState() + " to:" + message.getToState());
+	System.out.println("Sending Message " + message.getMsgId() + " to " + message.getTgtName()
+          + " transit " + (message.getGroupMessageMode()==false? message.getPartitionName() : message.getPartitionNames())
           + " from:" + message.getFromState() + " to:" + message.getToState());
-
       keys.add(keyBuilder.message(message.getTgtName(), message.getId()));
     }
 

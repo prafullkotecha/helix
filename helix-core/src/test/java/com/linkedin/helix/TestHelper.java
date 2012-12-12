@@ -221,10 +221,10 @@ public class TestHelper
     return set;
   }
 
-  public static void verifyWithTimeout(String verifierName, Object... args)
-  {
-    verifyWithTimeout(verifierName, 30 * 1000, args);
-  }
+//  public static void verifyWithTimeout(String verifierName, Object... args)
+//  {
+//    verifyWithTimeout(verifierName, 30 * 1000, args);
+//  }
 
   /**
    * generic method for verification with a timeout
@@ -439,7 +439,7 @@ public class TestHelper
     for (int i = 0; i < resourceNb; i++)
     {
       String dbName = resourceNamePrefix + i;
-      setupTool.addResourceToCluster(clusterName, dbName, partitionNb, stateModelDef, mode.toString());
+      setupTool.addResourceToCluster(clusterName, dbName, partitionNb, stateModelDef, mode.toString(), 0, false);
       if (doRebalance)
       {
         setupTool.rebalanceStorageCluster(clusterName, dbName, replica);

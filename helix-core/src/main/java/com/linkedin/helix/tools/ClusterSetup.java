@@ -84,10 +84,12 @@ public class ClusterSetup
   public static final String swapInstance = "swapInstance";
   public static final String dropInstance = "dropNode";
   public static final String rebalance = "rebalance";
+  public static final String rebalanceV8 = "rebalanceV8";
   public static final String expandCluster = "expandCluster";
   public static final String expandResource = "expandResource";
   public static final String mode = "mode";
   public static final String bucketSize = "bucketSize";
+  public static final String groupMsgMode = "groupMsgMode";
   public static final String resourceKeyPrefix = "key";
   public static final String addResourceProperty = "addResourceProperty";
   public static final String removeResourceProperty = "removeResourceProperty";
@@ -415,14 +417,16 @@ public class ClusterSetup
                                    int numResources,
                                    String stateModelRef,
                                    String idealStateMode,
-                                   int bucketSize)
+                                   int bucketSize,
+                                   boolean groupMsgMode)
   {
     _admin.addResource(clusterName,
                        resourceName,
                        numResources,
                        stateModelRef,
                        idealStateMode,
-                       bucketSize);
+                       bucketSize,
+                       groupMsgMode);
   }
 
   public void dropResourceFromCluster(String clusterName, String resourceName)
@@ -435,11 +439,62 @@ public class ClusterSetup
   {
     rebalanceStorageCluster(clusterName, resourceName, replica, resourceName);
   }
-
+  
   public void reblanceResource(String clusterName, String resourceName, int replica)
   {
     rebalanceStorageCluster(clusterName, resourceName, replica, resourceName); 
   }
+
+  // rebalancer for v08 cluster
+  public void rebalanceV08(String clusterName, String resourceName, int replica)
+  {
+    List<String> instanceNames = _admin.getInstancesInCluster(clusterName);
+    Collections.sort(instanceNames);
+
+    IdealState idealState = _admin.getResourceIdealState(clusterName, resourceName);
+    if (idealState == null)
+    {
+      throw new HelixException("Resource: " + resourceName + " has NOT been added yet");
+    }
+
+    idealState.setReplicas(Integer.toString(replica));
+    int partitions = idealState.getNumPartitions();
+
+    final int nodeNb = instanceNames.size();
+    final int groupNb = nodeNb / replica;
+    final int partitionsPerGroup = partitions/groupNb;
+    
+    IdealState newIdealState = new IdealState(resourceName);
+    newIdealState.getRecord().setSimpleFields(idealState.getRecord().getSimpleFields());
+    
+    for (int i = 0; i < groupNb; i++)
+    {
+      // int master = 8901 + i * replica;
+      List<String> preferenceList = new ArrayList<String>();
+      int masterIdx = i * replica;
+      String master = instanceNames.get(masterIdx);
+      preferenceList.add(master);
+      
+      // is.setPartitionState(partitionName, "localhost_" + master, "MASTER");
+      for (int j = masterIdx + 1; j < masterIdx + replica; j++)
+      {
+        // is.setPartitionState(partitionName, "localhost_" + j, "SLAVE");
+        String slave = instanceNames.get(j);
+        preferenceList.add(slave);
+      }
+
+      for (int k = 0; k < partitionsPerGroup; k++)
+      {
+        int partition = i * partitionsPerGroup + k;
+        String partitionName = resourceName + "_" + partition;
+        newIdealState.getRecord().setListField(partitionName, preferenceList);
+      }
+    }
+    
+    // System.out.println(newIdealState);
+    _admin.setResourceIdealState(clusterName, resourceName, newIdealState);
+  }
+
   public void expandResource(String clusterName, String resourceName)
   {
     IdealState idealState = _admin.getResourceIdealState(clusterName, resourceName);
@@ -1008,6 +1063,15 @@ public class ClusterSetup
     resourceBucketSizeOption.setRequired(false);
     resourceBucketSizeOption.setArgName("Size of a bucket for a resource");
 
+    Option resourceGroupMsgModeOption =
+        OptionBuilder.withLongOpt(groupMsgMode)
+                     .withDescription("Specify group message mode, used with addResourceGroup command")
+                     .create();
+    resourceGroupMsgModeOption.setArgs(1);
+    resourceGroupMsgModeOption.setRequired(false);
+    resourceGroupMsgModeOption.setArgName("Group message mode for a resource");
+
+    
     Option resourceKeyOption =
         OptionBuilder.withLongOpt(resourceKeyPrefix)
                      .withDescription("Specify resource key prefix, used with rebalance command")
@@ -1064,6 +1128,16 @@ public class ClusterSetup
     rebalanceOption.setRequired(false);
     rebalanceOption.setArgName("clusterName resourceName replicas");
 
+    // v8 rebalancer
+    Option rebalanceV8Option =
+        OptionBuilder.withLongOpt(rebalanceV8)
+                     .withDescription("Rebalance a resource in a v8 cluster")
+                     .create();
+    rebalanceV8Option.setArgs(3);
+    rebalanceV8Option.setRequired(false);
+    rebalanceV8Option.setArgName("clusterName resourceName replicas");
+
+    
     Option instanceInfoOption =
         OptionBuilder.withLongOpt(listInstanceInfo)
                      .withDescription("Query info of a Instance in a cluster")
@@ -1218,9 +1292,11 @@ public class ClusterSetup
     OptionGroup group = new OptionGroup();
     group.setRequired(true);
     group.addOption(rebalanceOption);
+    group.addOption(rebalanceV8Option);
     group.addOption(addResourceOption);
     group.addOption(resourceModeOption);
     group.addOption(resourceBucketSizeOption);
+    group.addOption(resourceGroupMsgModeOption);
     group.addOption(expandResourceOption);
     group.addOption(expandClusterOption);
     group.addOption(resourceKeyOption);
@@ -1232,7 +1308,7 @@ public class ClusterSetup
     group.addOption(listResourceOption);
     group.addOption(listClustersOption);
     group.addOption(addIdealStateOption);
-    group.addOption(rebalanceOption);
+//    group.addOption(rebalanceOption);
     group.addOption(dropInstanceOption);
     group.addOption(swapInstanceOption);
     group.addOption(dropResourceOption);
@@ -1337,10 +1413,11 @@ public class ClusterSetup
 
     if (cmd.hasOption(addResource))
     {
-      String clusterName = cmd.getOptionValues(addResource)[0];
-      String resourceName = cmd.getOptionValues(addResource)[1];
-      int partitions = Integer.parseInt(cmd.getOptionValues(addResource)[2]);
-      String stateModelRef = cmd.getOptionValues(addResource)[3];
+      String[] optionValues = cmd.getOptionValues(addResource);
+      String clusterName = optionValues[0];
+      String resourceName = optionValues[1];
+      int partitions = Integer.parseInt(optionValues[2]);
+      String stateModelRef = optionValues[3];
       String modeValue = IdealStateModeProperty.AUTO.toString();
       if (cmd.hasOption(mode))
       {
@@ -1353,12 +1430,19 @@ public class ClusterSetup
         bucketSizeVal = Integer.parseInt(cmd.getOptionValues(bucketSize)[0]);
       }
 
+      boolean groupMsgMode = false;
+      if (cmd.hasOption(ClusterSetup.groupMsgMode))
+      {
+        groupMsgMode = Boolean.parseBoolean(cmd.getOptionValues(ClusterSetup.groupMsgMode)[0]);
+      }
+      
       setupTool.addResourceToCluster(clusterName,
                                      resourceName,
                                      partitions,
                                      stateModelRef,
                                      modeValue,
-                                     bucketSizeVal);
+                                     bucketSizeVal,
+                                     groupMsgMode);
       return 0;
     }
 
@@ -1379,6 +1463,15 @@ public class ClusterSetup
       return 0;
     }
 
+    if (cmd.hasOption(rebalanceV8))
+    {
+      String clusterName = cmd.getOptionValues(rebalanceV8)[0];
+      String resourceName = cmd.getOptionValues(rebalanceV8)[1];
+      int replicas = Integer.parseInt(cmd.getOptionValues(rebalanceV8)[2]);
+
+      setupTool.rebalanceV08(clusterName, resourceName, replicas);
+    }
+    
     if (cmd.hasOption(expandCluster))
     {
       String clusterName = cmd.getOptionValues(expandCluster)[0];

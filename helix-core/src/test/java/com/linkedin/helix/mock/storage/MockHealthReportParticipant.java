@@ -260,7 +260,7 @@ public class MockHealthReportParticipant
         new MockParticipant(clusterName,
                             instanceName,
                             zkConnectStr,
-                            null,   // new StoreAccessDiffNodeTransition(), // new StoreAccessOneNodeTransition(),
+                            new MockParticipant.StoreAccessDiffNodeTransition(), // new StoreAccessOneNodeTransition(), // null 
                             new MockHealthReportJob());
     Runtime.getRuntime()
            .addShutdownHook(new MockHealthReportParticipantShutdownHook(participant));

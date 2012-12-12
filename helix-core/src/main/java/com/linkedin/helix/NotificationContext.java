@@ -17,12 +17,18 @@ package com.linkedin.helix;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class NotificationContext
 {
   // keys used for object map
   public static final String TASK_EXECUTOR_KEY = "TASK_EXECUTOR";
   
+  // public static final String ZK_WRITE_KEY = "ZK_WRITE";
+  private final ConcurrentLinkedQueue<ZkItem<ZNRecord>> _zkItemList = new ConcurrentLinkedQueue<ZkItem<ZNRecord>>();
+
+
   private Map<String, Object> _map;
 
   private HelixManager _manager;
@@ -99,5 +105,15 @@ public class NotificationContext
   public void setPathChanged(String pathChanged)
   {
     this._pathChanged = pathChanged;
+  }
+  
+  public void addZkItem(ZkItem<ZNRecord> item)
+  {
+      _zkItemList.add(item);
+  }
+  
+  public Queue<ZkItem<ZNRecord>> getZkItemList()
+  {
+      return _zkItemList;
   }
 }

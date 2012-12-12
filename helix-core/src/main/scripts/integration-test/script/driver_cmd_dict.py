@@ -50,7 +50,8 @@ cmd_dict={
 cmd_ret_pattern={    # the pattern when the call is considered return successfully
     "storage-node_start":re.compile("Espresso service started")
    ,"router_start":re.compile("Espresso service started")
-   ,"cluster-manager_start":re.compile("No Messages to process")
+#   ,"cluster-manager_start":re.compile("No Messages to process")
+   ,"cluster-manager_start":re.compile("Cluster manager started done")
    ,"mock-storage_start":re.compile("Mock storage started") 
    ,"dummy-process_start":re.compile("Dummy process started") 
    ,"mock-health-report-process_start":re.compile("MockHealthReportParticipant process started") 

@@ -31,7 +31,8 @@ public class HelixProperty
   public enum HelixPropertyAttribute
   {
     BUCKET_SIZE,
-    GROUP_MESSAGE_MODE
+    GROUP_MESSAGE_MODE,
+    EXE_BATCH_SIZE	// size of partitions executed in batch
   }
 
   protected final ZNRecord _record;
@@ -197,6 +198,26 @@ public class HelixProperty
     {
       return false;
     }
+  }
+  
+  public int getExeBatchSize()
+  {
+      String sizeStr = _record.getSimpleField(HelixPropertyAttribute.EXE_BATCH_SIZE.toString());
+      if (sizeStr != null)
+      {
+	  try {
+	      return Integer.parseInt(sizeStr);
+	  } catch (Exception e)
+	  {
+	      // OK
+	  }
+      }
+      return 1;
+  }
+  
+  public void setExeBatchSize(int n)
+  {
+      _record.setSimpleField(HelixPropertyAttribute.EXE_BATCH_SIZE.toString(), "" + n);
   }
   
   public boolean isValid()

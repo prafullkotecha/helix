@@ -48,7 +48,7 @@ public class IdealState extends HelixProperty
 
   public enum IdealStateModeProperty
   {
-    AUTO, CUSTOMIZED, AUTO_REBALANCE
+    AUTO, CUSTOMIZED, AUTO_REBALANCE, SEMI_CUSTOMIZED
   }
 
   private static final Logger logger = Logger.getLogger(IdealState.class.getName());
@@ -98,12 +98,12 @@ public class IdealState extends HelixProperty
 
   public Set<String> getPartitionSet()
   {
-    if (getIdealStateMode() == IdealStateModeProperty.AUTO
-        || getIdealStateMode() == IdealStateModeProperty.AUTO_REBALANCE)
+      IdealStateModeProperty mode = getIdealStateMode();
+    if (mode == IdealStateModeProperty.AUTO || mode == IdealStateModeProperty.AUTO_REBALANCE)
     {
       return _record.getListFields().keySet();
     }
-    else if (getIdealStateMode() == IdealStateModeProperty.CUSTOMIZED)
+    else if (mode == IdealStateModeProperty.CUSTOMIZED || mode == IdealStateModeProperty.SEMI_CUSTOMIZED)
     {
       return _record.getMapFields().keySet();
     }

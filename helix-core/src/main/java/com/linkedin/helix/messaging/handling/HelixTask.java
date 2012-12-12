@@ -19,18 +19,22 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 
+import com.linkedin.helix.AccessOption;
 import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
+import com.linkedin.helix.ZNRecord;
+import com.linkedin.helix.ZkItem;
 import com.linkedin.helix.messaging.handling.GroupMessageHandler.GroupMessageInfo;
 import com.linkedin.helix.messaging.handling.MessageHandler.ErrorCode;
 import com.linkedin.helix.messaging.handling.MessageHandler.ErrorType;
@@ -44,14 +48,14 @@ import com.linkedin.helix.util.StatusUpdateUtil;
 public class HelixTask implements Callable<HelixTaskResult>
 {
   private static Logger             logger     = Logger.getLogger(HelixTask.class);
-  private final Message             _message;
+  final Message             _message;
   private final MessageHandler      _handler;
   private final NotificationContext _notificationContext;
   private final HelixManager        _manager;
   StatusUpdateUtil                  _statusUpdateUtil;
   HelixTaskExecutor                 _executor;
   volatile boolean                  _isTimeout = false;
-
+  
   public class TimeoutCancelTask extends TimerTask
   {
     HelixTaskExecutor   _executor;
@@ -90,6 +94,7 @@ public class HelixTask implements Callable<HelixTaskResult>
     this._manager = notificationContext.getManager();
     _statusUpdateUtil = new StatusUpdateUtil();
     _executor = executor;
+    
   }
 
   @Override
@@ -225,15 +230,35 @@ public class HelixTask implements Callable<HelixTaskResult>
         GroupMessageInfo info = _executor._groupMsgHandler.onCompleteSubMessage(_message); 
         if (info != null)
         {
+           
+            // do group zk write
+            Queue<ZkItem<ZNRecord>> zkItemList = _notificationContext.getZkItemList();
+            if (zkItemList.size() > 0)
+            {
+              List<String> paths = new ArrayList<String>();
+              List<ZNRecord> records = new ArrayList<ZNRecord>();
+              for (ZkItem<ZNRecord> item : zkItemList)
+              {
+                paths.add(item._path);
+                records.add(item._data);
+              }
+              logger.info("async group zk-set. paths: " + paths);
+              // System.out.println("async group zk-set. paths: " + paths);
+              accessor.getBaseDataAccessor().setChildren(paths, records, AccessOption.PERSISTENT);
+            }
+
           // TODO: changed to async update
           // group update current state
           Map<PropertyKey, CurrentState> curStateMap = info.merge();
           for (PropertyKey key : curStateMap.keySet())
           {
+            // logger.info("updateCS: " + key);
+            // System.out.println("\tupdateCS: " + key.getPath() + ", " + curStateMap.get(key));
             accessor.updateProperty(key, curStateMap.get(key));
           }
 
           // remove group message
+          // System.out.println("\tremove: " + _message.getId());
           removeMessageFromZk(accessor, _message);
           reportMessageStat(_manager, _message, taskResult);
           sendReply(accessor, _message, taskResult);

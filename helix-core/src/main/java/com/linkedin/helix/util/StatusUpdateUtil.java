@@ -430,6 +430,10 @@ public class StatusUpdateUtil
                       String additionalInfo,
                       HelixDataAccessor accessor)
   {
+    if (true)
+      return;
+    
+
     logMessageStatusUpdateRecord(message,
                                  Level.HELIX_INFO,
                                  classInfo,

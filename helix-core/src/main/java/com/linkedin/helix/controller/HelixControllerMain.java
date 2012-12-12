@@ -237,7 +237,7 @@ public class HelixControllerMain
     controllerName = cmd.getOptionValue(name);
 
     // Espresso_driver.py will consume this
-    logger.info("Cluster manager started, zkServer: " + zkConnectString + ", clusterName:"
+    System.out.println("Cluster manager started, zkServer: " + zkConnectString + ", clusterName:"
         + clusterName + ", controllerName:" + controllerName + ", mode:" + controllerMode);
 
     if (propertyTransServicePort > 0)
@@ -249,6 +249,9 @@ public class HelixControllerMain
         controllerMode);
     try
     {
+      // consume by py script
+      System.out.println("Cluster manager started done");
+
       Thread.currentThread().join();
     } 
     catch (InterruptedException e)

@@ -15,13 +15,15 @@
  */
 package com.linkedin.helix.participant.statemachine;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public abstract class StateModelFactory<T extends StateModel>
 {
-  private ConcurrentMap<String, T> _stateModelMap = new ConcurrentHashMap<String, T>();
+  private final ConcurrentMap<String, T> _stateModelMap = new ConcurrentHashMap<String, T>();
 
   /**
    * This method will be invoked only once per partitionName per session
@@ -61,6 +63,15 @@ public abstract class StateModelFactory<T extends StateModel>
   public T getStateModel(String partitionName)
   {
     return _stateModelMap.get(partitionName);
+  }
+
+  public List<T> getStateModel(List<String> partitionNames)
+  {
+    List<T> stateModels = new ArrayList<T>();
+    for (String partitionName : partitionNames) {
+	stateModels.add(_stateModelMap.get(partitionName));
+    }
+    return stateModels;
   }
 
   /**

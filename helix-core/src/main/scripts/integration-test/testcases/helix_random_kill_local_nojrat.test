@@ -12,7 +12,7 @@ SCRIPT_DIR_TAB=( "../script" )
 # constants
 machine_nb=${#MACHINE_TAB[*]}
 controller_idx=0
-mocks_per_node=10
+mocks_per_node=2
 
 # colorful echo
 red='\e[00;31m'
@@ -85,8 +85,7 @@ $SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_addre
 # add resource
 #$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -addResource test-cluster test-db 2400 MasterSlave"
 
-$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="-zkSvr ${zookeeper_address} -addResource test-cluster test-db 1200 MasterSlave"
-
+$SCRIPT_DIR/cm_driver.py -c clm_console --cmdline_args="--zkSvr ${zookeeper_address} --addResource test-cluster test-db 512 MasterSlave --mode AUTO --groupMsgMode false --bucketSize 0"
 
 # add nodes
 start_port=8900
@@ -109,7 +108,6 @@ for j in `seq 0 $(($machine_nb-1))`; do
   ${SCRIPT_DIR_TAB[$j]}/cm_driver.py -n ${TEST_NAME} -c mock-health-report-process -o start --jvm_args="" -l "integration-test/config/log4j-info.properties" --save_process_id --component_id=$i --cmdline_args="-zkSvr ${zookeeper_address} -cluster test-cluster -host ${MACHINE_TAB[$j]} -port ${port}"
 	done
 done
-
 
 #sleep 10
 
@@ -223,7 +221,7 @@ done
 # analyze zk log
 test_start_time=${test_start_time:0:`expr length "$test_start_time" - 6`}
 echo "test_start_time: $test_start_time"
-../../../../../target/helix-core-pkg/bin/zk-log-analyzer ~/local/zookeeper-3.3.3/dataLogDir test-cluster $test_start_time
+../../../../../target/helix-core-pkg/bin/zk-log-analyzer /home/zzhang/bin/zookeeper-3.3.4/dataLogDir test-cluster $test_start_time
 
 
 echo == GREP SUCCEED ==
