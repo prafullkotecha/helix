@@ -18,6 +18,7 @@ package com.linkedin.helix;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class NotificationContext
@@ -25,10 +26,12 @@ public class NotificationContext
   // keys used for object map
   public static final String TASK_EXECUTOR_KEY = "TASK_EXECUTOR";
   
-  // public static final String ZK_WRITE_KEY = "ZK_WRITE";
+  // for group zk-writes from helix tasks; e.g. hwm property store
   private final ConcurrentLinkedQueue<ZkItem<ZNRecord>> _zkItemList = new ConcurrentLinkedQueue<ZkItem<ZNRecord>>();
 
-
+  // for group zk-reads from helix tasks
+  public final ConcurrentHashMap<String, ZNRecord> _zkReadMap = new ConcurrentHashMap<String, ZNRecord>();
+  
   private Map<String, Object> _map;
 
   private HelixManager _manager;

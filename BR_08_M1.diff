@@ -1,0 +1,1083 @@
+Index: espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/DefaultHighwaterMarkStore.java
+===================================================================
+--- espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/DefaultHighwaterMarkStore.java	(revision 542808)
++++ espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/DefaultHighwaterMarkStore.java	(working copy)
+@@ -7,20 +7,26 @@
+ import java.util.NoSuchElementException;
+ 
+ import org.I0Itec.zkclient.DataUpdater;
++import org.apache.log4j.Logger;
++
+ import com.google.common.base.Joiner;
+ import com.linkedin.espresso.common.EspressoSCN;
+ import com.linkedin.espresso.common.api.Partition;
+ import com.linkedin.helix.ZNRecord;
++import com.linkedin.helix.ZkItem;
+ 
+ public abstract class DefaultHighwaterMarkStore
+ {
++  private static final String MODULE             = DefaultHighwaterMarkStore.class.getName();
++  private static final Logger LOG                = Logger.getLogger(MODULE);
++
+   protected HighwaterMarkBackingStore<ZNRecord> _backingStore;
+ 
+   public DefaultHighwaterMarkStore(HighwaterMarkBackingStore<ZNRecord> backingStore)
+   {
+     _backingStore = backingStore;
+   }
+-  
++
+   protected EspressoSCN getLatestSCN(ZNRecord property, Partition partition) throws Exception
+   {
+     Iterator<? extends HighwaterMarkEntry> entriesIterator = getEntriesIterator(property, partition);
+@@ -28,10 +34,10 @@
+     {
+       return entriesIterator.next().getSCN();
+     }
+-    
++
+     return null;
+   }
+-  
++
+   protected String getLatestMaster(ZNRecord property, Partition partition) throws Exception
+   {
+     Iterator<? extends HighwaterMarkEntry> entriesIterator = getEntriesIterator(property, partition);
+@@ -60,7 +66,7 @@
+ 
+   protected abstract Iterator<? extends HighwaterMarkEntry> getEntriesIterator(ZNRecord property, Partition partition);
+ 
+-  
++
+   protected Map<String, String> lookupMap(ZNRecord property,
+                                           Partition partition,
+                                           String scnStr,
+@@ -82,12 +88,18 @@
+     EntriesDataUpdater updater = new EntriesDataUpdater(path, entry);
+     _backingStore.put(path, updater);
+   }
+-  
++
+   public void write(String path, ZNRecord currentRecord, HighwaterMarkEntry entry) throws Exception
+   {
+     EntriesDataUpdater updater = new EntriesDataUpdater(path, entry);
+     ZNRecord updatedProperty = updater.getUpdatedProperty(entry, path, currentRecord);
+-    _backingStore.put(path, updatedProperty);
++
++    // apply retention
++    updater.cleanupOldHwmEntries(updatedProperty, entry.getPartition().toString(), 3);
++
++    // put zk-write to thread-local
++    EspressoStorageStateModel._threadLocal.set(new ZkItem<ZNRecord>(path, updatedProperty));
++    // _backingStore.put(path, updatedProperty);
+   }
+ 
+   protected abstract int getMaxEntries();
+@@ -111,7 +123,7 @@
+ 
+     return null;
+   }
+-  
++
+   protected class EntriesDataUpdater implements DataUpdater<ZNRecord>
+   {
+     private final String _path;
+@@ -122,18 +134,18 @@
+       _path = path;
+       _entry = entry;
+     }
+-    
++
+     @Override
+     public ZNRecord update(ZNRecord currentData)
+     {
+       ZNRecord updatedProperty = getUpdatedProperty(_entry, _path, currentData);
+       cleanupOldHwmEntries(updatedProperty,
+                            _entry.getPartition().toString(),
+-                           getMaxEntries());    
+-      
++                           getMaxEntries());
++
+       return updatedProperty;
+     }
+-    
++
+     protected ZNRecord getUpdatedProperty(HighwaterMarkEntry entry,
+                                           String path,
+                                           ZNRecord property)
+@@ -149,7 +161,7 @@
+ 
+       return property;
+     }
+-    
++
+     protected void updateMapField(ZNRecord property, HighwaterMarkEntry entry)
+     {
+       String key =
+@@ -187,6 +199,7 @@
+     {
+       if (property != null)
+       {
++        // LOG.info("START: cleanupHwm. max: " + maxEntries);
+         EspressoStateUnitKey stateUnitKey = new EspressoStateUnitKey(partitionStr);
+         Partition partition =
+             new Partition(stateUnitKey.getDBName(), stateUnitKey.getPartitionId());
+@@ -210,6 +223,7 @@
+ 
+           setSCNList(property, partition, scnList);
+           setInstancesList(property, partition, instances);
++          // LOG.info("END: cleanupHwm. size: " + scnList.size());
+         }
+       }
+     }
+@@ -227,14 +241,14 @@
+     }
+ 
+   }
+-  
++
+   protected class EntriesIterator implements Iterator<Map<String, String>>
+   {
+     private Iterator<String> _scnListIterator  = null;
+     private Iterator<String> _instanceIterator = null;
+     private List<String>     _scnList;
+     private List<String>     _instancesList;
+-    private ZNRecord         _property;
++    private final ZNRecord         _property;
+     private final Partition  _partition;
+ 
+     public EntriesIterator(ZNRecord property, Partition partition)
+Index: espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/DefaultMasterHighwaterMarkStore.java
+===================================================================
+--- espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/DefaultMasterHighwaterMarkStore.java	(revision 542808)
++++ espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/DefaultMasterHighwaterMarkStore.java	(working copy)
+@@ -4,7 +4,6 @@
+ 
+ import com.linkedin.espresso.common.EspressoSCN;
+ import com.linkedin.espresso.common.api.Partition;
+-import com.linkedin.espresso.storagenode.cluster.DefaultHighwaterMarkStore.EntriesDataUpdater;
+ import com.linkedin.helix.ZNRecord;
+ import com.linkedin.helix.ZNRecordBucketizer;
+ 
+@@ -13,7 +12,7 @@
+ {
+   public static final int MAX_MASTER_HWM_ENTRIES = 10;
+   protected final String    _basePath;
+-  private ZNRecordBucketizer _bucketizer;
++  private final ZNRecordBucketizer _bucketizer;
+ 
+   public DefaultMasterHighwaterMarkStore(HighwaterMarkBackingStore<ZNRecord> backingStore, String basePath)
+   {
+@@ -52,17 +51,17 @@
+     }
+     return null;
+   }
+-  
++
+   @Override
+   public EspressoSCN getSCNForGeneration(Partition partition, int generation) throws Exception
+   {
+-	  
++
+     EspressoSCN scn = getSCNForGenerationEnd(partition, generation);
+     if(scn == null)
+     {
+       scn = getSCNForGenerationStart(partition, generation);
+     }
+-    
++
+     return scn;
+   }
+ 
+@@ -83,13 +82,14 @@
+   {
+     write(getPath(entry.getPartition()), entry);
+   }
+-  
++
+   @Override
+   public void write(ZNRecord currentRecord, MasterHighwaterMarkEntry entry) throws Exception
+   {
+-    write(getPath(entry.getPartition()), currentRecord, entry);
++    String path = getPath(entry.getPartition());
++    write(path, currentRecord, entry);
+   }
+-  
++
+   public String getPath(Partition partition)
+   {
+     String bucketName = _bucketizer.getBucketName(partition.toString());
+@@ -114,7 +114,7 @@
+     {
+       return iterator.next();
+     }
+-    
++
+     return null;
+   }
+ 
+@@ -158,16 +158,16 @@
+   {
+     return getEntriesIterator(getProperty(partition), partition);
+   }
+-  
++
+   @Override
+   public ZNRecord getProperty(Partition partition) throws Exception
+   {
+     return _backingStore.get(getPath(partition));
+   }
+-  
++
+   private class MasterEntriesIterator implements Iterator<MasterHighwaterMarkEntry>
+   {
+-    private EntriesIterator _iterator;
++    private final EntriesIterator _iterator;
+     public MasterEntriesIterator(ZNRecord property, Partition partition)
+     {
+       _iterator = new EntriesIterator(property, partition);
+@@ -177,13 +177,13 @@
+     {
+       return _iterator.hasNext();
+     }
+-    
++
+     @Override
+     public MasterHighwaterMarkEntry next()
+     {
+       return new MasterHighwaterMarkEntry(_iterator.next());
+     }
+-    
++
+     @Override
+     public void remove()
+     {
+Index: espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/CachingMasterHighwaterMarkStore.java
+===================================================================
+--- espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/CachingMasterHighwaterMarkStore.java	(revision 542808)
++++ espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/CachingMasterHighwaterMarkStore.java	(working copy)
+@@ -8,13 +8,13 @@
+ 
+ public class CachingMasterHighwaterMarkStore extends DefaultMasterHighwaterMarkStore
+ {
+-  private Map<Partition, ZNRecord> _cache;
++  private final Map<Partition, ZNRecord> _cache;
+   public CachingMasterHighwaterMarkStore(HighwaterMarkBackingStore<ZNRecord> backingStore, String basePath)
+   {
+     super(backingStore, basePath);
+     _cache = new HashMap<Partition, ZNRecord>();
+   }
+-  
++
+   @Override
+   public ZNRecord getProperty(Partition partition) throws Exception
+   {
+@@ -22,9 +22,14 @@
+     {
+       return _cache.get(partition);
+     }
+-    
++
+     ZNRecord record = super.getProperty(partition);
+     _cache.put(partition, record);
+     return record;
+   }
++
++  public void setProperty(Partition partition, ZNRecord record)
++  {
++    _cache.put(partition, record);
++  }
+ }
+Index: espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/EspressoStorageStateModel.java
+===================================================================
+--- espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/EspressoStorageStateModel.java	(revision 542808)
++++ espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/EspressoStorageStateModel.java	(working copy)
+@@ -1,11 +1,16 @@
+ package com.linkedin.espresso.storagenode.cluster;
+ 
+ 
++import java.util.List;
++
+ import org.apache.log4j.Logger;
+ 
+ import com.linkedin.espresso.common.api.EspressoException;
+ import com.linkedin.espresso.common.api.Partition;
+ import com.linkedin.helix.NotificationContext;
++import com.linkedin.helix.PropertyType;
++import com.linkedin.helix.ZNRecord;
++import com.linkedin.helix.ZkItem;
+ import com.linkedin.helix.model.Message;
+ import com.linkedin.helix.participant.statemachine.StateModel;
+ import com.linkedin.helix.participant.statemachine.StateModelInfo;
+@@ -16,6 +21,9 @@
+ @StateModelInfo(states = "{'OFFLINE', 'SLAVE', 'MASTER'}", initialState = "OFFLINE")
+ public class EspressoStorageStateModel extends StateModel
+ {
++  // static threadlocal variable for group set hwm
++  public static final ThreadLocal<ZkItem<ZNRecord>> _threadLocal = new ThreadLocal<ZkItem<ZNRecord>>();
++
+   private final ClusterStateCoordinator _clusterStateCoordinator;
+   private final boolean _replicationToMaster;
+   private final String _partitionName;
+@@ -36,13 +44,18 @@
+ 
+     // Initializations for the storage node to create right tables, indexes etc.
+     String dbName = ClusterUtils.parseDBName(task.getPartitionName());
+-    Integer partitionId = ClusterUtils.parsePartitionId(task.getPartitionName());
++    List<String> partitionNames = task.getExePartitionNames();
++    for (String partitionName : partitionNames)
++    {
++      // Integer partitionId = ClusterUtils.parsePartitionId(task.getPartitionName());
++      Integer partitionId = ClusterUtils.parsePartitionId(partitionName);
+ 
+-    _clusterStateCoordinator.init(dbName, partitionId);
+-    _clusterStateCoordinator.fromOfflineToSlave(dbName, partitionId);
+-    _clusterStateCoordinator.startClient(dbName, partitionId, null);
++      _clusterStateCoordinator.init(dbName, partitionId);
++      _clusterStateCoordinator.fromOfflineToSlave(dbName, partitionId);
++      _clusterStateCoordinator.startClient(dbName, partitionId, null);
+ 
+-    recordStateTransition(dbName, partitionId, task);
++      recordStateTransition(dbName, partitionId, task);
++    }
+     LOG.info("Became slave for partition " + task.getPartitionName());
+   }
+ 
+@@ -51,16 +64,22 @@
+   {
+     LOG.info("Becoming slave from master " + task.getPartitionName());
+     String dbName = ClusterUtils.parseDBName(task.getPartitionName());
+-    Integer partitionId = ClusterUtils.parsePartitionId(task.getPartitionName());
+-    _clusterStateCoordinator.fromMasterToSlave(dbName, partitionId);
+ 
+-    LOG.debug("replicationToMaster is " + _replicationToMaster);
+-    // Question:?
+-    if (!_replicationToMaster || !_clusterStateCoordinator.dbHasIndex(dbName))
++    List<String> partitionNames = task.getExePartitionNames();
++    for (String partitionName : partitionNames)
+     {
+-      _clusterStateCoordinator.startClient(dbName, partitionId, null);
++
++      Integer partitionId = ClusterUtils.parsePartitionId(partitionName);
++      _clusterStateCoordinator.fromMasterToSlave(dbName, partitionId);
++
++      LOG.debug("replicationToMaster is " + _replicationToMaster);
++      // Question:?
++      if (!_replicationToMaster || !_clusterStateCoordinator.dbHasIndex(dbName))
++      {
++        _clusterStateCoordinator.startClient(dbName, partitionId, null);
++      }
++      recordStateTransition(dbName, partitionId, task);
+     }
+-    recordStateTransition(dbName, partitionId, task);
+     LOG.info("Became slave for partition " + task.getPartitionName());
+   }
+ 
+@@ -74,19 +93,34 @@
+ 
+     LOG.info("Becoming master from slave " + task.getPartitionName());
+     String dbName = ClusterUtils.parseDBName(task.getPartitionName());
+-    Integer partitionId = ClusterUtils.parsePartitionId(task.getPartitionName());
+ 
+-    // We need to drain the databus for this partition before we can transition to master.
+-    _clusterStateCoordinator.flushClient(dbName, partitionId);
+-    if (!_replicationToMaster || !_clusterStateCoordinator.dbHasIndex(dbName))
++    List<String> partitionNames = task.getExePartitionNames();
++    for (String partitionName : partitionNames)
+     {
+-      _clusterStateCoordinator.shutdownClient(dbName, partitionId);
++
++      Integer partitionId = ClusterUtils.parsePartitionId(partitionName);
++
++      // We need to drain the databus for this partition before we can transition to master.
++      _clusterStateCoordinator.flushClient(dbName, partitionId);
++      if (!_replicationToMaster || !_clusterStateCoordinator.dbHasIndex(dbName))
++      {
++        _clusterStateCoordinator.shutdownClient(dbName, partitionId);
++      }
++
++      _clusterStateCoordinator.incrementGeneration(dbName, partitionId, context);
++      _clusterStateCoordinator.fromSlaveToMaster(dbName, partitionId);
++
++//      recordStateTransition(dbName, partitionId, task);
++
++      // get thread-local and put it to notification-context
++      ZkItem<ZNRecord> item = _threadLocal.get();
++  //    String path = "/" + PropertyType.PROPERTYSTORE + item._path;
++      String path = "/" + _clusterStateCoordinator.getClusterName()
++          + "/" + PropertyType.PROPERTYSTORE + item._path;
++      context.addZkItem(new ZkItem<ZNRecord>(path, item._data));
++      LOG.info("addGroupZkSet: " + path);
+     }
+ 
+-    _clusterStateCoordinator.incrementGeneration(dbName, partitionId);
+-    _clusterStateCoordinator.fromSlaveToMaster(dbName, partitionId);
+-
+-    recordStateTransition(dbName, partitionId, task);
+     LOG.info("Became master for partition " + task.getPartitionName());
+   }
+ 
+@@ -95,10 +129,15 @@
+   {
+     LOG.info("Becoming offline from error " + task.getPartitionName());
+     String dbName = ClusterUtils.parseDBName(task.getPartitionName());
+-    Integer partitionId = ClusterUtils.parsePartitionId(task.getPartitionName());
+-    _clusterStateCoordinator.fromErrorToOffline(dbName, partitionId);
+ 
+-    recordStateTransition(dbName, partitionId, task);
++    List<String> partitionNames = task.getExePartitionNames();
++    for (String partitionName : partitionNames)
++    {
++      Integer partitionId = ClusterUtils.parsePartitionId(partitionName);
++      _clusterStateCoordinator.fromErrorToOffline(dbName, partitionId);
++
++      recordStateTransition(dbName, partitionId, task);
++    }
+     LOG.info("Became offline for partition " + task.getPartitionName());
+   }
+ 
+@@ -107,11 +146,16 @@
+   {
+     LOG.info("Becoming offline from slave" + task.getPartitionName());
+     String dbName = ClusterUtils.parseDBName(task.getPartitionName());
+-    Integer partitionId = ClusterUtils.parsePartitionId(task.getPartitionName());
+-    _clusterStateCoordinator.shutdownClient(dbName, partitionId);
+-    _clusterStateCoordinator.fromSlaveToOffline(dbName, partitionId);
+ 
+-    recordStateTransition(dbName, partitionId, task);
++    List<String> partitionNames = task.getExePartitionNames();
++    for (String partitionName : partitionNames)
++    {
++      Integer partitionId = ClusterUtils.parsePartitionId(partitionName);
++      _clusterStateCoordinator.shutdownClient(dbName, partitionId);
++      _clusterStateCoordinator.fromSlaveToOffline(dbName, partitionId);
++
++      recordStateTransition(dbName, partitionId, task);
++    }
+     LOG.info("Became offline for partition " + task.getPartitionName());
+   }
+ 
+@@ -120,10 +164,16 @@
+   {
+     LOG.info("Becoming dropped from offline " + task.getPartitionName());
+     String dbName = ClusterUtils.parseDBName(task.getPartitionName());
+-    Integer partitionId = ClusterUtils.parsePartitionId(task.getPartitionName());
+-    _clusterStateCoordinator.fromOfflineToDropped(dbName, partitionId);
+ 
+-    recordStateTransition(dbName, partitionId, task);
++    List<String> partitionNames = task.getExePartitionNames();
++    for (String partitionName : partitionNames)
++    {
++
++      Integer partitionId = ClusterUtils.parsePartitionId(partitionName);
++      _clusterStateCoordinator.fromOfflineToDropped(dbName, partitionId);
++
++      recordStateTransition(dbName, partitionId, task);
++    }
+     LOG.info("Became dropped for partition " + task.getPartitionName());
+ 
+   }
+Index: espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/ClusterManagerAdmin.java
+===================================================================
+--- espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/ClusterManagerAdmin.java	(revision 542808)
++++ espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/ClusterManagerAdmin.java	(working copy)
+@@ -49,9 +49,11 @@
+ import com.linkedin.helix.HelixManager;
+ import com.linkedin.helix.HelixManagerFactory;
+ import com.linkedin.helix.InstanceType;
++import com.linkedin.helix.NotificationContext;
+ import com.linkedin.helix.PreConnectCallback;
+ import com.linkedin.helix.PropertyKey.Builder;
+ import com.linkedin.helix.ZNRecord;
++import com.linkedin.helix.ZkItem;
+ import com.linkedin.helix.controller.GenericHelixController;
+ import com.linkedin.helix.manager.zk.DefaultParticipantErrorMessageHandlerFactory;
+ import com.linkedin.helix.manager.zk.DefaultParticipantErrorMessageHandlerFactory.ActionOnError;
+@@ -425,6 +427,7 @@
+   @Override
+   public void fromSlaveToMaster(String dbName, Integer partitionId) throws UtilityTaskException, UtilitySchedulerException
+   {
++    long start = System.currentTimeMillis();
+     getLock(dbName, partitionId).writeLock().lock();
+     try
+     {
+@@ -436,6 +439,8 @@
+     finally
+     {
+       getLock(dbName, partitionId).writeLock().unlock();
++      long end = System.currentTimeMillis();
++      // LOG.info("movePartition took: " + (end - start) + " ms");
+     }
+   }
+ 
+@@ -778,6 +783,7 @@
+   @Override
+   public void flushClient(String dbName, int partitionId) throws Exception
+   {
++    long start = System.currentTimeMillis();
+     getLock(dbName, partitionId).writeLock().lock();
+     try
+     {
+@@ -789,6 +795,8 @@
+     finally
+     {
+       getLock(dbName, partitionId).writeLock().unlock();
++      long end = System.currentTimeMillis();
++      // LOG.info("flushClient took: " + (end - start) + " ms");
+     }
+   }
+ 
+@@ -1727,7 +1735,7 @@
+    * @see com.linkedin.espresso.storagenode.cluster.IClusterManagerAdmin#incrementGeneration(java.lang.String, java.lang.Integer)
+    */
+   @Override
+-  public void incrementGeneration(final String dbName, final Integer partitionId) throws Exception
++  public void incrementGeneration(final String dbName, final Integer partitionId, NotificationContext context) throws Exception
+   {
+     if (_mode.equals(Mode.STATIC) || _asyncReplicationEngine == null || !_asyncReplicationEngine.isEnabled())
+     {
+@@ -1735,56 +1743,67 @@
+     }
+ 
+     Partition partition = new Partition(dbName, partitionId);
+-    EspressoSCN localSCN = _indexedStoreAdmin.getPrimarySCN(dbName, partitionId);
+-    LOG.info("Got SCN for partition" + dbName + "_" + partitionId + " as " + localSCN);
++//    EspressoSCN localSCN = _indexedStoreAdmin.getPrimarySCN(dbName, partitionId);
++//    LOG.info("Got SCN for partition" + dbName + "_" + partitionId + " as " + localSCN);
+     String instanceName = getInstanceName();
+ 
+     // check the consistency between the indexSCN and primary SCN
+     if(_indexedStoreAdmin.dbHasIndex(dbName) && _asyncReplicationEngine.getChannel().equals(AsynchronousReplicationEngineDbus.DATABUS))
+     {
+-      EspressoSCN indexSCN = _indexedStoreAdmin.getIndexSCN(dbName, partitionId);
+-      if(indexSCN.getSCN() > localSCN.getSCN())
+-      {
+-        throw new IllegalStateException("IndexSCN:" + indexSCN + " > primarySCN:" + localSCN + " for partition:" + partition);
+-      }
++//      EspressoSCN indexSCN = _indexedStoreAdmin.getIndexSCN(dbName, partitionId);
++//      if(indexSCN.getSCN() > localSCN.getSCN())
++//      {
++//        throw new IllegalStateException("IndexSCN:" + indexSCN + " > primarySCN:" + localSCN + " for partition:" + partition);
++//      }
+     }
+ 
+     //creating a cached master hwm store to prevent multiple zk reads during consistency checking
+     CachingMasterHighwaterMarkStore cachingHwmStore = new CachingMasterHighwaterMarkStore(_hwmBackingStore, MASTER_GEN_INFO);
++    // populate caching store by pre-read zk data
++    ZNRecord record = context._zkReadMap.get(partition.toString());
++    if (record != null) {
++      cachingHwmStore.setProperty(partition, record);
++    }
+     MasterHighwaterMarkEntry currentHwmEntry = cachingHwmStore.getLatestEntry(partition);
+ 
+     EspressoSCN currentGlobalHwmSCN = (currentHwmEntry != null ? currentHwmEntry.getSCN() : null);
+     String currentMaster = (currentHwmEntry != null ? currentHwmEntry.getMaster() : null);
+ 
+-    checkConsistency(cachingHwmStore,
+-                     dbName,
+-                     partitionId,
+-                     localSCN,
+-                     localSCN.getGeneration(),
+-                     (currentGlobalHwmSCN != null ? currentGlobalHwmSCN.getGeneration()
+-                         : localSCN.getGeneration()));
++//    checkConsistency(cachingHwmStore,
++//                     dbName,
++//                     partitionId,
++//                     localSCN,
++//                     localSCN.getGeneration(),
++//                     (currentGlobalHwmSCN != null ? currentGlobalHwmSCN.getGeneration()
++//                         : localSCN.getGeneration()));
+ 
+     ZNRecord currentRecord = cachingHwmStore.getProperty(partition);
+     writeHwmEntryForNewGen(currentRecord,
+-                           localSCN,
++                           new EspressoSCN(0, 0), // localSCN,
+                            partition,
+                            instanceName,
+                            currentGlobalHwmSCN,
+                            currentMaster);
+ 
+-    MasterHighwaterMarkEntry latestEntry = _masterHwmStore.getLatestEntry(partition);
+ 
++    // MasterHighwaterMarkEntry latestEntry = _masterHwmStore.getLatestEntry(partition);
++
++    // update cache and get rid of last read
++    ZkItem<ZNRecord> item = EspressoStorageStateModel._threadLocal.get();
++    cachingHwmStore.setProperty(partition, item._data);
++    MasterHighwaterMarkEntry latestEntry = cachingHwmStore.getLatestEntry(partition);
++
+     assert(latestEntry != null);
+     EspressoSCN newScn = latestEntry.getSCN();
+ 
+     LOG.info("Starting new generation with startSCN:" + newScn);
+-    _indexedStoreAdmin.setEspressoSCN(dbName,
+-                                      partitionId,
+-                                      newScn.getGeneration(),
+-                                      newScn.getSequence());
++//    _indexedStoreAdmin.setEspressoSCN(dbName,
++//                                      partitionId,
++//                                      newScn.getGeneration(),
++//                                      newScn.getSequence());
+   }
+ 
+-  private void writeHwmEntryForNewGen(ZNRecord currentRecord, EspressoSCN localSCN,
++  private MasterHighwaterMarkEntry writeHwmEntryForNewGen(ZNRecord currentRecord, EspressoSCN localSCN,
+                                       Partition partition,
+                                       String instanceName,
+                                       EspressoSCN currentGlobalHwmSCN,
+@@ -1813,6 +1832,8 @@
+                                         sessionID);
+     LOG.info("newEntry =" + newEntry);
+     _masterHwmStore.write(currentRecord, newEntry);
++
++    return newEntry;
+                                       }
+ 
+   /* (non-Javadoc)
+@@ -2152,6 +2173,8 @@
+   @Override
+   public void onPreConnect()
+   {
++    if (true) return;
++
+     HelixDataAccessor accessor = _participantClusterManager.getHelixDataAccessor();
+     Builder keyBuilder = accessor.keyBuilder();
+     InstanceConfig instanceConfig =
+Index: espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/ClusterStateCoordinator.java
+===================================================================
+--- espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/ClusterStateCoordinator.java	(revision 542808)
++++ espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/cluster/ClusterStateCoordinator.java	(working copy)
+@@ -11,6 +11,7 @@
+ import com.linkedin.espresso.storagenode.scheduler.UtilitySchedulerException;
+ import com.linkedin.espresso.storagenode.scheduler.UtilityTaskException;
+ import com.linkedin.helix.HelixManager;
++import com.linkedin.helix.NotificationContext;
+ import com.linkedin.helix.messaging.handling.MessageHandlerFactory;
+ import com.linkedin.helix.model.InstanceConfig;
+ import com.linkedin.helix.store.PropertyStoreException;
+@@ -105,7 +106,7 @@
+    */
+   void fromAnyToOffline(String dbName, Integer partitionId) throws Exception;
+ 
+-  void incrementGeneration(final String dbName, final Integer partitionId) throws PropertyStoreException,
++  void incrementGeneration(final String dbName, final Integer partitionId, final NotificationContext context) throws PropertyStoreException,
+       Exception;
+ 
+   void init(String dbName, Integer partitionId) throws Exception;
+Index: espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/admin/IndexedStoreAdministrator.java
+===================================================================
+--- espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/admin/IndexedStoreAdministrator.java	(revision 542808)
++++ espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/admin/IndexedStoreAdministrator.java	(working copy)
+@@ -1,6 +1,11 @@
+ package com.linkedin.espresso.storagenode.admin;
+ 
+ 
++import java.util.List;
++import java.util.Map;
++
++import org.apache.log4j.Logger;
++
+ import com.linkedin.espresso.common.EspressoSCN;
+ import com.linkedin.espresso.common.api.EspressoException;
+ import com.linkedin.espresso.common.api.Partition;
+@@ -18,12 +23,9 @@
+ import com.linkedin.espresso.schema.impl.SchemaConstants;
+ import com.linkedin.espresso.schema.impl.TableSchemaImpl;
+ import com.linkedin.espresso.storagenode.cluster.ClusterStateCoordinator;
++import com.linkedin.espresso.store.MySqlStorageEngine;
+ import com.linkedin.espresso.store.StorageEngine;
+-import com.linkedin.espresso.store.MySqlStorageEngine;
+ import com.linkedin.espresso.store.index.SearchIndex;
+-import java.util.List;
+-import java.util.Map;
+-import org.apache.log4j.Logger;
+ 
+ public class IndexedStoreAdministrator implements SchemaChangeListener
+ {
+@@ -275,7 +277,13 @@
+   public EspressoSCN getPrimarySCN(String dbName,
+                                     Integer partitionId)
+   {
+-    return _storageEngine.getWatermark(dbName, partitionId, null);
++    long start = System.currentTimeMillis();
++    try {
++      return _storageEngine.getWatermark(dbName, partitionId, null);
++    } finally {
++      long end = System.currentTimeMillis();
++      LOG.info("getSCN took: " + (end - start) + " ms");
++    }
+   }
+ 
+   public boolean dbHasIndex(String dbName) throws EspressoException
+@@ -291,7 +299,13 @@
+    */
+   public EspressoSCN getIndexSCN(String dbName, int partitionId) throws EspressoException
+   {
+-    return _searchIndex.getHighWatermark(new Partition(dbName, partitionId));
++    long start = System.currentTimeMillis();
++    try {
++      return _searchIndex.getHighWatermark(new Partition(dbName, partitionId));
++    } finally {
++      long end = System.currentTimeMillis();
++      // LOG.info("getIndexSCN took: " + (end - start) + " ms");
++    }
+   }
+ 
+   public EspressoSCN getMinSCN(String dbName, int partitionId) throws EspressoException
+@@ -322,8 +336,15 @@
+                              int generation,
+                              int sequence)
+   {
++    long start = System.currentTimeMillis();
+     LOG.info("setEspressoSC_N(" + generation + "," + sequence + ")");
+-    _storageEngine.setSCN(dbName, partitionId, new EspressoSCN(generation, sequence), null);
++    try
++    {
++      _storageEngine.setSCN(dbName, partitionId, new EspressoSCN(generation, sequence), null);
++    } finally {
++      long end = System.currentTimeMillis();
++      LOG.info("setSCN took: " + (end - start) + " ms");
++    }
+   }
+ 
+   public void recordStateTransition(String dbName,
+Index: espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/replication/AsynchronousReplicationEngineMySQL.java
+===================================================================
+--- espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/replication/AsynchronousReplicationEngineMySQL.java	(revision 542808)
++++ espresso-storage-node/espresso-storage-node-impl/src/main/java/com/linkedin/espresso/storagenode/replication/AsynchronousReplicationEngineMySQL.java	(working copy)
+@@ -26,12 +26,13 @@
+ import com.linkedin.helix.ZNRecord;
+ import com.linkedin.helix.model.InstanceConfig;
+ 
++
+ public class AsynchronousReplicationEngineMySQL implements
+     AsynchronousReplicationEngine
+ {
+   public class ReplInfoMySQL
+   {
+-    private InstanceConfig _master;
++    private volatile InstanceConfig _master;
+ 
+     ReplInfoMySQL()
+     {
+@@ -50,6 +51,7 @@
+   };
+ 
+   final private ReplInfoMySQL _replInfo;
++
+   private final ClusterStateCoordinator _clusterStateCoordinator;
+   private final ClusterStateViewer _clusterStateViewer;
+   private final IndexedStoreAdministrator _indexedStoreAdmin;
+@@ -61,7 +63,7 @@
+       .getName();
+   private static final Logger LOG = Logger.getLogger(MODULE);
+   private final ReplicationStatMonitor _replicationStatMonitor;
+-  private boolean _isReplicationEnabled;
++  private final boolean _isReplicationEnabled;
+   private static final int SLAVECATCHUPTIMEOUT = 30;
+ 
+   public AsynchronousReplicationEngineMySQL(
+@@ -287,6 +289,7 @@
+         stmt.execute(replCmd.toString());
+         stmt.execute("start slave");
+         _replInfo.setInstanceConfig(master);
++
+         LOG.info("slave status after replication is started");
+         printSlaveStatus(conn);
+       } catch (SQLException e)
+@@ -378,7 +381,7 @@
+ 
+   /**
+    * Check the state of slave partitions
+-   * 
++   *
+    * @return
+    * @throws Exception
+    */
+@@ -427,18 +430,37 @@
+   @Override
+   public void shutdownClient() throws Exception
+   {
++//    if (true)
++//      return;
++
+     if (!_isReplicationEnabled)
+     {
+       return;
+     }
+ 
++    LOG.info("START:shutdownClient");
++    long start = System.currentTimeMillis();
++
++
++    // use double-checked locking
++    InstanceConfig currentMasterConfig = _replInfo.getInstanceConfig();
++    if (currentMasterConfig == null)
++    {
++      long end = System.currentTimeMillis();
++      LOG.info("3shutdownClient took: " + (end - start) + " ms");
++      return;
++    }
++
+     synchronized (_replInfo)
+     {
+       // If there is a replication client on, we need to shut it down.
+       // Else, we are done.
+-      InstanceConfig currentMasterConfig = _replInfo.getInstanceConfig();
++      // InstanceConfig
++      currentMasterConfig = _replInfo.getInstanceConfig();
+       if (currentMasterConfig == null)
+       {
++        long end = System.currentTimeMillis();
++        LOG.info("1shutdownClient took: " + (end - start) + " ms");
+         return;
+       }
+       String instanceName = currentMasterConfig.getInstanceName();
+@@ -462,7 +484,10 @@
+             + ":" + masterSqlPort, "rplespresso", "espresso");
+         remoteStmt = masterConn.createStatement();
+ 
++        long start2 = System.currentTimeMillis();
+         rs = remoteStmt.executeQuery("show master status");
++        long end2 = System.currentTimeMillis();
++        LOG.info("showMasterStatus took: " + (end2 - start2) + " ms");
+ 
+         if (rs.next())
+         {
+@@ -547,11 +572,19 @@
+         }
+         // TODO: check again in db if stop was successful and then set to null
+         _replInfo.setInstanceConfig(null);
++        LOG.info("END:Stopped replication from " + instanceName);
+ 
++//        CountDownLatch countdown = _countdown.getAndSet(null);
++//        if (countdown != null) {
++//          countdown.countDown();
++//        }
++        long end = System.currentTimeMillis();
++        LOG.info("2shutdownClient took: " + (end - start) + " ms");
+       }
+-      LOG.info("END:Stopped replication from " + instanceName);
++      // LOG.info("END:Stopped replication from " + instanceName);
+     }
+ 
++
+   }
+ 
+   private void waitForSlaveCatchup(String file, int position) throws Exception
+@@ -639,6 +672,7 @@
+ 
+   }
+ 
++  @Override
+   public void resetReplicationClient(String dbName, int partitionId,
+       InstanceConfig newMaster) throws Exception
+   {
+@@ -738,6 +772,7 @@
+     public int execMasterLogPos;
+     public int lastErrNo;
+ 
++    @Override
+     public String toString()
+     {
+       return "masterLogFile: " + masterLogFile + " relayMasterLogFile: "
+Index: espresso-store/espresso-store-impl/src/main/java/com/linkedin/espresso/store/StorageEngineJdbcImpl.java
+===================================================================
+--- espresso-store/espresso-store-impl/src/main/java/com/linkedin/espresso/store/StorageEngineJdbcImpl.java	(revision 542808)
++++ espresso-store/espresso-store-impl/src/main/java/com/linkedin/espresso/store/StorageEngineJdbcImpl.java	(working copy)
+@@ -81,7 +81,7 @@
+   {
+     private Connection _conn = null;
+     private boolean _isError = false;
+-    private ConnectionPool _pool;
++    private final ConnectionPool _pool;
+     private final StorageEngineJdbcImpl _storageEngine;
+     private boolean _isUserRequest= false;
+ 
+@@ -231,6 +231,7 @@
+                                      RequestProcessingStats stats)
+   {
+     long startT = System.nanoTime();
++    long start = System.currentTimeMillis();
+     try
+     {
+         return pool.getConnection();
+@@ -241,6 +242,9 @@
+       {
+         stats.addMysqlPoolLatency(new TimeValue(System.nanoTime() - startT, TimeUnit.NANOSECONDS));
+       }
++
++      long end = System.currentTimeMillis();
++      LOG.info("poolsize: " + pool.getPoolSize() + ". getConn took: " + (end - start) + " ms");
+     }
+   }
+ 
+Index: espresso-store/espresso-store-impl/src/main/java/com/linkedin/espresso/store/connection/MySqlDbcpConnectionPool.java
+===================================================================
+--- espresso-store/espresso-store-impl/src/main/java/com/linkedin/espresso/store/connection/MySqlDbcpConnectionPool.java	(revision 542808)
++++ espresso-store/espresso-store-impl/src/main/java/com/linkedin/espresso/store/connection/MySqlDbcpConnectionPool.java	(working copy)
+@@ -1,15 +1,10 @@
+ package com.linkedin.espresso.store.connection;
+ 
+ 
+-import com.linkedin.espresso.common.api.ConnectionPool;
+-import com.linkedin.espresso.common.api.StorageEngineUnavailableException;
+-import com.linkedin.espresso.common.config.ConfigBuilder;
+-import com.linkedin.espresso.common.config.InvalidConfigException;
+ import java.sql.Connection;
+ import java.sql.SQLException;
+ import java.util.concurrent.locks.ReentrantLock;
+-import org.apache.commons.dbcp.ConnectionFactory;
+-import org.apache.commons.dbcp.DriverManagerConnectionFactory;
++
+ import org.apache.commons.dbcp.PoolableConnectionFactory;
+ import org.apache.commons.dbcp.PoolingDataSource;
+ import org.apache.commons.pool.KeyedObjectPoolFactory;
+@@ -18,6 +13,11 @@
+ import org.apache.commons.pool.impl.GenericObjectPool;
+ import org.apache.log4j.Logger;
+ 
++import com.linkedin.espresso.common.api.ConnectionPool;
++import com.linkedin.espresso.common.api.StorageEngineUnavailableException;
++import com.linkedin.espresso.common.config.ConfigBuilder;
++import com.linkedin.espresso.common.config.InvalidConfigException;
++
+ /**
+  * This is a Object pool for MySql connections. It uses Apache Commons DBCP for it's implementation.
+  * @author aauradka
+@@ -29,24 +29,24 @@
+   private static final Logger LOG = Logger.getLogger(MODULE);
+   private static final int DEFAULT_NUM_CONN_TEST_ATTEMPTS = 5;
+   private static final int MIN_TIME_BETWEEN_CONN_TEST_MS = 100;
+-  private ReentrantLock _connMonitorLock; // Protects _connMonitorThread
++  private final ReentrantLock _connMonitorLock; // Protects _connMonitorThread
+   private Thread _connMonitorThread;
+   private volatile boolean _mySqlDown;
+   private final int _connTestTimeSec;
+   private final int _numConnTestAttempts;
+-  private int _port;
++  private final int _port;
+ 
+   // The pool for the Connection objects
+-  private GenericObjectPool _connectionPool;
++  private final GenericObjectPool _connectionPool;
+ 
+   // Creates the actual connections
+-  private MySQLConnectionUtils _connectionFactory;
++  private final MySQLConnectionUtils _connectionFactory;
+ 
+   // It is the factory that make the Connections "poolable"
+-  private PoolableConnectionFactory _poolableConnectionFactory;
++  private final PoolableConnectionFactory _poolableConnectionFactory;
+ 
+   // Obtains Connections from a specified pool.
+-  private PoolingDataSource _dataSource;
++  private final PoolingDataSource _dataSource;
+ 
+   public MySqlDbcpConnectionPool(StaticConfig config)
+   {
+@@ -409,21 +409,25 @@
+       return _stmtPoolConf;
+     }
+ 
++    @Override
+     public String getHostname()
+     {
+       return _hostname;
+     }
+ 
++    @Override
+     public int getPort()
+     {
+       return _port;
+     }
+ 
++    @Override
+     public String getUserName()
+     {
+       return _userName;
+     }
+ 
++    @Override
+     public String getPassword()
+     {
+       return _password;
+@@ -491,7 +495,7 @@
+     private int _maxConnections;
+     private GenericObjectPool.Config _connPoolConf;
+     private boolean _enableStmtPooling;
+-    private GenericKeyedObjectPool.Config _stmtPoolConf;
++    private final GenericKeyedObjectPool.Config _stmtPoolConf;
+     private boolean _autoCommit;
+     private boolean _readOnly;
+     private String _validationQuery;
+@@ -545,11 +549,11 @@
+       _connPoolConf.timeBetweenEvictionRunsMillis = 1000;
+       _connPoolConf.minEvictableIdleTimeMillis = 5000;
+       _connPoolConf.maxWait = -1L;
+-      _connPoolConf.minIdle = 0;
++      _connPoolConf.minIdle = 250;
+       // Default blocking on Pool exhaustion
+       _connPoolConf.whenExhaustedAction = GenericObjectPool.WHEN_EXHAUSTED_BLOCK;
+       _maxConnections = 250;
+-      _numPrecreatedConnections = 10;
++      _numPrecreatedConnections = 100;
+ 
+       _connTestTimeSec = 10;
+       _numConnTestAttempts = DEFAULT_NUM_CONN_TEST_ATTEMPTS;
+Index: espresso-store/espresso-store-impl/src/main/java/com/linkedin/espresso/store/MySqlStorageEngine.java
+===================================================================
+--- espresso-store/espresso-store-impl/src/main/java/com/linkedin/espresso/store/MySqlStorageEngine.java	(revision 542808)
++++ espresso-store/espresso-store-impl/src/main/java/com/linkedin/espresso/store/MySqlStorageEngine.java	(working copy)
+@@ -514,6 +514,7 @@
+     PreparedStatement stmt = null;
+     ResultSet rs = null;
+     EspressoSCN mark = null;
++    long start = System.currentTimeMillis();
+     try
+     {
+       stmt = MySqlStatementFactory.generateGetWatermark(conn, dbName, partition);
+@@ -552,6 +553,8 @@
+           LOG.warn("Error closing SQL Delete statement", e);
+         }
+       }
++      long end = System.currentTimeMillis();
++      LOG.info("getWm took: " + (end - start) + " ms");
+     }
+     return mark;
+   }
+@@ -1259,7 +1262,7 @@
+       rs = pstmt.executeQuery();
+       rs.next();
+ 
+-      // DDS-3960 - The end key must have the same partition id as the start key. 
++      // DDS-3960 - The end key must have the same partition id as the start key.
+       PartitionAwareResourceKey tmpKey =  ResourceKeyBuilder.fromResultSet(dbSchema, tableSchema, rs);
+       PartitionAwareResourceKey endKey =  new PartitionAwareResourceKey(tmpKey.getPartitionUnawareKey(),
+                                                                         tmpKey.getMaxKeyParts(),
+@@ -1709,8 +1712,8 @@
+     private boolean _batchDryRun;
+     private String _batchMode;
+     private MySqlBackupRestorable.Config _backupRestore;
+-    private boolean _waitForSlave = false;
+-    private int _slaveTimeoutSec = 0;
++    private final boolean _waitForSlave = false;
++    private final int _slaveTimeoutSec = 0;
+ 
+     public Config()
+     {
+Index: project-spec.json
+===================================================================
+--- project-spec.json	(revision 542808)
++++ project-spec.json	(working copy)
+@@ -61,8 +61,8 @@
+     "gnutar": "com.ice:gnutar:1.1.5",
+     "googleCollections": "com.google.collections:google-collections:1.0-rc2",
+     "hadoop": "org.apache.hadoop:hadoop-core:1.0.3",
+-    "helixCore": "com.linkedin.helix:helix-core:0.5.28",
+-    "helixWebapp": "com.linkedin.helix:helix-admin-webapp:0.5.28",
++    "helixCore": "com.linkedin.helix:helix-core:0.5.29",
++    "helixWebapp": "com.linkedin.helix:helix-admin-webapp:0.5.29",
+     "httpclient": "org.apache.http:httpclient:4.1.1",
+     "httpcore": "org.apache.http:httpcore:4.1.2",
+     "jacksonCoreAsl": "org.codehaus.jackson:jackson-core-asl:1.8.5",

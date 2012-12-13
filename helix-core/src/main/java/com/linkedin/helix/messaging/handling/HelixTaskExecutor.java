@@ -43,6 +43,7 @@ import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.NotificationContext.Type;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
+import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.Attributes;
@@ -497,6 +498,20 @@ public class HelixTaskExecutor implements MessageListener {
 	} else {
 	    _groupMsgHandler.put(message);
 
+	    // quick-hack
+	    HelixManager manager = changeContext.getManager();
+	    String clusterName = manager.getClusterName();
+	    String db = message.getResourceName();
+	    if (db.equals("MyDB") && clusterName.equals("ESPRESSO_DEV_SANDBOX_2")) {
+		List<ZNRecord> list = manager.getHelixDataAccessor()
+			.getBaseDataAccessor()
+			.getChildren("/" + clusterName + "/PROPERTYSTORE/PARTITION_GEN_INFO_V2/" + db, null, 0);
+		for (ZNRecord record : list) {
+		    String id = record.getId();
+		    String partitioName = "MyDB_" + id.substring(id.lastIndexOf('p') + 1);
+		    changeContext._zkReadMap.put(partitioName, record);
+		}
+	    }
 	    List<String> partitionNames = message.getPartitionNames();
 	    int exeBatchSize = message.getExeBatchSize();
 	    int partitionNb = partitionNames.size();
