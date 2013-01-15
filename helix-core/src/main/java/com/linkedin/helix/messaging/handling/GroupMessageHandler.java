@@ -18,22 +18,22 @@ public class GroupMessageHandler
 {
     private static Logger LOG = Logger.getLogger(GroupMessageHandler.class);
 
-  class CurrentStateUpdate
-  {
-    final PropertyKey  _key;
-    final CurrentState _curStateDelta;
-
-    public CurrentStateUpdate(PropertyKey key, CurrentState curStateDelta)
-    {
-      _key = key;
-      _curStateDelta = curStateDelta;
-    }
-
-    public void merge(CurrentState curState)
-    {
-      _curStateDelta.getRecord().merge(curState.getRecord());
-    }
-  }
+//  class CurrentStateUpdate
+//  {
+//    final PropertyKey  _key;
+//    final CurrentState _curStateDelta;
+//
+//    public CurrentStateUpdate(PropertyKey key, CurrentState curStateDelta)
+//    {
+//      _key = key;
+//      _curStateDelta = curStateDelta;
+//    }
+//
+//    public void merge(CurrentState curState)
+//    {
+//      _curStateDelta.getRecord().merge(curState.getRecord());
+//    }
+//  }
 
   static class GroupMessageInfo
   {

@@ -76,7 +76,8 @@ public class MockParticipant extends Thread
     @Transition(to = "SLAVE", from = "OFFLINE")
     public void onBecomeSlaveFromOffline(Message message, NotificationContext context) throws InterruptedException
     {
-      LOG.info("Become SLAVE from OFFLINE");
+//      LOG.info("Become SLAVE from OFFLINE");
+      System.err.println("Become SLAVE from OFFLINE, " + message.getExePartitionNames() + ", " + message.getTgtName());
       if (_transition != null)
       {
         _transition.doTransition(message, context);
@@ -87,7 +88,8 @@ public class MockParticipant extends Thread
     @Transition(to = "MASTER", from = "SLAVE")
     public void onBecomeMasterFromSlave(Message message, NotificationContext context) throws InterruptedException
     {
-      LOG.info("Become MASTER from SLAVE");
+//      LOG.info("Become MASTER from SLAVE");
+        System.err.println("Become MASTER from SLAVE, " + message.getExePartitionNames() + ", " + message.getTgtName());
       if (_transition != null)
       {
         _transition.doTransition(message, context);
@@ -144,6 +146,15 @@ public class MockParticipant extends Thread
         _transition.doReset();
       }
     }
+    
+    public void onBegin(Message message, NotificationContext context) {
+    	System.err.println("onBegin invoked");
+    }
+    
+    public void onEnd(Message message, NotificationContext context) {
+    	System.err.println("onEnd invoked");
+    }
+
   }
 
   // mock master slave state model factory

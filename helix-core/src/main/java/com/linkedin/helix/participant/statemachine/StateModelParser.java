@@ -27,25 +27,20 @@ import com.linkedin.helix.model.Message;
  * @author kgopalak
  * 
  */
-public class StateModelParser
-{
+public class StateModelParser {
 
-	public Method getMethodForTransition(Class<? extends StateModel> clazz,
-	    String fromState, String toState, Class<?>[] paramTypes)
-	{
-		Method method = getMethodForTransitionUsingAnnotation(clazz, fromState,
-		    toState, paramTypes);
-		if (method == null)
-		{
-			method = getMethodForTransitionByConvention(clazz, fromState, toState,
-			    paramTypes);
+	public Method getMethodForTransition(Class<? extends StateModel> clazz, String fromState,
+	        String toState, Class<?>[] paramTypes) {
+		Method method = getMethodForTransitionUsingAnnotation(clazz, fromState, toState, paramTypes);
+		if (method == null) {
+			method = getMethodForTransitionByConvention(clazz, fromState, toState, paramTypes);
 		}
 		return method;
 	}
 
 	/**
-	 * This class uses the method naming convention "onBecome" + toState + "From"
-	 * + fromState;
+	 * This class uses the method naming convention "onBecome" + toState +
+	 * "From" + fromState;
 	 * 
 	 * @param clazz
 	 * @param fromState
@@ -53,27 +48,20 @@ public class StateModelParser
 	 * @param paramTypes
 	 * @return Method if found else null
 	 */
-	public Method getMethodForTransitionByConvention(
-	    Class<? extends StateModel> clazz, String fromState, String toState,
-	    Class<?>[] paramTypes)
-	{
+	public Method getMethodForTransitionByConvention(Class<? extends StateModel> clazz,
+	        String fromState, String toState, Class<?>[] paramTypes) {
 		Method methodToInvoke = null;
 		String methodName = "onBecome" + toState + "From" + fromState;
-		if (fromState.equals("*"))
-		{
+		if (fromState.equals("*")) {
 			methodName = "onBecome" + toState;
 		}
 
 		Method[] methods = clazz.getMethods();
-		for (Method method : methods)
-		{
-			if (method.getName().equalsIgnoreCase(methodName))
-			{
+		for (Method method : methods) {
+			if (method.getName().equalsIgnoreCase(methodName)) {
 				Class<?>[] parameterTypes = method.getParameterTypes();
-				if (parameterTypes.length == 2
-				    && parameterTypes[0].equals(Message.class)
-				    && parameterTypes[1].equals(NotificationContext.class))
-				{
+				if (parameterTypes.length == 2 && parameterTypes[0].equals(Message.class)
+				        && parameterTypes[1].equals(NotificationContext.class)) {
 					methodToInvoke = method;
 					break;
 				}
@@ -89,34 +77,27 @@ public class StateModelParser
 	 * specify "to" and "from" state
 	 * 
 	 * @param clazz
-	 *          , class which extends StateModel
+	 *            , class which extends StateModel
 	 * @param fromState
 	 * @param toState
 	 * @param paramTypes
 	 * @return
 	 */
-	public Method getMethodForTransitionUsingAnnotation(
-	    Class<? extends StateModel> clazz, String fromState, String toState,
-	    Class<?>[] paramTypes)
-	{
+	public Method getMethodForTransitionUsingAnnotation(Class<? extends StateModel> clazz,
+	        String fromState, String toState, Class<?>[] paramTypes) {
 		StateModelInfo stateModelInfo = clazz.getAnnotation(StateModelInfo.class);
 		Method methodToInvoke = null;
-		if (stateModelInfo != null)
-		{
+		if (stateModelInfo != null) {
 			Method[] methods = clazz.getMethods();
-			if (methods != null)
-			{
-				for (Method method : methods)
-				{
+			if (methods != null) {
+				for (Method method : methods) {
 					Transition annotation = method.getAnnotation(Transition.class);
-					if (annotation != null)
-					{
+					if (annotation != null) {
 						boolean matchesFrom = annotation.from().equalsIgnoreCase(fromState);
 						boolean matchesTo = annotation.to().equalsIgnoreCase(toState);
 						boolean matchesParamTypes = Arrays.equals(paramTypes,
-						    method.getParameterTypes());
-						if (matchesFrom && matchesTo && matchesParamTypes)
-						{
+						        method.getParameterTypes());
+						if (matchesFrom && matchesTo && matchesParamTypes) {
 							methodToInvoke = method;
 							break;
 						}
@@ -127,6 +108,25 @@ public class StateModelParser
 
 		return methodToInvoke;
 	}
+	
+	public Method getMethodByConvention(Class<? extends StateModel> clazz,
+	        String value, Class<?>[] paramTypes) {
+		Method methodToInvoke = null;
+		String methodName = "on" + value;
+
+		Method[] methods = clazz.getMethods();
+		for (Method method : methods) {
+			if (method.getName().equalsIgnoreCase(methodName)) {
+				Class<?>[] parameterTypes = method.getParameterTypes();
+				if (parameterTypes.length == 2 && parameterTypes[0].equals(Message.class)
+				        && parameterTypes[1].equals(NotificationContext.class)) {
+					methodToInvoke = method;
+					break;
+				}
+			}
+		}
+		return methodToInvoke;
+	}
 
 	/**
 	 * Get the intial state for the state model
@@ -134,13 +134,11 @@ public class StateModelParser
 	 * @param clazz
 	 * @return
 	 */
-	public String getInitialState(Class<? extends StateModel> clazz)
-	{
+	public String getInitialState(Class<? extends StateModel> clazz) {
 		StateModelInfo stateModelInfo = clazz.getAnnotation(StateModelInfo.class);
-		if (stateModelInfo != null)
-		{
+		if (stateModelInfo != null) {
 			return stateModelInfo.initialState();
-		}else{
+		} else {
 			return StateModel.DEFAULT_INITIAL_STATE;
 		}
 	}

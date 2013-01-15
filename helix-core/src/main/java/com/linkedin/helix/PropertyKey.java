@@ -55,6 +55,7 @@ public class PropertyKey
   public PropertyType            _type;
   private final String[]         _params;
   Class<? extends HelixProperty> _typeClazz;
+  final String _path;
 
   public PropertyKey(PropertyType type,
                      Class<? extends HelixProperty> typeClazz,
@@ -68,6 +69,17 @@ public class PropertyKey
 
     _params = params;
     _typeClazz = typeClazz;
+    
+    // pre-generate path to avoid repeated calculation
+    String clusterName = _params[0];
+    String[] subKeys = Arrays.copyOfRange(_params, 1, _params.length);
+    _path = PropertyPathConfig.getPath(_type, clusterName, subKeys);
+    if (_path == null)
+    {
+      LOG.error("Invalid property key with type:" + _type + "subKeys:"
+          + Arrays.toString(_params));
+    }
+
   }
 
   @Override
@@ -78,15 +90,15 @@ public class PropertyKey
 
   public String getPath()
   {
-    String clusterName = _params[0];
-    String[] subKeys = Arrays.copyOfRange(_params, 1, _params.length);
-    String path = PropertyPathConfig.getPath(_type, clusterName, subKeys);
-    if (path == null)
-    {
-      LOG.error("Invalid property key with type:" + _type + "subKeys:"
-          + Arrays.toString(_params));
-    }
-    return path;
+//    String clusterName = _params[0];
+//    String[] subKeys = Arrays.copyOfRange(_params, 1, _params.length);
+//    String path = PropertyPathConfig.getPath(_type, clusterName, subKeys);
+//    if (path == null)
+//    {
+//      LOG.error("Invalid property key with type:" + _type + "subKeys:"
+//          + Arrays.toString(_params));
+//    }
+    return _path;
   }
 
   public static class Builder
