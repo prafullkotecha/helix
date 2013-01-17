@@ -17,6 +17,7 @@ package com.linkedin.helix;
 
 import java.util.List;
 
+import com.linkedin.helix.ConfigScope.ConfigScopeProperty;
 import com.linkedin.helix.controller.GenericHelixController;
 import com.linkedin.helix.healthcheck.ParticipantHealthReportCollector;
 import com.linkedin.helix.participant.HelixStateMachineEngine;
@@ -97,9 +98,26 @@ public interface HelixManager
   /**
    * @see ConfigChangeListener#onConfigChange(List, NotificationContext)
    * @param listener
+   * 
+   * @deprecated as of release 0.5.32, replaced by addInstanceConfigChangeListener()
    */
+  @Deprecated
   void addConfigChangeListener(ConfigChangeListener listener) throws Exception;
 
+  /**
+   * @see InstanceConfigChangeListener#onInstanceConfigChange(List, NotificationContext)
+   * @param listener
+   * 
+   */
+  void addInstanceConfigChangeListener(InstanceConfigChangeListener listener) throws Exception;
+
+  /**
+   * @see ScopedConfigChangeListener#onConfigChange(List, NotificationContext)
+   * @param listener
+   * @param scope
+   */
+  void addConfigChangeListener(ScopedConfigChangeListener listener, ConfigScopeProperty scope) throws Exception;
+  
   /**
    * @see MessageListener#onMessage(String, List, NotificationContext)
    * @param listener

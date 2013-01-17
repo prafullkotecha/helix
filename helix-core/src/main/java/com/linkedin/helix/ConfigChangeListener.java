@@ -21,8 +21,9 @@ import com.linkedin.helix.model.InstanceConfig;
 
 /**
  * @author kgopalak
- * 
+ * @deprecated as of release 0.5.32 replaced by InstanceConfigChangeListener
  */
+@Deprecated
 public interface ConfigChangeListener
 {
 

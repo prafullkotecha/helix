@@ -28,6 +28,7 @@ import org.I0Itec.zkclient.IZkChildListener;
 import org.I0Itec.zkclient.IZkDataListener;
 import org.apache.zookeeper.data.Stat;
 
+import com.linkedin.helix.ConfigScope.ConfigScopeProperty;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.healthcheck.HealthReportProvider;
 import com.linkedin.helix.healthcheck.ParticipantHealthReportCollector;
@@ -460,6 +461,20 @@ public class Mocks {
     {
       // TODO Auto-generated method stub
       return null;
+    }
+
+	@Override
+    public void addInstanceConfigChangeListener(InstanceConfigChangeListener listener)
+            throws Exception {
+	    // TODO Auto-generated method stub
+	    
+    }
+
+	@Override
+    public void addConfigChangeListener(ScopedConfigChangeListener listener,
+            ConfigScopeProperty scope) throws Exception {
+	    // TODO Auto-generated method stub
+	    
     }
 
 	}

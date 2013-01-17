@@ -20,6 +20,7 @@ import java.util.UUID;
 import com.linkedin.helix.ClusterMessagingService;
 import com.linkedin.helix.ConfigAccessor;
 import com.linkedin.helix.ConfigChangeListener;
+import com.linkedin.helix.ConfigScope.ConfigScopeProperty;
 import com.linkedin.helix.ControllerChangeListener;
 import com.linkedin.helix.CurrentStateChangeListener;
 import com.linkedin.helix.DataAccessor;
@@ -29,10 +30,12 @@ import com.linkedin.helix.HelixAdmin;
 import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.IdealStateChangeListener;
+import com.linkedin.helix.InstanceConfigChangeListener;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.LiveInstanceChangeListener;
 import com.linkedin.helix.MessageListener;
 import com.linkedin.helix.PreConnectCallback;
+import com.linkedin.helix.ScopedConfigChangeListener;
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.healthcheck.ParticipantHealthReportCollector;
 import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
@@ -274,5 +277,18 @@ public class MockZKHelixManager implements HelixManager
     // TODO Auto-generated method stub
     return null;
   }
+
+@Override
+public void addInstanceConfigChangeListener(InstanceConfigChangeListener listener) throws Exception {
+	// TODO Auto-generated method stub
+	
+}
+
+@Override
+public void addConfigChangeListener(ScopedConfigChangeListener listener, ConfigScopeProperty scope)
+        throws Exception {
+	// TODO Auto-generated method stub
+	
+}
 
 }

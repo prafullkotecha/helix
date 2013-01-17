@@ -15,15 +15,6 @@
  */
 package com.linkedin.helix.manager.zk;
 
-import static com.linkedin.helix.HelixConstants.ChangeType.CONFIG;
-import static com.linkedin.helix.HelixConstants.ChangeType.CURRENT_STATE;
-import static com.linkedin.helix.HelixConstants.ChangeType.EXTERNAL_VIEW;
-import static com.linkedin.helix.HelixConstants.ChangeType.HEALTH;
-import static com.linkedin.helix.HelixConstants.ChangeType.IDEAL_STATE;
-import static com.linkedin.helix.HelixConstants.ChangeType.LIVE_INSTANCE;
-import static com.linkedin.helix.HelixConstants.ChangeType.MESSAGE;
-import static com.linkedin.helix.HelixConstants.ChangeType.MESSAGES_CONTROLLER;
-
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -57,13 +48,16 @@ import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.HelixTimerTask;
 import com.linkedin.helix.IdealStateChangeListener;
+import com.linkedin.helix.InstanceConfigChangeListener;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.LiveInstanceChangeListener;
 import com.linkedin.helix.MessageListener;
 import com.linkedin.helix.PreConnectCallback;
+import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.PropertyPathConfig;
 import com.linkedin.helix.PropertyType;
+import com.linkedin.helix.ScopedConfigChangeListener;
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.controller.restlet.ZKPropertyTransferServer;
 import com.linkedin.helix.healthcheck.HealthStatsAggregationTask;
@@ -219,83 +213,77 @@ public class ZKHelixManager implements HelixManager
   @Override
   public void addIdealStateChangeListener(final IdealStateChangeListener listener) throws Exception
   {
-    logger.info("ClusterManager.addIdealStateChangeListener()");
-    checkConnected();
-    final String path =
-        PropertyPathConfig.getPath(PropertyType.IDEALSTATES, _clusterName);
-    CallbackHandler callbackHandler =
-        createCallBackHandler(path,
-                              listener,
-                              new EventType[] { EventType.NodeDataChanged,
-                                  EventType.NodeDeleted, EventType.NodeCreated },
-                              IDEAL_STATE);
-    addListener(callbackHandler);
+    addListener(listener, new Builder(_clusterName).idealStates(), ChangeType.IDEAL_STATE, 
+    		new EventType[] { EventType.NodeDataChanged, EventType.NodeDeleted, EventType.NodeCreated });
   }
 
   @Override
   public void addLiveInstanceChangeListener(LiveInstanceChangeListener listener) throws Exception
   {
-    logger.info("ClusterManager.addLiveInstanceChangeListener()");
-    checkConnected();
-    final String path = _helixAccessor.keyBuilder().liveInstances().getPath();
-    CallbackHandler callbackHandler =
-        createCallBackHandler(path,
-                              listener,
-                              new EventType[] { EventType.NodeDataChanged, EventType.NodeChildrenChanged,
-                                  EventType.NodeDeleted, EventType.NodeCreated },
-                              LIVE_INSTANCE);
-    addListener(callbackHandler);
+    addListener(listener, new Builder(_clusterName).liveInstances(), ChangeType.LIVE_INSTANCE, 
+    		new EventType[] { EventType.NodeDataChanged, EventType.NodeChildrenChanged, EventType.NodeDeleted, EventType.NodeCreated });
+  }
+
+  
+  @Override
+  @Deprecated
+  public void addConfigChangeListener(ConfigChangeListener listener)
+  {
+    addListener(listener, new Builder(_clusterName).instanceConfigs(), ChangeType.INSTANCE_CONFIG, 
+    		new EventType[] { EventType.NodeChildrenChanged });
+  }
+  
+  @Override
+  public void addInstanceConfigChangeListener(InstanceConfigChangeListener listener)
+  {
+	 addListener(listener, new Builder(_clusterName).instanceConfigs(), ChangeType.INSTANCE_CONFIG, 
+			 new EventType[] { EventType.NodeChildrenChanged });
   }
 
   @Override
-  public void addConfigChangeListener(ConfigChangeListener listener)
+  public void addConfigChangeListener(ScopedConfigChangeListener listener, ConfigScopeProperty scope)
   {
-    logger.info("ClusterManager.addConfigChangeListener()");
-    checkConnected();
-    final String path =
-        PropertyPathConfig.getPath(PropertyType.CONFIGS,
-                                   _clusterName,
-                                   ConfigScopeProperty.PARTICIPANT.toString());
-
-    CallbackHandler callbackHandler =
-        createCallBackHandler(path,
-                              listener,
-                              new EventType[] { EventType.NodeChildrenChanged },
-                              CONFIG);
-    addListener(callbackHandler);
-
+	Builder keyBuilder = new Builder(_clusterName);
+	
+	PropertyKey propertyKey = null;
+	switch(scope)
+	{
+	case CLUSTER:
+		propertyKey = keyBuilder.clusterConfigs();
+		break;
+	case PARTICIPANT:
+		propertyKey = keyBuilder.instanceConfigs();
+		break;
+	case RESOURCE:
+		propertyKey = keyBuilder.resourceConfigs();
+		break;
+	default:
+		break;
+	}
+	
+	if (propertyKey != null)
+	{
+		addListener(listener, propertyKey, ChangeType.CONFIG, 
+				new EventType[] { EventType.NodeChildrenChanged });
+	} else
+	{
+		logger.error("Can't add listener to config scope: " + scope);
+	}
   }
-
+  
   // TODO: Decide if do we still need this since we are exposing
   // ClusterMessagingService
   @Override
   public void addMessageListener(MessageListener listener, String instanceName)
   {
-    logger.info("ClusterManager.addMessageListener() " + instanceName);
-    checkConnected();
-    final String path = _helixAccessor.keyBuilder().messages(instanceName).getPath();
-    CallbackHandler callbackHandler =
-        createCallBackHandler(path,
-                              listener,
-                              new EventType[] { EventType.NodeChildrenChanged,
-                                  EventType.NodeDeleted, EventType.NodeCreated },
-                              MESSAGE);
-    addListener(callbackHandler);
+    addListener(listener, new Builder(_clusterName).messages(instanceName), ChangeType.MESSAGE, 
+    		new EventType[] { EventType.NodeChildrenChanged, EventType.NodeDeleted, EventType.NodeCreated });
   }
 
   void addControllerMessageListener(MessageListener listener)
   {
-    logger.info("ClusterManager.addControllerMessageListener()");
-    checkConnected();
-    final String path = _helixAccessor.keyBuilder().controllerMessages().getPath();
-
-    CallbackHandler callbackHandler =
-        createCallBackHandler(path,
-                              listener,
-                              new EventType[] { EventType.NodeChildrenChanged,
-                                  EventType.NodeDeleted, EventType.NodeCreated },
-                              MESSAGES_CONTROLLER);
-    addListener(callbackHandler);
+    addListener(listener, new Builder(_clusterName).controllerMessages(), ChangeType.MESSAGES_CONTROLLER,
+    		new EventType[] { EventType.NodeChildrenChanged, EventType.NodeDeleted, EventType.NodeCreated });
   }
 
   @Override
@@ -303,52 +291,23 @@ public class ZKHelixManager implements HelixManager
                                             String instanceName,
                                             String sessionId)
   {
-    logger.info("ClusterManager.addCurrentStateChangeListener() " + instanceName + " "
-        + sessionId);
-    checkConnected();
-    final String path =
-        _helixAccessor.keyBuilder().currentStates(instanceName, sessionId).getPath();
-
-    CallbackHandler callbackHandler =
-        createCallBackHandler(path,
-                              listener,
-                              new EventType[] { EventType.NodeChildrenChanged,
-                                  EventType.NodeDeleted, EventType.NodeCreated },
-                              CURRENT_STATE);
-    addListener(callbackHandler);
+    addListener(listener, new Builder(_clusterName).currentStates(instanceName, sessionId), ChangeType.CURRENT_STATE,
+    		new EventType[] { EventType.NodeChildrenChanged, EventType.NodeDeleted, EventType.NodeCreated });
   }
 
   @Override
   public void addHealthStateChangeListener(HealthStateChangeListener listener,
                                            String instanceName)
   {
-    // System.out.println("ZKClusterManager.addHealthStateChangeListener()");
-    // TODO: re-form this for stats checking
-    logger.info("ClusterManager.addHealthStateChangeListener()" + instanceName);
-    checkConnected();
-    final String path = _helixAccessor.keyBuilder().healthReports(instanceName).getPath();
-
-    CallbackHandler callbackHandler =
-        createCallBackHandler(path, listener, new EventType[] {
-            EventType.NodeChildrenChanged, EventType.NodeDataChanged,
-            EventType.NodeDeleted, EventType.NodeCreated }, HEALTH);
-    addListener(callbackHandler);
+    addListener(listener, new Builder(_clusterName).healthReports(instanceName), ChangeType.HEALTH,
+    		new EventType[] { EventType.NodeChildrenChanged, EventType.NodeDeleted, EventType.NodeCreated });
   }
 
   @Override
   public void addExternalViewChangeListener(ExternalViewChangeListener listener)
   {
-    logger.info("ClusterManager.addExternalViewChangeListener()");
-    checkConnected();
-    final String path = _helixAccessor.keyBuilder().externalViews().getPath();
-
-    CallbackHandler callbackHandler =
-        createCallBackHandler(path,
-                              listener,
-                              new EventType[] { EventType.NodeDataChanged,
-                                  EventType.NodeDeleted, EventType.NodeCreated },
-                              EXTERNAL_VIEW);
-    addListener(callbackHandler);
+    addListener(listener, new Builder(_clusterName).externalViews(), ChangeType.EXTERNAL_VIEW,
+    		new EventType[] { EventType.NodeChildrenChanged, EventType.NodeDeleted, EventType.NodeCreated });
   }
 
   @Override
@@ -488,26 +447,14 @@ public class ZKHelixManager implements HelixManager
   @Override
   public void addControllerListener(ControllerChangeListener listener)
   {
-    checkConnected();
-    final String path = _helixAccessor.keyBuilder().controller().getPath();
-    logger.info("Add controller listener at: " + path);
-    CallbackHandler callbackHandler =
-        createCallBackHandler(path,
-                              listener,
-                              new EventType[] { EventType.NodeChildrenChanged,
-                                  EventType.NodeDeleted, EventType.NodeCreated },
-                              ChangeType.CONTROLLER);
-
-    // System.out.println("add controller listeners to " + _instanceName +
-    // " for " + _clusterName);
-    // _handlers.add(callbackHandler);
-    addListener(callbackHandler);
+    addListener(listener, new Builder(_clusterName).controller(), ChangeType.CONTROLLER,
+    		new EventType[] { EventType.NodeChildrenChanged, EventType.NodeDeleted, EventType.NodeCreated });
   }
 
   @Override
   public boolean removeListener(Object listener)
   {
-    logger.info("remove listener: " + listener + " from " + _instanceName);
+    logger.info("remove listener: " + listener + " from cluster: " + _clusterName + ", instance: " + _instanceName);
 
     synchronized (this)
     {
@@ -652,7 +599,7 @@ public class ZKHelixManager implements HelixManager
     }
   }
 
-  private CallbackHandler createCallBackHandler(String path,
+  private CallbackHandler createCallBackHandler(PropertyKey propertyKey, // String path,
                                                 Object listener,
                                                 EventType[] eventTypes,
                                                 ChangeType changeType)
@@ -661,7 +608,7 @@ public class ZKHelixManager implements HelixManager
     {
       throw new HelixException("Listener cannot be null");
     }
-    return new CallbackHandler(this, _zkClient, path, listener, eventTypes, changeType);
+    return new CallbackHandler(this, _zkClient, propertyKey, /* path, */ listener, eventTypes, changeType);
   }
 
   /**
@@ -743,11 +690,11 @@ public class ZKHelixManager implements HelixManager
 
       if (_leaderElectionHandler == null)
       {
-        final String path =
-            PropertyPathConfig.getPath(PropertyType.CONTROLLER, _clusterName);
+//        final String path =
+//            PropertyPathConfig.getPath(PropertyType.CONTROLLER, _clusterName);
 
         _leaderElectionHandler =
-            createCallBackHandler(path,
+            createCallBackHandler(new Builder(_clusterName).controller(),
                                   new DistClusterControllerElection(_zkConnectString),
                                   new EventType[] { EventType.NodeChildrenChanged,
                                       EventType.NodeDeleted, EventType.NodeCreated },
@@ -870,13 +817,19 @@ public class ZKHelixManager implements HelixManager
     }
   }
 
-  private void addListener(CallbackHandler handler)
+  private void addListener(Object listener, PropertyKey propertyKey, ChangeType changeType, EventType[] eventType) // PropertyType type, String... keys)
   {
+    checkConnected();
+    // String path = PropertyPathConfig.getPath(type, _clusterName, keys);
+
+    PropertyType type = propertyKey.getType();
+    CallbackHandler handler =
+        createCallBackHandler(propertyKey, listener, eventType, changeType);
+
     synchronized (this)
     {
       _handlers.add(handler);
-      logger.info("add handler: " + handler.getPath() + " by "
-          + Thread.currentThread().getName());
+      logger.info("Add listener: " + listener + " for type: " + type + " to path: " + handler.getPath());
     }
   }
 

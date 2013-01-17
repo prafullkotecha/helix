@@ -17,11 +17,11 @@ package com.linkedin.helix;
 
 public interface HelixConstants
 {
-  // ChangeType and PropertyType are the same; remove this
   enum ChangeType
   {
     // @formatter:off
     IDEAL_STATE,
+    INSTANCE_CONFIG,
     CONFIG,
     LIVE_INSTANCE,
     CURRENT_STATE,

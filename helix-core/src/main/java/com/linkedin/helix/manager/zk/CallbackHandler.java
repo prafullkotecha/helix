@@ -15,14 +15,6 @@
  */
 package com.linkedin.helix.manager.zk;
 
-import static com.linkedin.helix.HelixConstants.ChangeType.CONFIG;
-import static com.linkedin.helix.HelixConstants.ChangeType.CURRENT_STATE;
-import static com.linkedin.helix.HelixConstants.ChangeType.EXTERNAL_VIEW;
-import static com.linkedin.helix.HelixConstants.ChangeType.IDEAL_STATE;
-import static com.linkedin.helix.HelixConstants.ChangeType.LIVE_INSTANCE;
-import static com.linkedin.helix.HelixConstants.ChangeType.MESSAGE;
-import static com.linkedin.helix.HelixConstants.ChangeType.MESSAGES_CONTROLLER;
-
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -40,12 +32,15 @@ import com.linkedin.helix.HealthStateChangeListener;
 import com.linkedin.helix.HelixConstants.ChangeType;
 import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixManager;
+import com.linkedin.helix.HelixProperty;
 import com.linkedin.helix.IdealStateChangeListener;
+import com.linkedin.helix.InstanceConfigChangeListener;
 import com.linkedin.helix.LiveInstanceChangeListener;
 import com.linkedin.helix.MessageListener;
 import com.linkedin.helix.NotificationContext;
-import com.linkedin.helix.PropertyKey.Builder;
+import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyPathConfig;
+import com.linkedin.helix.ScopedConfigChangeListener;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.ExternalView;
 import com.linkedin.helix.model.HealthStat;
@@ -62,6 +57,8 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
 
   private final String _path;
   private final Object _listener;
+  
+  // TODO: eventType is not used
   private final EventType[] _eventTypes;
   private final HelixDataAccessor _accessor;
   private final ChangeType _changeType;
@@ -69,16 +66,20 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
   private final AtomicLong lastNotificationTimeStamp;
   private final HelixManager _manager;
 
-  public CallbackHandler(HelixManager manager, ZkClient client, String path,
+  private final PropertyKey _propertyKey;
+  
+  public CallbackHandler(HelixManager manager, ZkClient client, PropertyKey propertyKey, // String path,
                          Object listener, EventType[] eventTypes, ChangeType changeType)
   {
     this._manager = manager;
     this._accessor = manager.getHelixDataAccessor();
     this._zkClient = client;
-    this._path = path;
+    this._propertyKey = propertyKey;
+    this._path = propertyKey.getPath();
     this._listener = listener;
     this._eventTypes = eventTypes;
     this._changeType = changeType;
+    
     lastNotificationTimeStamp = new AtomicLong(System.nanoTime());
     init();
   }
@@ -98,7 +99,7 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
     // This allows the listener to work with one change at a time
     synchronized (_manager)
     {
-      Builder keyBuilder = _accessor.keyBuilder();
+//      Builder keyBuilder = _accessor.keyBuilder();
       long start = System.currentTimeMillis();
       if (logger.isInfoEnabled())
       {
@@ -107,96 +108,112 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
             + _path + " listener:" + _listener.getClass().getCanonicalName());
       }
 
-      if (_changeType == IDEAL_STATE)
+      switch(_changeType)
       {
-
+      case IDEAL_STATE:
+      {
         IdealStateChangeListener idealStateChangeListener =
             (IdealStateChangeListener) _listener;
         subscribeForChanges(changeContext, _path, true, true);
-        List<IdealState> idealStates = _accessor.getChildValues(keyBuilder.idealStates());
+        List<IdealState> idealStates = _accessor.getChildValues(_propertyKey);
 
         idealStateChangeListener.onIdealStateChange(idealStates, changeContext);
-
+        break;
       }
-      else if (_changeType == CONFIG)
+      case INSTANCE_CONFIG:
       {
-
-        ConfigChangeListener configChangeListener = (ConfigChangeListener) _listener;
         subscribeForChanges(changeContext, _path, true, true);
-        List<InstanceConfig> configs =
-            _accessor.getChildValues(keyBuilder.instanceConfigs());
-
-        configChangeListener.onConfigChange(configs, changeContext);
-
+    	if (_listener instanceof ConfigChangeListener)
+    	{
+    		ConfigChangeListener configChangeListener = (ConfigChangeListener) _listener;
+    		List<InstanceConfig> configs = _accessor.getChildValues(_propertyKey);
+    		configChangeListener.onConfigChange(configs, changeContext);
+    	} else if (_listener instanceof InstanceConfigChangeListener)
+    	{
+    		InstanceConfigChangeListener listener = (InstanceConfigChangeListener) _listener;
+    		List<InstanceConfig> configs = _accessor.getChildValues(_propertyKey);
+    		listener.onInstanceConfigChange(configs, changeContext);    		
+    	}
+    	break;
       }
-      else if (_changeType == LIVE_INSTANCE)
+      case CONFIG: 
+      {
+        subscribeForChanges(changeContext, _path, true, true);
+		ScopedConfigChangeListener listener = (ScopedConfigChangeListener) _listener;
+		List<HelixProperty> configs = _accessor.getChildValues(_propertyKey);
+		listener.onConfigChange(configs, changeContext);
+		break;
+      }
+      case LIVE_INSTANCE:
       {
         LiveInstanceChangeListener liveInstanceChangeListener =
             (LiveInstanceChangeListener) _listener;
         subscribeForChanges(changeContext, _path, true, true);
         List<LiveInstance> liveInstances =
-            _accessor.getChildValues(keyBuilder.liveInstances());
-
+            _accessor.getChildValues(_propertyKey);
         liveInstanceChangeListener.onLiveInstanceChange(liveInstances, changeContext);
-
+        break;
       }
-      else if (_changeType == CURRENT_STATE)
+      case CURRENT_STATE:
       {
         CurrentStateChangeListener currentStateChangeListener;
         currentStateChangeListener = (CurrentStateChangeListener) _listener;
         subscribeForChanges(changeContext, _path, true, true);
         String instanceName = PropertyPathConfig.getInstanceNameFromPath(_path);
-        String[] pathParts = _path.split("/");
+//        String[] pathParts = _path.split("/");
 
         // TODO: fix this
-        List<CurrentState> currentStates =
-            _accessor.getChildValues(keyBuilder.currentStates(instanceName,
-                                                              pathParts[pathParts.length - 1]));
+//        List<CurrentState> currentStates =
+//            _accessor.getChildValues(keyBuilder.currentStates(instanceName,
+//                                                              pathParts[pathParts.length - 1]));
+        List<CurrentState> currentStates = _accessor.getChildValues(_propertyKey);
 
         currentStateChangeListener.onStateChange(instanceName,
                                                  currentStates,
                                                  changeContext);
-
+        break;
       }
-      else if (_changeType == MESSAGE)
+      case MESSAGE:
       {
         MessageListener messageListener = (MessageListener) _listener;
         subscribeForChanges(changeContext, _path, true, false);
         String instanceName = PropertyPathConfig.getInstanceNameFromPath(_path);
         List<Message> messages =
-            _accessor.getChildValues(keyBuilder.messages(instanceName));
+            _accessor.getChildValues(_propertyKey);
 
         messageListener.onMessage(instanceName, messages, changeContext);
-
+        break;
       }
-      else if (_changeType == MESSAGES_CONTROLLER)
+      case MESSAGES_CONTROLLER:
       {
         MessageListener messageListener = (MessageListener) _listener;
         subscribeForChanges(changeContext, _path, true, false);
         List<Message> messages =
-            _accessor.getChildValues(keyBuilder.controllerMessages());
+            _accessor.getChildValues(_propertyKey);
 
         messageListener.onMessage(_manager.getInstanceName(), messages, changeContext);
-
+        break;
       }
-      else if (_changeType == EXTERNAL_VIEW)
+      case EXTERNAL_VIEW:
       {
         ExternalViewChangeListener externalViewListener =
             (ExternalViewChangeListener) _listener;
         subscribeForChanges(changeContext, _path, true, true);
         List<ExternalView> externalViewList =
-            _accessor.getChildValues(keyBuilder.externalViews());
+            _accessor.getChildValues(_propertyKey);
 
         externalViewListener.onExternalViewChange(externalViewList, changeContext);
+        break;
       }
-      else if (_changeType == ChangeType.CONTROLLER)
+      case CONTROLLER:
       {
         ControllerChangeListener controllerChangelistener =
             (ControllerChangeListener) _listener;
         subscribeForChanges(changeContext, _path, true, false);
         controllerChangelistener.onControllerChange(changeContext);
+        break;
       }
-      else if (_changeType == ChangeType.HEALTH)
+      case HEALTH:
       {
         HealthStateChangeListener healthStateChangeListener =
             (HealthStateChangeListener) _listener;
@@ -205,12 +222,17 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
         String instanceName = PropertyPathConfig.getInstanceNameFromPath(_path);
 
         List<HealthStat> healthReportList =
-            _accessor.getChildValues(keyBuilder.healthReports(instanceName));
+            _accessor.getChildValues(_propertyKey);
 
         healthStateChangeListener.onHealthChange(instanceName,
                                                  healthReportList,
                                                  changeContext);
+        break;
       }
+      default:
+    	break;
+      }
+      
       long end = System.currentTimeMillis();
       if (logger.isInfoEnabled())
       {

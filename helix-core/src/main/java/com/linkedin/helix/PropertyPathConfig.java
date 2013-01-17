@@ -55,26 +55,28 @@ public class PropertyPathConfig
 {
   private static Logger logger = Logger.getLogger(PropertyPathConfig.class);
 
-  static Map<PropertyType, Map<Integer, String>> templateMap = new HashMap<PropertyType, Map<Integer, String>>();
-  static Map<PropertyType, Class<? extends HelixProperty>> typeToClassMapping= new HashMap<PropertyType, Class<? extends HelixProperty>>();
-  static{
-    typeToClassMapping.put(LIVEINSTANCES, LiveInstance.class);
-    typeToClassMapping.put(IDEALSTATES, IdealState.class);
-    typeToClassMapping.put(CONFIGS, InstanceConfig.class);
-    typeToClassMapping.put(EXTERNALVIEW, ExternalView.class);
-    typeToClassMapping.put(STATEMODELDEFS, StateModelDefinition.class);
-    typeToClassMapping.put(MESSAGES, Message.class);
-    typeToClassMapping.put(CURRENTSTATES, CurrentState.class);
-    typeToClassMapping.put(STATUSUPDATES, StatusUpdate.class);
-    typeToClassMapping.put(HISTORY, LeaderHistory.class);
-    typeToClassMapping.put(HEALTHREPORT, HealthStat.class);
-    typeToClassMapping.put(ALERTS, Alerts.class);
-    typeToClassMapping.put(ALERT_STATUS, AlertStatus.class);
-    typeToClassMapping.put(PAUSE, PauseSignal.class);
-  }
+  static final Map<PropertyType, Map<Integer, String>> templateMap = new HashMap<PropertyType, Map<Integer, String>>();
+  static final Map<PropertyType, Class<? extends HelixProperty>> typeToClassMap= new HashMap<PropertyType, Class<? extends HelixProperty>>();
+  
   static
   {
-    // @formatter:off
+	// @formatter:off
+	// fill type to class map
+    typeToClassMap.put(LIVEINSTANCES, LiveInstance.class);
+    typeToClassMap.put(IDEALSTATES, IdealState.class);
+    typeToClassMap.put(CONFIGS, InstanceConfig.class);
+    typeToClassMap.put(EXTERNALVIEW, ExternalView.class);
+    typeToClassMap.put(STATEMODELDEFS, StateModelDefinition.class);
+    typeToClassMap.put(MESSAGES, Message.class);
+    typeToClassMap.put(CURRENTSTATES, CurrentState.class);
+    typeToClassMap.put(STATUSUPDATES, StatusUpdate.class);
+    typeToClassMap.put(HISTORY, LeaderHistory.class);
+    typeToClassMap.put(HEALTHREPORT, HealthStat.class);
+    typeToClassMap.put(ALERTS, Alerts.class);
+    typeToClassMap.put(ALERT_STATUS, AlertStatus.class);
+    typeToClassMap.put(PAUSE, PauseSignal.class);
+
+    // fill pathConfig map
     addEntry(PropertyType.CONFIGS, 1, "/{clusterName}/CONFIGS");
     addEntry(PropertyType.CONFIGS, 2, "/{clusterName}/CONFIGS/{scope}");
     addEntry(PropertyType.CONFIGS, 3, "/{clusterName}/CONFIGS/{scope}/{scopeKey}");
@@ -197,6 +199,7 @@ public class PropertyPathConfig
     }
     return result;
   }
+  
   public static String getInstanceNameFromPath(String path)
   {
     // path structure
@@ -211,4 +214,5 @@ public class PropertyPathConfig
     }
     return null;
   }
+  
 }
