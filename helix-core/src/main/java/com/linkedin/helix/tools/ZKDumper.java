@@ -38,9 +38,9 @@ import com.linkedin.helix.manager.zk.ZkClient;
 
 /**
  * Dumps the Zookeeper file structure on to Disk
- * 
+ *
  * @author kgopalak
- * 
+ *
  */
 @SuppressWarnings("static-access")
 public class ZKDumper
@@ -49,8 +49,8 @@ public class ZKDumper
   private FilenameFilter filter;
   static Options options;
   private String suffix = "";
-  //enable by default
-  private boolean removeSuffix=true;
+  // can be enabled through cmd
+  private boolean removeSuffix=false;
 
   public String getSuffix()
   {
@@ -76,7 +76,7 @@ public class ZKDumper
   {
     options = new Options();
     OptionGroup optionGroup = new OptionGroup();
-    
+
     Option d = OptionBuilder.withLongOpt("download")
         .withDescription("Download from ZK to File System").create();
     d.setArgs(0);
@@ -84,7 +84,7 @@ public class ZKDumper
         .withDescription("add suffix to every file downloaded from ZK").create();
     dSuffix.setArgs(1);
     dSuffix.setRequired(false);
-    
+
     Option u = OptionBuilder.withLongOpt("upload")
         .withDescription("Upload from File System to ZK").create();
     u.setArgs(0);
@@ -92,7 +92,7 @@ public class ZKDumper
         .withDescription("remove suffix from every file uploaded to ZK").create();
     uSuffix.setArgs(0);
     uSuffix.setRequired(false);
-    
+
     Option del = OptionBuilder.withLongOpt("delete")
         .withDescription("Delete given path from ZK").create();
 
@@ -248,7 +248,7 @@ public class ZKDumper
 
   public void download(String zkPath, String fsPath) throws Exception
   {
-    
+
     List<String> children = client.getChildren(zkPath);
     if (children != null && children.size() > 0)
     {

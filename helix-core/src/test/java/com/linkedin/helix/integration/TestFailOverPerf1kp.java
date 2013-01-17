@@ -19,7 +19,7 @@ public class TestFailOverPerf1kp
     String className = TestHelper.getTestClassName();
     String methodName = TestHelper.getTestMethodName();
     String testName = className + "_" + methodName;
-    
+
     System.out.println("START " + testName + " at "
         + new Date(System.currentTimeMillis()));
 
@@ -29,18 +29,19 @@ public class TestFailOverPerf1kp
     int j = output.indexOf("ms", i);
     long latency = Long.parseLong(output.substring(i, j));
     System.out.println("startup latency: " + latency);
-    
+
     i = getStateTransitionLatency(i, output);
     j = output.indexOf("ms", i);
     latency = Long.parseLong(output.substring(i, j));
     System.out.println("failover latency: " + latency);
-    Assert.assertTrue(latency < 800, "failover latency for 1k partition test should < 800ms");
-    
+    Assert.assertTrue(latency < 800, "failover latency for 1k partition test should < 800ms, but was "
+        + latency + " ms");
+
     System.out.println("END " + testName + " at "
         + new Date(System.currentTimeMillis()));
 
   }
-  
+
   int getStateTransitionLatency(int start, String output)
   {
     final String pattern = "state transition latency: ";
