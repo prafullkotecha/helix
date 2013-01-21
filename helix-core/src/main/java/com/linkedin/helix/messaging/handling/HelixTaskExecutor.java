@@ -48,7 +48,6 @@ import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
-import com.linkedin.helix.model.Message.Attributes;
 import com.linkedin.helix.model.Message.MessageState;
 import com.linkedin.helix.model.Message.MessageType;
 import com.linkedin.helix.monitoring.ParticipantMonitor;
@@ -81,12 +80,12 @@ public class HelixTaskExecutor implements MessageListener
   Map<String, Integer>                                   _resourceThreadpoolSizeMap =
                                                                                         new ConcurrentHashMap<String, Integer>();
 
-  final GroupMessageHandler                              _groupMsgHandler;
+//  final GroupMessageHandler                              _groupMsgHandler;
 
   public HelixTaskExecutor()
   {
     _taskMap = new ConcurrentHashMap<String, Future<HelixTaskResult>>();
-    _groupMsgHandler = new GroupMessageHandler();
+//    _groupMsgHandler = new GroupMessageHandler();
 
     _lock = new Object();
     _statusUpdateUtil = new StatusUpdateUtil();
@@ -378,7 +377,7 @@ public class HelixTaskExecutor implements MessageListener
     List<CurrentState> metaCurStates = new ArrayList<CurrentState>();
     Set<String> createCurStateNames = new HashSet<String>();
 
-    changeContext.add(NotificationContext.TASK_EXECUTOR_KEY, this);
+  //  changeContext.add(NotificationContext.TASK_EXECUTOR_KEY, this);
     for (Message message : messages)
     {
       // nop messages are simply removed. It is used to trigger onMessage() in
@@ -423,13 +422,14 @@ public class HelixTaskExecutor implements MessageListener
       // create message handlers, if handlers not found, leave its state as NEW
       try
       {
-        List<MessageHandler> createHandlers =
-            createMessageHandlers(message, changeContext);
-        if (createHandlers.isEmpty())
+        // List<MessageHandler> createHandlers =
+    	  MessageHandler createHandler =
+            createMessageHandler(message, changeContext);
+        if (createHandler == null)
         {
           continue;
         }
-        handlers.addAll(createHandlers);
+        handlers.add(createHandler);
       }
       catch (Exception e)
       {
@@ -553,45 +553,45 @@ public class HelixTaskExecutor implements MessageListener
     return handlerFactory.createHandler(message, changeContext);
   }
 
-  private List<MessageHandler> createMessageHandlers(Message message,
-                                                     NotificationContext changeContext)
-  {
-    List<MessageHandler> handlers = new ArrayList<MessageHandler>();
-    if (!message.getGroupMessageMode())
-    {
-      LOG.info("Creating handler for message " + message.getMsgId() + "/"
-          + message.getPartitionName());
-
-      MessageHandler handler = createMessageHandler(message, changeContext);
-
-      if (handler != null)
-      {
-        handlers.add(handler);
-      }
-    }
-    else
-    {
-      _groupMsgHandler.put(message);
-
-      List<String> partitionNames = message.getPartitionNames();
-      for (String partitionName : partitionNames)
-      {
-        Message subMsg = new Message(message.getRecord());
-        subMsg.setPartitionName(partitionName);
-        subMsg.setAttribute(Attributes.PARENT_MSG_ID, message.getId());
-
-        LOG.info("Creating handler for group message " + subMsg.getMsgId() + "/"
-            + partitionName);
-        MessageHandler handler = createMessageHandler(subMsg, changeContext);
-        if (handler != null)
-        {
-          handlers.add(handler);
-        }
-      }
-    }
-
-    return handlers;
-  }
+//  private List<MessageHandler> createMessageHandlers(Message message,
+//                                                     NotificationContext changeContext)
+//  {
+//    List<MessageHandler> handlers = new ArrayList<MessageHandler>();
+//    if (!message.getGroupMessageMode())
+//    {
+//      LOG.info("Creating handler for message " + message.getMsgId() + "/"
+//          + message.getPartitionName());
+//
+//      MessageHandler handler = createMessageHandler(message, changeContext);
+//
+//      if (handler != null)
+//      {
+//        handlers.add(handler);
+//      }
+//    }
+//    else
+//    {
+//      _groupMsgHandler.put(message);
+//
+//      List<String> partitionNames = message.getPartitionNames();
+//      for (String partitionName : partitionNames)
+//      {
+//        Message subMsg = new Message(message.getRecord());
+//        subMsg.setPartitionName(partitionName);
+//        subMsg.setAttribute(Attributes.PARENT_MSG_ID, message.getId());
+//
+//        LOG.info("Creating handler for group message " + subMsg.getMsgId() + "/"
+//            + partitionName);
+//        MessageHandler handler = createMessageHandler(subMsg, changeContext);
+//        if (handler != null)
+//        {
+//          handlers.add(handler);
+//        }
+//      }
+//    }
+//
+//    return handlers;
+//  }
 
   public void shutDown()
   {

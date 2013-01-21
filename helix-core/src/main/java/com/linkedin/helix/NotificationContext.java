@@ -21,7 +21,7 @@ import java.util.Map;
 public class NotificationContext
 {
   // keys used for object map
-  public static final String TASK_EXECUTOR_KEY = "TASK_EXECUTOR";
+//  public static final String TASK_EXECUTOR_KEY = "TASK_EXECUTOR";
   
   private Map<String, Object> _map;
 

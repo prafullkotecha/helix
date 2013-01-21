@@ -121,35 +121,6 @@ public class CurrentState extends HelixProperty
     return _record.getSimpleField(CurrentStateProperty.STATE_MODEL_FACTORY_NAME.toString());
   }
 
-//  @Override
-//  public int getBucketSize()
-//  {
-//    String bucketSizeStr =
-//        _record.getSimpleField(CurrentStateProperty.BUCKET_SIZE.toString());
-//    int bucketSize = 0;
-//    if (bucketSizeStr != null)
-//    {
-//      try
-//      {
-//        bucketSize = Integer.parseInt(bucketSizeStr);
-//      }
-//      catch (NumberFormatException e)
-//      {
-//        // OK
-//      }
-//    }
-//    return bucketSize;
-//  }
-//
-//  @Override
-//  public void setBucketSize(int bucketSize)
-//  {
-//    if (bucketSize > 0)
-//    {
-//      _record.setSimpleField(CurrentStateProperty.BUCKET_SIZE.toString(), "" + bucketSize);
-//    }
-//  }
-
   @Override
   public boolean isValid()
   {

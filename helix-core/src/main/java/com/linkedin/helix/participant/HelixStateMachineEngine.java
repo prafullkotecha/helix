@@ -18,6 +18,8 @@ package com.linkedin.helix.participant;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.log4j.Logger;
 
@@ -28,9 +30,11 @@ import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.PropertyKey.Builder;
-import com.linkedin.helix.messaging.handling.HelixStateTransitionHandler;
-import com.linkedin.helix.messaging.handling.HelixTaskExecutor;
+import com.linkedin.helix.messaging.handling.BatchMsgHandler;
+import com.linkedin.helix.messaging.handling.BatchMsgModel;
+import com.linkedin.helix.messaging.handling.BatchMsgModelFactory;
 import com.linkedin.helix.messaging.handling.MessageHandler;
+import com.linkedin.helix.messaging.handling.StateTransitionMsgHandler;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.MessageType;
@@ -39,6 +43,7 @@ import com.linkedin.helix.participant.statemachine.StateModel;
 import com.linkedin.helix.participant.statemachine.StateModelFactory;
 import com.linkedin.helix.participant.statemachine.StateModelParser;
 
+// TODO: separate impl of state-machine-engine and message-handler-factory
 public class HelixStateMachineEngine implements StateMachineEngine
 {
   private static Logger logger = Logger.getLogger(HelixStateMachineEngine.class);
@@ -50,6 +55,26 @@ public class HelixStateMachineEngine implements StateMachineEngine
   private final HelixManager _manager;
 
   private final ConcurrentHashMap<String, StateModelDefinition> _stateModelDefs;
+
+  
+  // TODO: get executor-service from helix-task-executor
+  final ExecutorService _executorService = Executors.newFixedThreadPool(40);;
+
+  // stateModelName -> batchMsgModelFactory
+  final ConcurrentHashMap<String, BatchMsgModelFactory> _batchMsgModelFtyMap;
+
+  public void registerModelFactory(String stateModelName, StateModelFactory<? extends StateModel> stateModelFactory,
+    		BatchMsgModelFactory<? extends BatchMsgModel> batchMsgModelFactory) {
+    	
+	  // TODO: combine stateModel and batchMsgModel
+	  registerStateModelFactory(stateModelName, stateModelFactory);   	
+	  registerBatchMsgModelFactory(stateModelName, batchMsgModelFactory);
+  }
+
+  
+  private void registerBatchMsgModelFactory(String stateModelName, BatchMsgModelFactory batchModelFty) {
+	  _batchMsgModelFtyMap.put(stateModelName, batchModelFty);
+  }
 
   public StateModelFactory<? extends StateModel> getStateModelFactory(String stateModelName)
   {
@@ -75,6 +100,8 @@ public class HelixStateMachineEngine implements StateMachineEngine
     _stateModelFactoryMap =
         new ConcurrentHashMap<String, Map<String, StateModelFactory<? extends StateModel>>>();
     _stateModelDefs = new ConcurrentHashMap<String, StateModelDefinition>();
+    
+	_batchMsgModelFtyMap = new ConcurrentHashMap<String, BatchMsgModelFactory>();
   }
 
   @Override
@@ -91,6 +118,7 @@ public class HelixStateMachineEngine implements StateMachineEngine
                                            StateModelFactory<? extends StateModel> factory,
                                            String factoryName)
   {
+	// TODO: add register default batchMsgModelFactory
     if (stateModelName == null || factory == null || factoryName == null)
     {
       throw new HelixException("stateModelDef|stateModelFactory|factoryName cannot be null");
@@ -252,13 +280,18 @@ public class HelixStateMachineEngine implements StateMachineEngine
     currentStateDelta.setState(partitionKey, (stateModel.getCurrentState() == null)
         ? initState : stateModel.getCurrentState());
 
-    HelixTaskExecutor executor = (HelixTaskExecutor) context.get(NotificationContext.TASK_EXECUTOR_KEY);
-    
-    return new HelixStateTransitionHandler(stateModel,
-                                           message,
-                                           context,
-                                           currentStateDelta,
-                                           executor);
+    if (message.getGroupMessageMode() == false) {
+        return new StateTransitionMsgHandler(stateModel,
+                                               message,
+                                               context,
+                                               currentStateDelta);
+//                                               ,executor);
+    } else
+    {
+		BatchMsgModelFactory batchModelFty = _batchMsgModelFtyMap.get(stateModelName);
+    	BatchMsgModel batchMsgModel = batchModelFty.createBatchMsgModel(resourceName);
+    	return new BatchMsgHandler(message, context, this, batchMsgModel, _executorService);
+    }
   }
 
   @Override

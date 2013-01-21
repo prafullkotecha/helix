@@ -16,10 +16,10 @@
 package com.linkedin.helix.messaging.handling;
 
 import java.util.Date;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
@@ -27,13 +27,11 @@ import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.NotificationContext;
-import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
-import com.linkedin.helix.messaging.handling.GroupMessageHandler.GroupMessageInfo;
 import com.linkedin.helix.messaging.handling.MessageHandler.ErrorCode;
 import com.linkedin.helix.messaging.handling.MessageHandler.ErrorType;
-import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
+import com.linkedin.helix.model.Message.Attributes;
 import com.linkedin.helix.model.Message.MessageType;
 import com.linkedin.helix.monitoring.StateTransitionContext;
 import com.linkedin.helix.monitoring.StateTransitionDataPoint;
@@ -41,7 +39,7 @@ import com.linkedin.helix.util.StatusUpdateUtil;
 
 public class HelixTask implements Callable<HelixTaskResult>
 {
-  private static Logger             logger     = Logger.getLogger(HelixTask.class);
+  private static Logger             LOG     = Logger.getLogger(HelixTask.class);
   private final Message             _message;
   private final MessageHandler      _handler;
   private final NotificationContext _notificationContext;
@@ -69,7 +67,7 @@ public class HelixTask implements Callable<HelixTaskResult>
     public void run()
     {
       _isTimeout = true;
-      logger.warn("Message time out, canceling. id:" + _message.getMsgId()
+      LOG.warn("Message time out, canceling. id:" + _message.getMsgId()
           + " timeout : " + _message.getExecutionTimeout());
       _handler.onTimeout();
       _executor.cancelTask(_message, _context);
@@ -100,12 +98,12 @@ public class HelixTask implements Callable<HelixTaskResult>
       timer = new Timer(true);
       timer.schedule(new TimeoutCancelTask(_executor, _message, _notificationContext),
                      _message.getExecutionTimeout());
-      logger.info("Message starts with timeout " + _message.getExecutionTimeout()
+      LOG.info("Message starts with timeout " + _message.getExecutionTimeout()
           + " MsgId:" + _message.getMsgId());
     }
     else
     {
-      logger.info("Message does not have timeout. MsgId:" + _message.getMsgId() + "/"
+      LOG.info("Message does not have timeout. MsgId:" + _message.getMsgId() + "/"
           + _message.getPartitionName());
     }
 
@@ -116,7 +114,7 @@ public class HelixTask implements Callable<HelixTaskResult>
     ErrorCode code = ErrorCode.ERROR;
 
     long start = System.currentTimeMillis();
-    logger.info("msg:" + _message.getMsgId() + " handling task begin, at: " + start);
+    LOG.info("msg:" + _message.getMsgId() + " handling task begin, at: " + start);
     HelixDataAccessor accessor = _manager.getHelixDataAccessor();
     _statusUpdateUtil.logInfo(_message,
                               HelixTask.class,
@@ -127,6 +125,11 @@ public class HelixTask implements Callable<HelixTaskResult>
     // Handle the message
     try
     {
+      // add a concurrent map to hold currentStateUpdates: partitionName -> csUpdate
+      if (_message.getGroupMessageMode() == true) {
+    	  _notificationContext.add("HELIX_CURRENT_STATE_UPDATE", new ConcurrentHashMap<String, CurrentStateUpdate>());
+      }
+      
       taskResult = _handler.handleMessage();
       exception = taskResult.getException();
     }
@@ -137,7 +140,7 @@ public class HelixTask implements Callable<HelixTaskResult>
                                  e,
                                  "State transition interrupted, timeout:" + _isTimeout,
                                  accessor);
-      logger.info("Message " + _message.getMsgId() + " is interrupted");
+      LOG.info("Message " + _message.getMsgId() + " is interrupted");
       taskResult.setInterrupted(true);
       taskResult.setException(e);
       exception = e;
@@ -147,7 +150,7 @@ public class HelixTask implements Callable<HelixTaskResult>
       String errorMessage =
           "Exception while executing a message. " + e + " msgId: " + _message.getMsgId()
               + " type: " + _message.getMsgType();
-      logger.error(errorMessage, e);
+      LOG.error(errorMessage, e);
       _statusUpdateUtil.logError(_message, HelixTask.class, e, errorMessage, accessor);
       taskResult.setSuccess(false);
       taskResult.setException(e);
@@ -168,16 +171,16 @@ public class HelixTask implements Callable<HelixTaskResult>
                                 _handler.getClass(),
                                 "Message handling task completed successfully",
                                 accessor);
-      logger.info("Message " + _message.getMsgId() + " completed.");
+      LOG.info("Message " + _message.getMsgId() + " completed.");
     }
     else if (taskResult.isInterrupted())
     {
-      logger.info("Message " + _message.getMsgId() + " is interrupted");
+      LOG.info("Message " + _message.getMsgId() + " is interrupted");
       code = _isTimeout ? ErrorCode.TIMEOUT : ErrorCode.CANCEL;
       if (_isTimeout)
       {
         int retryCount = _message.getRetryCount();
-        logger.info("Message timeout, retry count: " + retryCount + " MSGID:"
+        LOG.info("Message timeout, retry count: " + retryCount + " MSGID:"
             + _message.getMsgId());
         _statusUpdateUtil.logInfo(_message,
                                   _handler.getClass(),
@@ -205,57 +208,36 @@ public class HelixTask implements Callable<HelixTaskResult>
       {
         errorMsg += exception;
       }
-      logger.error(errorMsg, exception);
+      LOG.error(errorMsg, exception);
       _statusUpdateUtil.logError(_message, _handler.getClass(), errorMsg, accessor);
     }
 
     // Post-processing for the finished task
     try
     {
-      if (!_message.getGroupMessageMode())
-      {
-        removeMessageFromZk(accessor, _message);
-        reportMessageStat(_manager, _message, taskResult);
-        sendReply(accessor, _message, taskResult);
-      }
-      else
-      {
-        GroupMessageInfo info = _executor._groupMsgHandler.onCompleteSubMessage(_message); 
-        if (info != null)
-        {
-          // TODO: changed to async update
-          // group update current state
-          Map<PropertyKey, CurrentState> curStateMap = info.merge();
-          for (PropertyKey key : curStateMap.keySet())
-          {
-            accessor.updateProperty(key, curStateMap.get(key));
-          }
-
-          // remove group message
-          removeMessageFromZk(accessor, _message);
-          reportMessageStat(_manager, _message, taskResult);
-          sendReply(accessor, _message, taskResult);
-        }
-      }
-      _executor.reportCompletion(_message);
+      	// remove msg
+    	if (_message.getAttribute(Attributes.PARENT_MSG_ID) == null) {
+            removeMessageFromZk(accessor, _message);
+            reportMessageStat(_manager, _message, taskResult);
+            sendReply(accessor, _message, taskResult);
+            _executor.reportCompletion(_message);
+    	}
     }
-
     // TODO: capture errors and log here
     catch (Exception e)
     {
       String errorMessage =
           "Exception after executing a message, msgId: " + _message.getMsgId() + e;
-      logger.error(errorMessage, e);
+      LOG.error(errorMessage, e);
       _statusUpdateUtil.logError(_message, HelixTask.class, errorMessage, accessor);
       exception = e;
       type = ErrorType.FRAMEWORK;
       code = ErrorCode.ERROR;
     }
-    //
     finally
     {
       long end = System.currentTimeMillis();
-      logger.info("msg:" + _message.getMsgId() + " handling task completed, results:"
+      LOG.info("msg:" + _message.getMsgId() + " handling task completed, results:"
           + taskResult.isSucess() + ", at: " + end + ", took:" + (end - start));
 
       // Notify the handler about any error happened in the handling procedure, so that
@@ -290,7 +272,7 @@ public class HelixTask implements Callable<HelixTaskResult>
     if (_message.getCorrelationId() != null
         && !message.getMsgType().equals(MessageType.TASK_REPLY.toString()))
     {
-      logger.info("Sending reply for message " + message.getCorrelationId());
+      LOG.info("Sending reply for message " + message.getCorrelationId());
       _statusUpdateUtil.logInfo(message, HelixTask.class, "Sending reply", accessor);
 
       taskResult.getTaskResultMap().put("SUCCESS", "" + taskResult.isSucess());
@@ -360,8 +342,8 @@ public class HelixTask implements Callable<HelixTaskResult>
     }
     else
     {
-      logger.warn("message read time and start execution time not recorded.");
+      LOG.warn("message read time and start execution time not recorded.");
     }
   }
-
+  
 };

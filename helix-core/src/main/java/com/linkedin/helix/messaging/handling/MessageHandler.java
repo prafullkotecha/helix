@@ -60,7 +60,7 @@ public abstract class MessageHandler
    * @return returns the CMTaskResult which contains info about the message processing.
    */
   public abstract HelixTaskResult handleMessage()  throws InterruptedException;
-  
+    
   /**
    * Callback when error happens in the message handling pipeline. 
    * @param type TODO
@@ -76,6 +76,5 @@ public abstract class MessageHandler
    */
   public void onTimeout()
   {
-    
   }
 }
