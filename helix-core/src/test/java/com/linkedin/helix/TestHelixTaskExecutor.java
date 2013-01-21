@@ -72,8 +72,7 @@ public class TestHelixTaskExecutor
         new StateTransitionMsgHandler(stateModel,
                                         message,
                                         context,
-                                        currentStateDelta,
-                                        executor);
+                                        currentStateDelta);
 
     executor.scheduleTask(message, handler, context);
     while (!executor.isDone(msgId + "/" + message.getPartitionName()))
