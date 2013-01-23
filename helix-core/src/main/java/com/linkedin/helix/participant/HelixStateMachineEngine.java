@@ -42,7 +42,6 @@ import com.linkedin.helix.participant.statemachine.StateModel;
 import com.linkedin.helix.participant.statemachine.StateModelFactory;
 import com.linkedin.helix.participant.statemachine.StateModelParser;
 
-// TODO: separate impl of state-machine-engine and message-handler-factory
 public class HelixStateMachineEngine implements StateMachineEngine
 {
   private static Logger logger = Logger.getLogger(HelixStateMachineEngine.class);

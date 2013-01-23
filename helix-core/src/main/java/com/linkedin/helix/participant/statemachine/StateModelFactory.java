@@ -40,7 +40,8 @@ public abstract class StateModelFactory<T extends StateModel>
 
   /**
    * Add a state model for a partition
-   * Doesn't seem to be used by Helix, stateModel should be generated in this factory
+   * Doesn't seem to be used by Helix. 
+   * StateModel should be generated in this factory and not added by external entity
    * 
    * @param partitionName
    * @return

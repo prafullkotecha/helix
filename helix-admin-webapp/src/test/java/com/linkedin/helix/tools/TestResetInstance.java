@@ -10,6 +10,7 @@ import org.testng.annotations.Test;
 
 import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.mock.controller.ClusterController;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockParticipant.ErrTransition;
 import com.linkedin.helix.webapp.resources.JsonParameters;
@@ -66,7 +67,7 @@ public class TestResetInstance extends AdminTestBase
             new MockParticipant(clusterName,
                                 instanceName,
                                 ZK_ADDR,
-                                new ErrTransition(errPartitions));
+                                new MockMSModelFactory(new ErrTransition(errPartitions)));
       }
       else
       {
