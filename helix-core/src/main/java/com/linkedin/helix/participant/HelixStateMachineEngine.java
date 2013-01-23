@@ -31,8 +31,7 @@ import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.messaging.handling.BatchMsgHandler;
-import com.linkedin.helix.messaging.handling.BatchMsgModel;
-import com.linkedin.helix.messaging.handling.BatchMsgModelFactory;
+import com.linkedin.helix.messaging.handling.BatchMsgWrapper;
 import com.linkedin.helix.messaging.handling.MessageHandler;
 import com.linkedin.helix.messaging.handling.StateTransitionMsgHandler;
 import com.linkedin.helix.model.CurrentState;
@@ -58,22 +57,16 @@ public class HelixStateMachineEngine implements StateMachineEngine
 
   
   // TODO: get executor-service from helix-task-executor
-  final ExecutorService _executorService = Executors.newFixedThreadPool(40);;
-
-  // stateModelName -> batchMsgModelFactory
-  final ConcurrentHashMap<String, BatchMsgModelFactory> _batchMsgModelFtyMap;
-
-  public void registerModelFactory(String stateModelName, StateModelFactory<? extends StateModel> stateModelFactory,
-    		BatchMsgModelFactory<? extends BatchMsgModel> batchMsgModelFactory) {
-    	
-	  // TODO: combine stateModel and batchMsgModel
-	  registerStateModelFactory(stateModelName, stateModelFactory);   	
-	  registerBatchMsgModelFactory(stateModelName, batchMsgModelFactory);
-  }
-
+  final ExecutorService _executorService = Executors.newFixedThreadPool(40);
   
-  private void registerBatchMsgModelFactory(String stateModelName, BatchMsgModelFactory batchModelFty) {
-	  _batchMsgModelFtyMap.put(stateModelName, batchModelFty);
+  public HelixStateMachineEngine(HelixManager manager)
+  {
+    _stateModelParser = new StateModelParser();
+    _manager = manager;
+
+    _stateModelFactoryMap =
+        new ConcurrentHashMap<String, Map<String, StateModelFactory<? extends StateModel>>>();
+    _stateModelDefs = new ConcurrentHashMap<String, StateModelDefinition>();
   }
 
   public StateModelFactory<? extends StateModel> getStateModelFactory(String stateModelName)
@@ -92,18 +85,6 @@ public class HelixStateMachineEngine implements StateMachineEngine
     return _stateModelFactoryMap.get(stateModelName).get(factoryName);
   }
 
-  public HelixStateMachineEngine(HelixManager manager)
-  {
-    _stateModelParser = new StateModelParser();
-    _manager = manager;
-
-    _stateModelFactoryMap =
-        new ConcurrentHashMap<String, Map<String, StateModelFactory<? extends StateModel>>>();
-    _stateModelDefs = new ConcurrentHashMap<String, StateModelDefinition>();
-    
-	_batchMsgModelFtyMap = new ConcurrentHashMap<String, BatchMsgModelFactory>();
-  }
-
   @Override
   public boolean registerStateModelFactory(String stateModelDef,
                                            StateModelFactory<? extends StateModel> factory)
@@ -118,7 +99,6 @@ public class HelixStateMachineEngine implements StateMachineEngine
                                            StateModelFactory<? extends StateModel> factory,
                                            String factoryName)
   {
-	// TODO: add register default batchMsgModelFactory
     if (stateModelName == null || factory == null || factoryName == null)
     {
       throw new HelixException("stateModelDef|stateModelFactory|factoryName cannot be null");
@@ -258,39 +238,42 @@ public class HelixStateMachineEngine implements StateMachineEngine
         throw new HelixException("stateModelDef for " + stateModelName
             + " does NOT exists");
       }
+      
+      // cache stateModelDef's
       _stateModelDefs.put(stateModelName, stateModelDef);
     }
 
-    // create currentStateDelta for this partition
-    String initState = _stateModelDefs.get(message.getStateModelDef()).getInitialState();
-    StateModel stateModel = stateModelFactory.getStateModel(partitionKey);
-    if (stateModel == null)
-    {
-      stateModelFactory.createAndAddStateModel(partitionKey);
-      stateModel = stateModelFactory.getStateModel(partitionKey);
-      stateModel.updateState(initState);
-    }
+    if (message.getBatchMessageMode() == false) {
+        // create currentStateDelta for this partition
+        String initState = _stateModelDefs.get(message.getStateModelDef()).getInitialState();
+        StateModel stateModel = stateModelFactory.getStateModel(partitionKey);
+        if (stateModel == null)
+        {
+          stateModel = stateModelFactory.createAndAddStateModel(partitionKey);	// stateModelFactory.getStateModel(partitionKey);
+          stateModel.updateState(initState);
+        }
 
-    CurrentState currentStateDelta = new CurrentState(resourceName);
-    currentStateDelta.setSessionId(sessionId);
-    currentStateDelta.setStateModelDefRef(stateModelName);
-    currentStateDelta.setStateModelFactoryName(factoryName);
-    currentStateDelta.setBucketSize(bucketSize);
+        CurrentState currentStateDelta = new CurrentState(resourceName);
+        currentStateDelta.setSessionId(sessionId);
+        currentStateDelta.setStateModelDefRef(stateModelName);
+        currentStateDelta.setStateModelFactoryName(factoryName);
+        currentStateDelta.setBucketSize(bucketSize);
 
-    currentStateDelta.setState(partitionKey, (stateModel.getCurrentState() == null)
-        ? initState : stateModel.getCurrentState());
+        currentStateDelta.setState(partitionKey, (stateModel.getCurrentState() == null)
+            ? initState : stateModel.getCurrentState());
 
-    if (message.getGroupMessageMode() == false) {
         return new StateTransitionMsgHandler(stateModel,
                                                message,
                                                context,
                                                currentStateDelta);
-//                                               ,executor);
     } else
     {
-		BatchMsgModelFactory batchModelFty = _batchMsgModelFtyMap.get(stateModelName);
-    	BatchMsgModel batchMsgModel = batchModelFty.createBatchMsgModel(resourceName);
-    	return new BatchMsgHandler(message, context, this, batchMsgModel, _executorService);
+    	BatchMsgWrapper batchMsgWrapper = stateModelFactory.getBatchMsgWrapper(resourceName);
+    	if (batchMsgWrapper == null)
+    	{
+    		batchMsgWrapper = stateModelFactory.createAndAddBatchMsgWrapper(resourceName);
+    	}
+    	return new BatchMsgHandler(message, context, this, batchMsgWrapper, _executorService);
     }
   }
 

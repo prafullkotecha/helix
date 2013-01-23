@@ -19,9 +19,16 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.linkedin.helix.messaging.handling.BatchMsgWrapper;
+
 public abstract class StateModelFactory<T extends StateModel>
 {
+  // partitionName -> StateModel
   private ConcurrentMap<String, T> _stateModelMap = new ConcurrentHashMap<String, T>();
+  
+  // resourceName -> BatchMsgWrapper
+  private final ConcurrentMap<String, BatchMsgWrapper> _batchMsgWrapperMap 
+      = new ConcurrentHashMap<String, BatchMsgWrapper>();
 
   /**
    * This method will be invoked only once per partitionName per session
@@ -33,23 +40,27 @@ public abstract class StateModelFactory<T extends StateModel>
 
   /**
    * Add a state model for a partition
+   * Doesn't seem to be used by Helix, stateModel should be generated in this factory
    * 
    * @param partitionName
    * @return
    */
+  @Deprecated
   public void addStateModel(String partitionName, T stateModel)
   {
     _stateModelMap.put(partitionName, stateModel);
   }
   
   /**
-   * Create a state model for a partition
+   * Create a state model for a partition and add it to map
    * 
    * @param partitionName
    */
-  public void createAndAddStateModel(String partitionName)
+  public T createAndAddStateModel(String partitionName)
   {
-    _stateModelMap.put(partitionName, createNewStateModel(partitionName));
+	T stateModel = createNewStateModel(partitionName);
+    _stateModelMap.put(partitionName, stateModel);
+    return stateModel;
   }
 
   /**
@@ -72,4 +83,41 @@ public abstract class StateModelFactory<T extends StateModel>
   {
     return _stateModelMap;
   }
+  
+  /**
+   * Create batch message wrapper for a resource
+   * 
+   * @param resourceName
+   * @return
+   */
+  public BatchMsgWrapper createBatchMsgWrapper(String resourceName)
+  {
+	  return new BatchMsgWrapper();
+  }
+  
+  /**
+   * create batch message wrapper for a resource and put it into map
+   * 
+   * @param partitionName
+   * @return
+   */
+  public BatchMsgWrapper createAndAddBatchMsgWrapper(String resourceName)
+  {
+	BatchMsgWrapper wrapper = createBatchMsgWrapper(resourceName);
+	_batchMsgWrapperMap.put(resourceName, wrapper);
+    return wrapper;
+  }
+
+  /**
+   * get batch message wrapper
+   * 
+   * @param resourceName
+   * @return
+   */
+  public BatchMsgWrapper getBatchMsgWrapper(String resourceName)
+  {
+    return _batchMsgWrapperMap.get(resourceName);
+  }
+
+
 }

@@ -31,6 +31,7 @@ import com.linkedin.helix.integration.ZkIntegrationTestBase;
 import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.mock.controller.ClusterController;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockTransition;
 import com.linkedin.helix.model.HealthStat;
@@ -113,7 +114,7 @@ public class TestDummyAlerts extends ZkIntegrationTestBase
           new MockParticipant(clusterName,
                               instanceName,
                               ZK_ADDR,
-                              new DummyAlertsTransition());
+                              new MockMSModelFactory(new DummyAlertsTransition()));
       participants[i].syncStart();
     }
 

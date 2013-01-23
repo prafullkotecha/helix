@@ -30,6 +30,7 @@ import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.mock.controller.ClusterController;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockParticipant.ErrTransition;
 import com.linkedin.helix.model.LiveInstance;
@@ -109,7 +110,7 @@ public class TestResetPartitionState extends ZkIntegrationTestBase
             new MockParticipant(clusterName,
                                 instanceName,
                                 ZK_ADDR,
-                                new ErrTransition(errPartitions));
+                                new MockMSModelFactory(new ErrTransition(errPartitions)));
       }
       else
       {

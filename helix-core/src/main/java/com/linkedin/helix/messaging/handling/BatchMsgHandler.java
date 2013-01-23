@@ -17,11 +17,11 @@ import com.linkedin.helix.model.Message.Attributes;
 
 public class BatchMsgHandler extends MessageHandler {
 	final MessageHandlerFactory _msgHandlerFty;
-	final BatchMsgModel _batchMsgModel;
+	final BatchMsgWrapper _batchMsgModel;
 	final ExecutorService _executorSvc;
 
 	public BatchMsgHandler(Message msg, NotificationContext context, MessageHandlerFactory fty,
-	        BatchMsgModel batchMsgModel, ExecutorService exeSvc) {
+	        BatchMsgWrapper batchMsgModel, ExecutorService exeSvc) {
 		super(msg, context);
 		_msgHandlerFty = fty;
 		_batchMsgModel = batchMsgModel;
@@ -29,14 +29,14 @@ public class BatchMsgHandler extends MessageHandler {
 	}
 
 	public void preHandleMessage() {
-		if (_message.getGroupMessageMode() == true && _batchMsgModel != null) {
+		if (_message.getBatchMessageMode() == true && _batchMsgModel != null) {
 			_batchMsgModel.start(_message, _notificationContext);
 		}
 
 	}
 
 	public void postHandleMessage() {
-		if (_message.getGroupMessageMode() == true && _batchMsgModel != null) {
+		if (_message.getBatchMessageMode() == true && _batchMsgModel != null) {
 			_batchMsgModel.end(_message, _notificationContext);
 		}
 
@@ -58,6 +58,8 @@ public class BatchMsgHandler extends MessageHandler {
 	// will not return until all sub-messages are done
 	@Override
 	public HelixTaskResult handleMessage() {
+		HelixTaskResult result = new HelixTaskResult();
+		
 		preHandleMessage();
 
 		List<Message> subMsgs = new ArrayList<Message>();
@@ -71,6 +73,8 @@ public class BatchMsgHandler extends MessageHandler {
 			subMsgs.add(subMsg);
 		}
 
+		// System.err.println("create subMsgs: " + subMsgs);
+		
 		int exeBatchSize = 1; // TODO: getExeBatchSize from msg
 		List<HelixBatchMsgTask> batchTasks = new ArrayList<HelixBatchMsgTask>();
 		for (int i = 0; i < partitionKeys.size(); i += exeBatchSize) {
@@ -95,7 +99,10 @@ public class BatchMsgHandler extends MessageHandler {
 		}
 
 		postHandleMessage();
-		return null;
+		
+		// TODO: fill result
+		result.setSuccess(true);
+		return result;
 	}
 
 	@Override

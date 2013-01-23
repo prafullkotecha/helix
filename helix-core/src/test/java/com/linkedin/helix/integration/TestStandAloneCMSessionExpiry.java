@@ -65,7 +65,7 @@ public class TestStandAloneCMSessionExpiry extends ZkIntegrationTestBase
                                  instanceName,
                                  InstanceType.PARTICIPANT,
                                  ZK_ADDR);
-      participants[i] = new MockParticipant(manager, null);
+      participants[i] = new MockParticipant(manager, null, null);
       participants[i].syncStart();
     }
 

@@ -238,7 +238,6 @@ public class StateTransitionMsgHandler extends MessageHandler
       else
       {
     	// sub-message of a batch message
-//        _executor._groupMsgHandler.addCurStateUpdate(_message, key, _currentStateDelta);
         ConcurrentHashMap<String, CurrentStateUpdate> csUpdateMap = (ConcurrentHashMap<String, CurrentStateUpdate>) _notificationContext.get("HELIX_CURRENT_STATE_UPDATE");
         csUpdateMap.put(partitionKey, new CurrentStateUpdate(key, _currentStateDelta));
       }

@@ -126,7 +126,7 @@ public class HelixTask implements Callable<HelixTaskResult>
     try
     {
       // add a concurrent map to hold currentStateUpdates: partitionName -> csUpdate
-      if (_message.getGroupMessageMode() == true) {
+      if (_message.getBatchMessageMode() == true) {
     	  _notificationContext.add("HELIX_CURRENT_STATE_UPDATE", new ConcurrentHashMap<String, CurrentStateUpdate>());
       }
       

@@ -31,7 +31,7 @@ import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
 import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.manager.zk.ZkClient;
-import com.linkedin.helix.mock.storage.MockJobIntf;
+import com.linkedin.helix.mock.storage.MockParticipantWrapper;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.model.LiveInstance;
 import com.linkedin.helix.participant.CustomCodeCallbackHandler;
@@ -60,10 +60,10 @@ public class TestHelixCustomCodeRunner extends ZkIntegrationTestBase
 
   }
 
-  class MockJob implements MockJobIntf
+  class MockJob implements MockParticipantWrapper
   {
     @Override
-    public void doPreConnectJob(HelixManager manager)
+    public void onPreConnect(HelixManager manager)
     {
       try
       {
@@ -87,7 +87,7 @@ public class TestHelixCustomCodeRunner extends ZkIntegrationTestBase
     }
 
     @Override
-    public void doPostConnectJob(HelixManager manager)
+    public void onPostConnect(HelixManager manager)
     {
       // TODO Auto-generated method stub
 

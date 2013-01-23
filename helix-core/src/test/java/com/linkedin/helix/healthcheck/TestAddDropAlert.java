@@ -40,6 +40,7 @@ import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.manager.zk.ZkClient;
 import com.linkedin.helix.mock.storage.MockEspressoHealthReportProvider;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockTransition;
 import com.linkedin.helix.model.Message;
@@ -155,7 +156,7 @@ public class TestAddDropAlert extends ZkIntegrationTestBase
           new MockParticipant(clusterName,
                               instanceName,
                               ZK_ADDR,
-                              new AddDropAlertTransition());
+                              new MockMSModelFactory(new AddDropAlertTransition()));
       participants[i].syncStart();
 //      new Thread(participants[i]).start();
     }

@@ -1,5 +1,6 @@
 package com.linkedin.helix.messaging.handling;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -31,15 +32,18 @@ public class HelixBatchMsgTask implements Callable<HelixTaskResult> {
 
 	@Override
 	public HelixTaskResult call() throws Exception {
+		List<HelixTaskResult> results = new ArrayList<HelixTaskResult>();
 		for (Message msg : _msgs) {
 			MessageHandler handler = createMsgHandler(msg, _context);
 			if (handler != null) {
 				// HelixTask task = new HelixTask(msg, _context, handler, null);
 				// task.call();
-				handler.handleMessage();
+				HelixTaskResult result = handler.handleMessage();
+				results.add(result);
 			}
 		}
 		
-		return null;
+		// TODO: need to merge task-results
+		return results.get(0);
 	}
 }

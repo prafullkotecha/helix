@@ -10,7 +10,7 @@ import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.controller.HelixControllerMain;
 import com.linkedin.helix.manager.zk.ZkClient;
 import com.linkedin.helix.mock.storage.MockParticipant;
-import com.linkedin.helix.mock.storage.MockParticipant.MockBootstrapModelFactory;
+import com.linkedin.helix.mock.storage.MockBootstrapModelFactory;
 import com.linkedin.helix.participant.StateMachineEngine;
 import com.linkedin.helix.tools.ClusterSetup;
 import com.linkedin.helix.tools.ClusterStateVerifier;

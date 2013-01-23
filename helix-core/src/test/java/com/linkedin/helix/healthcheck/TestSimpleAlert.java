@@ -41,6 +41,7 @@ import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.manager.zk.ZkClient;
 import com.linkedin.helix.mock.storage.MockEspressoHealthReportProvider;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockTransition;
 import com.linkedin.helix.model.Message;
@@ -162,7 +163,7 @@ public class TestSimpleAlert extends ZkIntegrationTestBase
       participants[i] = new MockParticipant(clusterName,
                                             instanceName,
                                             ZK_ADDR,
-                                            new SimpleAlertTransition(15));
+                                            new MockMSModelFactory(new SimpleAlertTransition(15)));
       participants[i].syncStart();
 //      new Thread(participants[i]).start();
     }

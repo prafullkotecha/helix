@@ -27,6 +27,8 @@ import org.testng.annotations.Test;
 import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.controller.HelixControllerMain;
 import com.linkedin.helix.manager.zk.ZKHelixAdmin;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
+import com.linkedin.helix.mock.storage.MockMSStateModel;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockParticipant.ErrTransition;
 import com.linkedin.helix.tools.ClusterStateVerifier;
@@ -75,7 +77,7 @@ public class TestErrorPartition extends ZkIntegrationTestBase
             new MockParticipant(clusterName,
                                 instanceName,
                                 ZK_ADDR,
-                                new ErrTransition(errPartitions));
+                                new MockMSModelFactory(new ErrTransition(errPartitions)));
       }
       else
       {

@@ -128,18 +128,18 @@ public class MockHealthReportParticipant
     }
   }
 
-  static class MockHealthReportJob implements MockJobIntf
+  static class MockHealthReportJob implements MockParticipantWrapper
   {
 
     @Override
-    public void doPreConnectJob(HelixManager manager)
+    public void onPreConnect(HelixManager manager)
     {
       // TODO Auto-generated method stub
 
     }
 
     @Override
-    public void doPostConnectJob(HelixManager manager)
+    public void onPostConnect(HelixManager manager)
     {
       // TODO Auto-generated method stub
       manager.getHealthReportCollector()

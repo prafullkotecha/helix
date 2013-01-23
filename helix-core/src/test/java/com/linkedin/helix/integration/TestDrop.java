@@ -14,6 +14,7 @@ import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.mock.controller.ClusterController;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockParticipant.ErrTransition;
 import com.linkedin.helix.model.ExternalView;
@@ -67,7 +68,7 @@ public class TestDrop extends ZkIntegrationTestBase
             new MockParticipant(clusterName,
                                 instanceName,
                                 ZK_ADDR,
-                                new ErrTransition(errTransitions));
+                                new MockMSModelFactory(new ErrTransition(errTransitions)));
       }
       else
       {

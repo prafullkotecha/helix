@@ -492,7 +492,7 @@ public class HelixTaskExecutor implements MessageListener
           metaCurState.setBucketSize(message.getBucketSize());
           metaCurState.setStateModelDefRef(message.getStateModelDef());
           metaCurState.setSessionId(sessionId);
-          metaCurState.setGroupMessageMode(message.getGroupMessageMode());
+          metaCurState.setGroupMessageMode(message.getBatchMessageMode());
           String ftyName = message.getStateModelFactoryName();
           if (ftyName != null)
           {

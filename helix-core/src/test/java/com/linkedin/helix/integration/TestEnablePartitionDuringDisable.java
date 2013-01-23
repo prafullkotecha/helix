@@ -9,6 +9,7 @@ import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.mock.controller.ClusterController;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockTransition;
 import com.linkedin.helix.model.Message;
@@ -106,7 +107,7 @@ public class TestEnablePartitionDuringDisable extends ZkIntegrationTestBase
             new MockParticipant(clusterName,
                                 instanceName,
                                 ZK_ADDR,
-                                transition);
+                                new MockMSModelFactory(transition));
       }
       else
       {

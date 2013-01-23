@@ -18,7 +18,7 @@ import com.linkedin.helix.model.IdealState;
 import com.linkedin.helix.tools.ClusterStateVerifier;
 import com.linkedin.helix.tools.ClusterStateVerifier.BestPossAndExtViewZkVerifier;
 
-public class TestGroupMessage extends ZkIntegrationTestBase
+public class TestBatchMessage extends ZkIntegrationTestBase
 {
   class TestZkChildListener implements IZkChildListener
   {
@@ -33,7 +33,6 @@ public class TestGroupMessage extends ZkIntegrationTestBase
         _maxNbOfChilds = currentChilds.size();
       }
     }
-    
   }
   
   @Test
@@ -80,7 +79,7 @@ public class TestGroupMessage extends ZkIntegrationTestBase
     {
       String instanceName = "localhost_" + (12918 + i);
 
-      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, null);
+      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR);
       participants[i].syncStart();
     }
 
@@ -105,7 +104,7 @@ public class TestGroupMessage extends ZkIntegrationTestBase
   
   // a non-group-message run followed by a group-message-enabled run
   @Test
-  public void testChangeGroupMessageMode() throws Exception
+  public void testChangeBatchMessageMode() throws Exception
   {
     // Logger.getRootLogger().setLevel(Level.INFO);
     String className = TestHelper.getTestClassName();
@@ -136,7 +135,7 @@ public class TestGroupMessage extends ZkIntegrationTestBase
     {
       String instanceName = "localhost_" + (12918 + i);
 
-      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, null);
+      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR);
       participants[i].syncStart();
     }
 
@@ -152,7 +151,7 @@ public class TestGroupMessage extends ZkIntegrationTestBase
       participants[i].syncStop();
     }
     
-    // enable group message
+    // enable batch message
     ZKHelixDataAccessor accessor = new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_gZkClient));
     Builder keyBuilder = accessor.keyBuilder();
     IdealState idealState = accessor.getProperty(keyBuilder.idealStates("TestDB0"));
@@ -168,7 +167,7 @@ public class TestGroupMessage extends ZkIntegrationTestBase
     {
       String instanceName = "localhost_" + (12918 + i);
 
-      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, null);
+      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR);
       participants[i].syncStart();
     }
     

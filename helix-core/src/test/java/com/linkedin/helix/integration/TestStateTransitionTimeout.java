@@ -21,6 +21,7 @@ import com.linkedin.helix.controller.HelixControllerMain;
 import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkClient;
 import com.linkedin.helix.messaging.handling.MessageHandler.ErrorCode;
+import com.linkedin.helix.mock.storage.MockMSStateModel;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockTransition;
 import com.linkedin.helix.model.ExternalView;
@@ -74,7 +75,7 @@ public class TestStateTransitionTimeout extends ZkStandAloneCMTestBase
   }
   
   @StateModelInfo(initialState = "OFFLINE", states = { "MASTER", "SLAVE", "ERROR" })
-  public static class TimeOutStateModel extends MockParticipant.MockMSStateModel
+  public static class TimeOutStateModel extends MockMSStateModel
   {
     boolean _sleep = false;
     StateTransitionError _error;
@@ -176,7 +177,7 @@ public class TestStateTransitionTimeout extends ZkStandAloneCMTestBase
         }
       }
       
-      participants[i] = new MockParticipant(factory, CLUSTER_NAME, instanceName, ZK_ADDR, null);
+      participants[i] = new MockParticipant(CLUSTER_NAME, instanceName, ZK_ADDR, factory, null);
       participants[i].syncStart();
     }
     String controllerName = CONTROLLER_PREFIX + "_0";

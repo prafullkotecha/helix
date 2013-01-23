@@ -56,6 +56,7 @@ import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.manager.zk.ZkClient;
 import com.linkedin.helix.mock.storage.MockEspressoHealthReportProvider;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockTransition;
 import com.linkedin.helix.model.Message;
@@ -242,7 +243,7 @@ public class TestWildcardAlert extends ZkIntegrationTestBase
       String instanceName = "localhost_" + (12918 + i);
 
       participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR,
-          new WildcardAlertTransition());
+          new MockMSModelFactory(new WildcardAlertTransition()));
       participants[i].syncStart();
 //      new Thread(participants[i]).start();
     }

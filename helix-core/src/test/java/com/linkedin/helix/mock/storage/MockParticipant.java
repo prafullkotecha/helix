@@ -35,10 +35,7 @@ import com.linkedin.helix.mock.storage.DummyProcess.DummyLeaderStandbyStateModel
 import com.linkedin.helix.mock.storage.DummyProcess.DummyOnlineOfflineStateModelFactory;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.participant.StateMachineEngine;
-import com.linkedin.helix.participant.statemachine.StateModel;
 import com.linkedin.helix.participant.statemachine.StateModelFactory;
-import com.linkedin.helix.participant.statemachine.StateModelInfo;
-import com.linkedin.helix.participant.statemachine.Transition;
 import com.linkedin.helix.store.zk.ZkHelixPropertyStore;
 
 public class MockParticipant extends Thread
@@ -47,7 +44,6 @@ public class MockParticipant extends Thread
                                                                Logger.getLogger(MockParticipant.class);
   private final String            _clusterName;
   private final String            _instanceName;
-  // private final String _zkAddr;
 
   private final CountDownLatch    _startCountDown          = new CountDownLatch(1);
   private final CountDownLatch    _stopCountDown           = new CountDownLatch(1);
@@ -55,217 +51,7 @@ public class MockParticipant extends Thread
 
   private final HelixManager      _manager;
   private final StateModelFactory _msModelFactory;
-  private final MockJobIntf       _job;
-
-  // mock master-slave state model
-  @StateModelInfo(initialState = "OFFLINE", states = { "MASTER", "SLAVE", "ERROR" })
-  public static class MockMSStateModel extends StateModel
-  {
-    protected MockTransition _transition;
-
-    public MockMSStateModel(MockTransition transition)
-    {
-      _transition = transition;
-    }
-
-    public void setTransition(MockTransition transition)
-    {
-      _transition = transition;
-    }
-
-    @Transition(to = "SLAVE", from = "OFFLINE")
-    public void onBecomeSlaveFromOffline(Message message, NotificationContext context) throws InterruptedException
-    {
-      LOG.info("Become SLAVE from OFFLINE");
-      if (_transition != null)
-      {
-        _transition.doTransition(message, context);
-
-      }
-    }
-
-    @Transition(to = "MASTER", from = "SLAVE")
-    public void onBecomeMasterFromSlave(Message message, NotificationContext context) throws InterruptedException
-    {
-      LOG.info("Become MASTER from SLAVE");
-      if (_transition != null)
-      {
-        _transition.doTransition(message, context);
-      }
-    }
-
-    @Transition(to = "SLAVE", from = "MASTER")
-    public void onBecomeSlaveFromMaster(Message message, NotificationContext context) throws InterruptedException
-    {
-      LOG.info("Become SLAVE from MASTER");
-      if (_transition != null)
-      {
-        _transition.doTransition(message, context);
-      }
-    }
-
-    @Transition(to = "OFFLINE", from = "SLAVE")
-    public void onBecomeOfflineFromSlave(Message message, NotificationContext context) throws InterruptedException
-    {
-      LOG.info("Become OFFLINE from SLAVE");
-      if (_transition != null)
-      {
-        _transition.doTransition(message, context);
-      }
-    }
-
-    @Transition(to = "DROPPED", from = "OFFLINE")
-    public void onBecomeDroppedFromOffline(Message message, NotificationContext context) throws InterruptedException
-    {
-      LOG.info("Become DROPPED from OFFLINE");
-      if (_transition != null)
-      {
-        _transition.doTransition(message, context);
-      }
-    }
-
-    @Transition(to = "OFFLINE", from = "ERROR")
-    public void onBecomeOfflineFromError(Message message, NotificationContext context) throws InterruptedException
-    {
-      LOG.info("Become OFFLINE from ERROR");
-      // System.err.println("Become OFFLINE from ERROR");
-      if (_transition != null)
-      {
-        _transition.doTransition(message, context);
-      }
-    }
-
-    @Override
-    public void reset()
-    {
-      LOG.info("Default MockMSStateModel.reset() invoked");
-      if (_transition != null)
-      {
-        _transition.doReset();
-      }
-    }
-  }
-
-  // mock master slave state model factory
-  public static class MockMSModelFactory extends StateModelFactory<MockMSStateModel>
-  {
-    private final MockTransition _transition;
-
-    public MockMSModelFactory()
-    {
-      this(null);
-    }
-
-    public MockMSModelFactory(MockTransition transition)
-    {
-      _transition = transition;
-    }
-
-    public void setTrasition(MockTransition transition)
-    {
-      Map<String, MockMSStateModel> stateModelMap = getStateModelMap();
-      for (MockMSStateModel stateModel : stateModelMap.values())
-      {
-        stateModel.setTransition(transition);
-      }
-    }
-
-    @Override
-    public MockMSStateModel createNewStateModel(String partitionKey)
-    {
-      MockMSStateModel model = new MockMSStateModel(_transition);
-
-      return model;
-    }
-  }
-
-  // mock STORAGE_DEFAULT_SM_SCHEMATA state model
-  @StateModelInfo(initialState = "OFFLINE", states = { "MASTER", "DROPPED", "ERROR" })
-  public class MockSchemataStateModel extends StateModel
-  {
-    @Transition(to = "MASTER", from = "OFFLINE")
-    public void onBecomeMasterFromOffline(Message message, NotificationContext context)
-    {
-      LOG.info("Become MASTER from OFFLINE");
-    }
-
-    @Transition(to = "OFFLINE", from = "MASTER")
-    public void onBecomeOfflineFromMaster(Message message, NotificationContext context)
-    {
-      LOG.info("Become OFFLINE from MASTER");
-    }
-
-    @Transition(to = "DROPPED", from = "OFFLINE")
-    public void onBecomeDroppedFromOffline(Message message, NotificationContext context)
-    {
-      LOG.info("Become DROPPED from OFFLINE");
-    }
-
-    @Transition(to = "OFFLINE", from = "ERROR")
-    public void onBecomeOfflineFromError(Message message, NotificationContext context)
-    {
-      LOG.info("Become OFFLINE from ERROR");
-    }
-  }
-
-  // mock Bootstrap state model
-  @StateModelInfo(initialState = "OFFLINE", states = { "ONLINE", "BOOTSTRAP", "OFFLINE",
-      "IDLE" })
-  public static class MockBootstrapStateModel extends StateModel
-  {
-    // Overwrite the default value of intial state
-    MockBootstrapStateModel()
-    {
-      _currentState = "IDLE";
-    }
-
-    @Transition(to = "OFFLINE", from = "IDLE")
-    public void onBecomeOfflineFromIdle(Message message, NotificationContext context)
-    {
-      LOG.info("Become OFFLINE from IDLE");
-    }
-
-    @Transition(to = "BOOTSTRAP", from = "OFFLINE")
-    public void onBecomeBootstrapFromOffline(Message message, NotificationContext context)
-    {
-      LOG.info("Become BOOTSTRAP from OFFLINE");
-    }
-
-    @Transition(to = "ONLINE", from = "BOOSTRAP")
-    public void onBecomeOnlineFromBootstrap(Message message, NotificationContext context)
-    {
-      LOG.info("Become ONLINE from BOOTSTRAP");
-    }
-
-    @Transition(to = "OFFLINE", from = "ONLINE")
-    public void onBecomeOfflineFromOnline(Message message, NotificationContext context)
-    {
-      LOG.info("Become OFFLINE from ONLINE");
-    }
-  }
-
-  // mock STORAGE_DEFAULT_SM_SCHEMATA state model factory
-  public class MockSchemataModelFactory extends StateModelFactory<MockSchemataStateModel>
-  {
-    @Override
-    public MockSchemataStateModel createNewStateModel(String partitionKey)
-    {
-      MockSchemataStateModel model = new MockSchemataStateModel();
-      return model;
-    }
-  }
-
-  // mock Bootstrap state model factory
-  public static class MockBootstrapModelFactory extends
-      StateModelFactory<MockBootstrapStateModel>
-  {
-    @Override
-    public MockBootstrapStateModel createNewStateModel(String partitionKey)
-    {
-      MockBootstrapStateModel model = new MockBootstrapStateModel();
-      return model;
-    }
-  }
+  private final MockParticipantWrapper _wrapper;
 
   // simulate error transition
   public static class ErrTransition extends MockTransition
@@ -434,66 +220,66 @@ public class MockParticipant extends Thread
   
   public MockParticipant(String clusterName, String instanceName, String zkAddr) throws Exception
   {
-    this(clusterName, instanceName, zkAddr, null, null);
+    this(clusterName, instanceName, zkAddr, new MockMSModelFactory(), null);
   }
 
   public MockParticipant(String clusterName,
                          String instanceName,
                          String zkAddr,
-                         MockTransition transition) throws Exception
+                         StateModelFactory factory) throws Exception
   {
-    this(clusterName, instanceName, zkAddr, transition, null);
+    this(clusterName, instanceName, zkAddr, factory, null);
   }
+
+//  public MockParticipant(String clusterName,
+//                         String instanceName,
+//                         String zkAddr,
+//                         MockTransition transition,
+//                         MockParticipantWrapper wrapper) throws Exception
+//  {
+//	this(clusterName, instanceName, zkAddr, new MockMSModelFactory(transition), wrapper);
+//    _clusterName = clusterName;
+//    _instanceName = instanceName;
+//    _msModelFactory = new MockMSModelFactory(transition);
+//
+//    _manager =
+//        HelixManagerFactory.getZKHelixManager(_clusterName,
+//                                              _instanceName,
+//                                              InstanceType.PARTICIPANT,
+//                                              zkAddr);
+//    _wrapper = wrapper;
+//  }
 
   public MockParticipant(String clusterName,
                          String instanceName,
                          String zkAddr,
-                         MockTransition transition,
-                         MockJobIntf job) throws Exception
+                         StateModelFactory factory,
+                         MockParticipantWrapper wrapper) throws Exception
   {
-    _clusterName = clusterName;
-    _instanceName = instanceName;
-    _msModelFactory = new MockMSModelFactory(transition);
-
-    _manager =
-        HelixManagerFactory.getZKHelixManager(_clusterName,
-                                              _instanceName,
-                                              InstanceType.PARTICIPANT,
-                                              zkAddr);
-    _job = job;
+//    _clusterName = clusterName;
+//    _instanceName = instanceName;
+//    _msModelFactory = factory;
+//
+    this(HelixManagerFactory.getZKHelixManager(clusterName,
+            instanceName,
+            InstanceType.PARTICIPANT,
+            zkAddr), factory, wrapper);
+//    _wrapper = wrapper;
   }
 
-  public MockParticipant(StateModelFactory factory,
-                         String clusterName,
-                         String instanceName,
-                         String zkAddr,
-                         MockJobIntf job) throws Exception
-  {
-    _clusterName = clusterName;
-    _instanceName = instanceName;
-    _msModelFactory = factory;
-
-    _manager =
-        HelixManagerFactory.getZKHelixManager(_clusterName,
-                                              _instanceName,
-                                              InstanceType.PARTICIPANT,
-                                              zkAddr);
-    _job = job;
-  }
-
-  public StateModelFactory getStateModelFactory()
-  {
-    return _msModelFactory;
-  }
-
-  public MockParticipant(HelixManager manager, MockTransition transition)
+  public MockParticipant(HelixManager manager, StateModelFactory factory, MockParticipantWrapper wrapper)
   {
     _clusterName = manager.getClusterName();
     _instanceName = manager.getInstanceName();
     _manager = manager;
 
-    _msModelFactory = new MockMSModelFactory(transition);
-    _job = null;
+    _msModelFactory = factory; // new MockMSModelFactory(transition);
+    _wrapper = wrapper;
+  }
+
+  public StateModelFactory getStateModelFactory()
+  {
+    return _msModelFactory;
   }
 
   public void setTransition(MockTransition transition)
@@ -558,6 +344,7 @@ public class MockParticipant extends Thread
     try
     {
       StateMachineEngine stateMach = _manager.getStateMachineEngine();
+      
       stateMach.registerStateModelFactory("MasterSlave", _msModelFactory);
 
       DummyLeaderStandbyStateModelFactory lsModelFactory =
@@ -572,17 +359,17 @@ public class MockParticipant extends Thread
       // MockBootstrapModelFactory bootstrapFactory = new MockBootstrapModelFactory();
       // stateMach.registerStateModelFactory("Bootstrap", bootstrapFactory);
 
-      if (_job != null)
+      if (_wrapper != null)
       {
-        _job.doPreConnectJob(_manager);
+        _wrapper.onPreConnect(_manager);
       }
 
       _manager.connect();
       _startCountDown.countDown();
 
-      if (_job != null)
+      if (_wrapper != null)
       {
-        _job.doPostConnectJob(_manager);
+        _wrapper.onPostConnect(_manager);
       }
 
       _stopCountDown.await();
@@ -592,8 +379,8 @@ public class MockParticipant extends Thread
       String msg =
           "participant: " + _instanceName + ", " + Thread.currentThread().getName()
               + " is interrupted";
-      LOG.info(msg);
-      System.err.println(msg);
+      LOG.error(msg);
+//      System.err.println(msg);
     }
     catch (Exception e)
     {
