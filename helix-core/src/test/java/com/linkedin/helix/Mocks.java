@@ -236,7 +236,7 @@ public class Mocks {
 		boolean completionInvoked = false;
 
 		@Override
-		protected void reportCompletion(Message message) {
+		protected void finishTask(Message message) {
 			System.out.println("Mocks.MockCMTaskExecutor.reportCompletion()");
 			completionInvoked = true;
 		}

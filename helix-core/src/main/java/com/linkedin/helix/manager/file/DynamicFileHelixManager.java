@@ -120,7 +120,7 @@ public class DynamicFileHelixManager implements HelixManager
   public void disconnect()
   {
     _store.stop();
-    _messagingService.getExecutor().shutDown();
+    _messagingService.getExecutor().shutdown();
 
     _isConnected = false;
   }

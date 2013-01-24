@@ -192,7 +192,7 @@ public class HelixTask implements Callable<HelixTaskResult>
                                   "Message handling task timeout, retryCount:"
                                       + retryCount,
                                   accessor);
-        // TODO: move retry logic to task-executor
+        // TODO: move retry logic to task-executor?
         //
         // Notify the handler that timeout happens, and the number of retries left
         // In case timeout happens (time out and also interrupted)
@@ -227,7 +227,7 @@ public class HelixTask implements Callable<HelixTaskResult>
             removeMessageFromZk(accessor, _message);
             reportMessageStat(_manager, _message, taskResult);
             sendReply(accessor, _message, taskResult);
-            _executor.reportCompletion(_message);
+            _executor.finishTask(_message);
     	}
     }
     // TODO: capture errors and log here

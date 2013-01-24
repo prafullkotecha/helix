@@ -72,7 +72,7 @@ public class TestDrop extends ZkIntegrationTestBase
       }
       else
       {
-        participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, null);
+        participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, new MockMSModelFactory());
       }
       participants[i].syncStart();
     }

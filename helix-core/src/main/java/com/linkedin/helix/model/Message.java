@@ -537,14 +537,14 @@ public class Message extends HelixProperty
 //    _groupMsgCountDown = countDown;
 //  }
   
-  public boolean isControlerMsg()
+  public boolean isControllerMsg()
   {
     return getTgtName().equalsIgnoreCase("controller");
   }
   
   public PropertyKey getKey(Builder keyBuilder, String instanceName)
   {
-    if (isControlerMsg())
+    if (isControllerMsg())
     {
       return keyBuilder.controllerMessage(getId());
     }

@@ -510,7 +510,7 @@ public class TestHelixTaskExecutor
         Assert.assertFalse(svc.isShutdown());
       }
       Assert.assertTrue(factory._processedMsgIds.size() > 0);
-      executor.shutDown();
+      executor.shutdown();
       for(ExecutorService svc : executor._threadpoolMap.values())
       {
         Assert.assertTrue(svc.isShutdown());
