@@ -66,60 +66,63 @@ public class BatchMsgHandler extends MessageHandler {
 	// will not return until all sub-message executions are done
 	@Override
 	public HelixTaskResult handleMessage() {
-		preHandleMessage();
+		synchronized (_batchMsgWrapper) {
+			preHandleMessage();
 
-		List<Message> subMsgs = new ArrayList<Message>();
-		List<String> partitionKeys = _message.getPartitionNames();
-		for (String partitionKey : partitionKeys) {
-			Message subMsg = new Message(_message.getRecord());
-			subMsg.setPartitionName(partitionKey);
-			subMsg.setAttribute(Attributes.PARENT_MSG_ID, _message.getId());
-			subMsg.setGroupMessageMode(false);
+			List<Message> subMsgs = new ArrayList<Message>();
+			List<String> partitionKeys = _message.getPartitionNames();
+			for (String partitionKey : partitionKeys) {
+				Message subMsg = new Message(_message.getRecord());
+				subMsg.setPartitionName(partitionKey);
+				subMsg.setAttribute(Attributes.PARENT_MSG_ID, _message.getId());
+				subMsg.setGroupMessageMode(false);
 
-			subMsgs.add(subMsg);
-		}
-
-		// System.err.println("create subMsgs: " + subMsgs);
-
-		int exeBatchSize = 1; // TODO: getExeBatchSize from msg
-		List<HelixBatchMsgTask> batchTasks = new ArrayList<HelixBatchMsgTask>();
-		for (int i = 0; i < partitionKeys.size(); i += exeBatchSize) {
-			if (i + exeBatchSize <= partitionKeys.size()) {
-				HelixBatchMsgTask batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i
-				        + exeBatchSize), _notificationContext, _msgHandlerFty);
-				batchTasks.add(batchTask);
-
-			} else {
-				HelixBatchMsgTask batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i
-				        + partitionKeys.size()), _notificationContext, _msgHandlerFty);
-				batchTasks.add(batchTask);
+				subMsgs.add(subMsg);
 			}
-		}
 
-		HelixTaskResult result = new HelixTaskResult();
-		try {
-			// invokeAll() is blocking call
-			List<Future<HelixTaskResult>> futures = _executorSvc.invokeAll(batchTasks);
-			for (Future<HelixTaskResult> future : futures) {
-				HelixTaskResult taskResult = future.get();
+			// System.err.println("create subMsgs: " + subMsgs);
 
-				// if any subMsg execution fails, skip postHandling() and return
-				if (!taskResult.isSucess()) {
-					return taskResult;
+			int exeBatchSize = 1; // TODO: getExeBatchSize from msg
+			List<HelixBatchMsgTask> batchTasks = new ArrayList<HelixBatchMsgTask>();
+			for (int i = 0; i < partitionKeys.size(); i += exeBatchSize) {
+				if (i + exeBatchSize <= partitionKeys.size()) {
+					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i
+					        + exeBatchSize), _notificationContext, _msgHandlerFty);
+					batchTasks.add(batchTask);
+
+				} else {
+					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i
+					        + partitionKeys.size()), _notificationContext, _msgHandlerFty);
+					batchTasks.add(batchTask);
 				}
-
 			}
-		} catch (Exception e) {
-			LOG.error("fail to execute batchMsg: " + _message.getId(), e);
-			result.setException(e);
+
+			HelixTaskResult result = new HelixTaskResult();
+			try {
+				// invokeAll() is blocking call
+				List<Future<HelixTaskResult>> futures = _executorSvc.invokeAll(batchTasks);
+				for (Future<HelixTaskResult> future : futures) {
+					HelixTaskResult taskResult = future.get();
+
+					// if any subMsg execution fails, skip postHandling() and
+					// return
+					if (!taskResult.isSucess()) {
+						return taskResult;
+					}
+
+				}
+			} catch (Exception e) {
+				LOG.error("fail to execute batchMsg: " + _message.getId(), e);
+				result.setException(e);
+				return result;
+			}
+
+			postHandleMessage();
+
+			// TODO: fill result
+			result.setSuccess(true);
 			return result;
 		}
-
-		postHandleMessage();
-
-		// TODO: fill result
-		result.setSuccess(true);
-		return result;
 	}
 
 	@Override
