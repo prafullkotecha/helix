@@ -29,6 +29,7 @@ import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.NotificationContext;
+import com.linkedin.helix.NotificationContext.MapKey;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.messaging.handling.BatchMsgHandler;
 import com.linkedin.helix.messaging.handling.BatchMsgWrapper;
@@ -58,7 +59,7 @@ public class HelixStateMachineEngine implements StateMachineEngine, MessageHandl
 
   
   // TODO: get executor-service from helix-task-executor
-  final ExecutorService _executorService = Executors.newFixedThreadPool(40);
+  // final ExecutorService _executorService = Executors.newFixedThreadPool(40);
   
   public HelixStateMachineEngine(HelixManager manager)
   {
@@ -277,7 +278,15 @@ public class HelixStateMachineEngine implements StateMachineEngine, MessageHandl
     	{
     		batchMsgWrapper = stateModelFactory.createAndAddBatchMsgWrapper(resourceName);
     	}
-    	return new BatchMsgHandler(message, context, this, batchMsgWrapper, _executorService);
+    	
+    	// get executor-service for the message
+    	ExecutorService executorSvc = (ExecutorService) context.get(MapKey.MSG_EXECUTOR.toString());
+    	if (executorSvc == null)
+    	{
+    		LOG.error("fail to get executor-service for batch message: " + message.getId() 
+    				+ ". msgType: " + message.getMsgType() + ", resource: " + message.getResourceName());
+    	}
+    	return new BatchMsgHandler(message, context, this, batchMsgWrapper, executorSvc);
     }
   }
 

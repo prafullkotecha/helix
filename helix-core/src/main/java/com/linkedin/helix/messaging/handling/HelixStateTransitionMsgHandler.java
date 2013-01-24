@@ -29,6 +29,7 @@ import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.NotificationContext;
+import com.linkedin.helix.NotificationContext.MapKey;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.ZNRecordBucketizer;
@@ -238,7 +239,8 @@ public class HelixStateTransitionMsgHandler extends MessageHandler
       else
       {
     	// sub-message of a batch message
-        ConcurrentHashMap<String, CurrentStateUpdate> csUpdateMap = (ConcurrentHashMap<String, CurrentStateUpdate>) _notificationContext.get("HELIX_CURRENT_STATE_UPDATE");
+        ConcurrentHashMap<String, CurrentStateUpdate> csUpdateMap 
+          = (ConcurrentHashMap<String, CurrentStateUpdate>) _notificationContext.get(MapKey.CURRENT_STATE_UPDATE.toString());
         csUpdateMap.put(partitionKey, new CurrentStateUpdate(key, _currentStateDelta));
       }
       

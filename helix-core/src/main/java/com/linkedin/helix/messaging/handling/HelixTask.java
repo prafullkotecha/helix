@@ -27,6 +27,7 @@ import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.NotificationContext;
+import com.linkedin.helix.NotificationContext.MapKey;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.messaging.handling.MessageHandler.ErrorCode;
 import com.linkedin.helix.messaging.handling.MessageHandler.ErrorType;
@@ -44,10 +45,11 @@ public class HelixTask implements Callable<HelixTaskResult>
   private final MessageHandler      _handler;
   private final NotificationContext _notificationContext;
   private final HelixManager        _manager;
-  StatusUpdateUtil                  _statusUpdateUtil;
-  HelixTaskExecutor                 _executor;
+  final StatusUpdateUtil                  _statusUpdateUtil;
+  final HelixTaskExecutor                 _executor;
   volatile boolean                  _isTimeout = false;
 
+  // TODO: move TimeoutTask out use one timer in executor to handle all timeout-tasks
   public class TimeoutCancelTask extends TimerTask
   {
     HelixTaskExecutor   _executor;
@@ -80,10 +82,10 @@ public class HelixTask implements Callable<HelixTaskResult>
                    MessageHandler handler,
                    HelixTaskExecutor executor) throws Exception
   {
-    this._notificationContext = notificationContext;
-    this._message = message;
-    this._handler = handler;
-    this._manager = notificationContext.getManager();
+    _notificationContext = notificationContext;
+    _message = message;
+    _handler = handler;
+    _manager = notificationContext.getManager();
     _statusUpdateUtil = new StatusUpdateUtil();
     _executor = executor;
   }
@@ -91,6 +93,7 @@ public class HelixTask implements Callable<HelixTaskResult>
   @Override
   public HelixTaskResult call()
   {
+	// TODO: should be started by task-executor which manages all helix-tasks
     // Start the timeout TimerTask, if necessary
     Timer timer = null;
     if (_message.getExecutionTimeout() > 0)
@@ -125,9 +128,11 @@ public class HelixTask implements Callable<HelixTaskResult>
     // Handle the message
     try
     {
-      // add a concurrent map to hold currentStateUpdates: partitionName -> csUpdate
+      // add a concurrent map to hold currentStateUpdates for sub-messages of a batch-message
+      // partitionName -> csUpdate
       if (_message.getBatchMessageMode() == true) {
-    	  _notificationContext.add("HELIX_CURRENT_STATE_UPDATE", new ConcurrentHashMap<String, CurrentStateUpdate>());
+    	  _notificationContext.add(MapKey.CURRENT_STATE_UPDATE.toString(), 
+    			  new ConcurrentHashMap<String, CurrentStateUpdate>());
       }
       
       taskResult = _handler.handleMessage();
@@ -187,6 +192,8 @@ public class HelixTask implements Callable<HelixTaskResult>
                                   "Message handling task timeout, retryCount:"
                                       + retryCount,
                                   accessor);
+        // TODO: move retry logic to task-executor
+        //
         // Notify the handler that timeout happens, and the number of retries left
         // In case timeout happens (time out and also interrupted)
         // we should retry the execution of the message by re-schedule it in

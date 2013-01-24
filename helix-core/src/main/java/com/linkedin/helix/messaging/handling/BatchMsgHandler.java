@@ -6,46 +6,54 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+
+import org.apache.log4j.Logger;
 
 import com.linkedin.helix.HelixDataAccessor;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.NotificationContext;
+import com.linkedin.helix.NotificationContext.MapKey;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.Attributes;
+import com.linkedin.helix.participant.HelixStateMachineEngine;
 
 public class BatchMsgHandler extends MessageHandler {
+	private static Logger LOG = Logger.getLogger(BatchMsgHandler.class);
+
 	final MessageHandlerFactory _msgHandlerFty;
-	final BatchMsgWrapper _batchMsgModel;
+	final BatchMsgWrapper _batchMsgWrapper;
 	final ExecutorService _executorSvc;
 
 	public BatchMsgHandler(Message msg, NotificationContext context, MessageHandlerFactory fty,
-	        BatchMsgWrapper batchMsgModel, ExecutorService exeSvc) {
+	        BatchMsgWrapper batchMsgWrapper, ExecutorService exeSvc) {
 		super(msg, context);
 		_msgHandlerFty = fty;
-		_batchMsgModel = batchMsgModel;
+		_batchMsgWrapper = batchMsgWrapper;
 		_executorSvc = exeSvc;
 	}
 
 	public void preHandleMessage() {
-		if (_message.getBatchMessageMode() == true && _batchMsgModel != null) {
-			_batchMsgModel.start(_message, _notificationContext);
+		if (_message.getBatchMessageMode() == true && _batchMsgWrapper != null) {
+			_batchMsgWrapper.start(_message, _notificationContext);
 		}
 
 	}
 
 	public void postHandleMessage() {
-		if (_message.getBatchMessageMode() == true && _batchMsgModel != null) {
-			_batchMsgModel.end(_message, _notificationContext);
+		if (_message.getBatchMessageMode() == true && _batchMsgWrapper != null) {
+			_batchMsgWrapper.end(_message, _notificationContext);
 		}
 
 		// update currentState
 		HelixManager manager = _notificationContext.getManager();
 		HelixDataAccessor accessor = manager.getHelixDataAccessor();
 		ConcurrentHashMap<String, CurrentStateUpdate> csUpdateMap = (ConcurrentHashMap<String, CurrentStateUpdate>) _notificationContext
-		        .get("HELIX_CURRENT_STATE_UPDATE");
+		        .get(MapKey.CURRENT_STATE_UPDATE.toString());
 		Map<PropertyKey, CurrentState> csUpdate = merge(csUpdateMap);
+
 		// TODO: change to use asyncSet
 		for (PropertyKey key : csUpdate.keySet()) {
 			// logger.info("updateCS: " + key);
@@ -55,11 +63,9 @@ public class BatchMsgHandler extends MessageHandler {
 		}
 	}
 
-	// will not return until all sub-messages are done
+	// will not return until all sub-message executions are done
 	@Override
 	public HelixTaskResult handleMessage() {
-		HelixTaskResult result = new HelixTaskResult();
-		
 		preHandleMessage();
 
 		List<Message> subMsgs = new ArrayList<Message>();
@@ -74,32 +80,43 @@ public class BatchMsgHandler extends MessageHandler {
 		}
 
 		// System.err.println("create subMsgs: " + subMsgs);
-		
+
 		int exeBatchSize = 1; // TODO: getExeBatchSize from msg
 		List<HelixBatchMsgTask> batchTasks = new ArrayList<HelixBatchMsgTask>();
 		for (int i = 0; i < partitionKeys.size(); i += exeBatchSize) {
-			HelixBatchMsgTask batchTask = null;
 			if (i + exeBatchSize <= partitionKeys.size()) {
-				batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i + exeBatchSize),
-				        _notificationContext, _msgHandlerFty);
+				HelixBatchMsgTask batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i
+				        + exeBatchSize), _notificationContext, _msgHandlerFty);
+				batchTasks.add(batchTask);
+
 			} else {
-				batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i + partitionKeys.size()),
-				        _notificationContext, _msgHandlerFty);
-			}
-			if (batchTask != null) {
+				HelixBatchMsgTask batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i
+				        + partitionKeys.size()), _notificationContext, _msgHandlerFty);
 				batchTasks.add(batchTask);
 			}
 		}
+
+		HelixTaskResult result = new HelixTaskResult();
 		try {
 			// invokeAll() is blocking call
-			_executorSvc.invokeAll(batchTasks);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			List<Future<HelixTaskResult>> futures = _executorSvc.invokeAll(batchTasks);
+			for (Future<HelixTaskResult> future : futures) {
+				HelixTaskResult taskResult = future.get();
+
+				// if any subMsg execution fails, skip postHandling() and return
+				if (!taskResult.isSucess()) {
+					return taskResult;
+				}
+
+			}
+		} catch (Exception e) {
+			LOG.error("fail to execute batchMsg: " + _message.getId(), e);
+			result.setException(e);
+			return result;
 		}
 
 		postHandleMessage();
-		
+
 		// TODO: fill result
 		result.setSuccess(true);
 		return result;
@@ -108,11 +125,10 @@ public class BatchMsgHandler extends MessageHandler {
 	@Override
 	public void onError(Exception e, ErrorCode code, ErrorType type) {
 		// TODO: call onError on each subMsg handler
-
 	}
 
-	// TODO: optimize this based on the fact that each cs update is for one
-	// partition
+	// TODO: optimize this based on the fact that each cs update is for a
+	// distinct partition
 	public Map<PropertyKey, CurrentState> merge(
 	        ConcurrentHashMap<String, CurrentStateUpdate> csUpdateMap) {
 		Map<String, CurrentStateUpdate> curStateUpdateMap = new HashMap<String, CurrentStateUpdate>();

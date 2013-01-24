@@ -18,86 +18,77 @@ package com.linkedin.helix;
 import java.util.HashMap;
 import java.util.Map;
 
-public class NotificationContext
-{
-  // keys used for object map
-//  public static final String TASK_EXECUTOR_KEY = "TASK_EXECUTOR";
-  
-  private Map<String, Object> _map;
+public class NotificationContext {
+	// keys used for object map
+	// public static final String TASK_EXECUTOR_KEY = "TASK_EXECUTOR";
+	public enum MapKey {
+		MSG_EXECUTOR,
+		CURRENT_STATE_UPDATE
+	}
+	
+	public enum Type {
+		INIT, CALLBACK, FINALIZE
+	}
 
-  private HelixManager _manager;
-  private Type _type;
-  private String _pathChanged;
-  private String _eventName;
+	private Map<String, Object> _map;
 
-  public String getEventName()
-  {
-    return _eventName;
-  }
+	private HelixManager _manager;
+	private Type _type;
+	private String _pathChanged;
+	private String _eventName;
 
-  public void setEventName(String eventName)
-  {
-    _eventName = eventName;
-  }
+	public String getEventName() {
+		return _eventName;
+	}
 
-  public NotificationContext(HelixManager manager)
-  {
-    _manager = manager;
-    _map = new HashMap<String, Object>();
-  }
+	public void setEventName(String eventName) {
+		_eventName = eventName;
+	}
 
-  public HelixManager getManager()
-  {
-    return _manager;
-  }
+	public NotificationContext(HelixManager manager) {
+		_manager = manager;
+		_map = new HashMap<String, Object>();
+	}
 
-  public Map<String, Object> getMap()
-  {
-    return _map;
-  }
+	public HelixManager getManager() {
+		return _manager;
+	}
 
-  public Type getType()
-  {
-    return _type;
-  }
+	public void setManager(HelixManager manager) {
+		this._manager = manager;
+	}
 
-  public void setManager(HelixManager manager)
-  {
-    this._manager = manager;
-  }
+	public void add(String key, Object value) {
+		_map.put(key, value);
+	}
 
-  public void add(String key, Object value)
-  {
-    _map.put(key, value);
-  }
+	public Object get(String key) {
+		return _map.get(key);
+	}
 
-  public void setMap(Map<String, Object> map)
-  {
-    this._map = map;
-  }
+	// public Map<String, Object> getMap()
+	// {
+	// return _map;
+	// }
 
-  public void setType(Type type)
-  {
-    this._type = type;
-  }
+	// public void setMap(Map<String, Object> map)
+	// {
+	// this._map = map;
+	// }
 
-  public Object get(String key)
-  {
-    return _map.get(key);
-  }
+	public Type getType() {
+		return _type;
+	}
 
-  public enum Type
-  {
-    INIT, CALLBACK, FINALIZE
-  }
+	public void setType(Type type) {
+		this._type = type;
+	}
 
-  public String getPathChanged()
-  {
-    return _pathChanged;
-  }
+	public String getPathChanged() {
+		return _pathChanged;
+	}
 
-  public void setPathChanged(String pathChanged)
-  {
-    this._pathChanged = pathChanged;
-  }
+	public void setPathChanged(String pathChanged) {
+		_pathChanged = pathChanged;
+	}
 }

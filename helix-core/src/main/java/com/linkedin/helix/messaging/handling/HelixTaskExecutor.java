@@ -43,6 +43,7 @@ import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.MessageListener;
 import com.linkedin.helix.NotificationContext;
+import com.linkedin.helix.NotificationContext.MapKey;
 import com.linkedin.helix.NotificationContext.Type;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
@@ -54,6 +55,7 @@ import com.linkedin.helix.monitoring.ParticipantMonitor;
 import com.linkedin.helix.participant.HelixStateMachineEngine;
 import com.linkedin.helix.util.StatusUpdateUtil;
 
+// TODO: abstract an interface for MessageExecutor
 public class HelixTaskExecutor implements MessageListener
 {
   // TODO: we need to further design how to throttle this.
@@ -68,6 +70,7 @@ public class HelixTaskExecutor implements MessageListener
   public static final String                             MAX_THREADS                =
                                                                                         "maxThreads";
 
+  // msgType -> msgHandlerFactory
   final ConcurrentHashMap<String, MessageHandlerFactory> _handlerFactoryMap         =
                                                                                         new ConcurrentHashMap<String, MessageHandlerFactory>();
 
@@ -80,12 +83,9 @@ public class HelixTaskExecutor implements MessageListener
   Map<String, Integer>                                   _resourceThreadpoolSizeMap =
                                                                                         new ConcurrentHashMap<String, Integer>();
 
-//  final GroupMessageHandler                              _groupMsgHandler;
-
   public HelixTaskExecutor()
   {
     _taskMap = new ConcurrentHashMap<String, Future<HelixTaskResult>>();
-//    _groupMsgHandler = new GroupMessageHandler();
 
     _lock = new Object();
     _statusUpdateUtil = new StatusUpdateUtil();
@@ -550,48 +550,10 @@ public class HelixTaskExecutor implements MessageListener
       return null;
     }
 
+    ExecutorService executorSvc = findExecutorServiceForMsg(message);
+    changeContext.add(MapKey.MSG_EXECUTOR.toString(), executorSvc);
     return handlerFactory.createHandler(message, changeContext);
   }
-
-//  private List<MessageHandler> createMessageHandlers(Message message,
-//                                                     NotificationContext changeContext)
-//  {
-//    List<MessageHandler> handlers = new ArrayList<MessageHandler>();
-//    if (!message.getGroupMessageMode())
-//    {
-//      LOG.info("Creating handler for message " + message.getMsgId() + "/"
-//          + message.getPartitionName());
-//
-//      MessageHandler handler = createMessageHandler(message, changeContext);
-//
-//      if (handler != null)
-//      {
-//        handlers.add(handler);
-//      }
-//    }
-//    else
-//    {
-//      _groupMsgHandler.put(message);
-//
-//      List<String> partitionNames = message.getPartitionNames();
-//      for (String partitionName : partitionNames)
-//      {
-//        Message subMsg = new Message(message.getRecord());
-//        subMsg.setPartitionName(partitionName);
-//        subMsg.setAttribute(Attributes.PARENT_MSG_ID, message.getId());
-//
-//        LOG.info("Creating handler for group message " + subMsg.getMsgId() + "/"
-//            + partitionName);
-//        MessageHandler handler = createMessageHandler(subMsg, changeContext);
-//        if (handler != null)
-//        {
-//          handlers.add(handler);
-//        }
-//      }
-//    }
-//
-//    return handlers;
-//  }
 
   public void shutDown()
   {

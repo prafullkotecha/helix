@@ -18,11 +18,23 @@ package com.linkedin.helix.messaging.handling;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.model.Message;
 
-public interface MessageHandlerFactory
-{
-  public MessageHandler createHandler(Message message, NotificationContext context);
-  
-  public String getMessageType();
-  
-  public void reset();
+public interface MessageHandlerFactory {
+	/**
+	 * create message handler
+	 * @param message
+	 * @param context
+	 * @return
+	 */
+	public MessageHandler createHandler(Message message, NotificationContext context);
+
+	/**
+	 * message type the factory handles
+	 * @return
+	 */
+	public String getMessageType();
+
+	/**
+	 * reset factory
+	 */
+	public void reset();
 }
