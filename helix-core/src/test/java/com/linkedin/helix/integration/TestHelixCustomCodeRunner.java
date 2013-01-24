@@ -31,6 +31,7 @@ import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
 import com.linkedin.helix.manager.zk.ZNRecordSerializer;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.manager.zk.ZkClient;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipantWrapper;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.model.LiveInstance;
@@ -60,7 +61,7 @@ public class TestHelixCustomCodeRunner extends ZkIntegrationTestBase
 
   }
 
-  class MockJob implements MockParticipantWrapper
+  class MockWrapper implements MockParticipantWrapper
   {
     @Override
     public void onPreConnect(HelixManager manager)
@@ -123,7 +124,7 @@ public class TestHelixCustomCodeRunner extends ZkIntegrationTestBase
       String instanceName =  "localhost_" + (_startPort + i);
 
       partics[i] = new MockParticipant(_clusterName, instanceName, ZK_ADDR,
-                        null, new MockJob());
+                        new MockMSModelFactory(), new MockWrapper());
       partics[i].syncStart();
 //      new Thread(partics[i]).start();
     }

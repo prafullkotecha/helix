@@ -82,7 +82,7 @@ public class DynamicFileHelixManager implements HelixManager
   private final DefaultMessagingService _messagingService;
   private final FilePropertyStore<ZNRecord> _store;
   private final String _version;
-  private final StateMachineEngine _stateMachEngine;
+  private final HelixStateMachineEngine _stateMachEngine;
   private PropertyStore<ZNRecord> _propertyStore = null;
 
   public DynamicFileHelixManager(String clusterName, String instanceName,

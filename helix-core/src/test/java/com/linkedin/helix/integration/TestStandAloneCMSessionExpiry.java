@@ -25,6 +25,7 @@ import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.ZkTestHelper;
 import com.linkedin.helix.ZkTestHelper.TestZkHelixManager;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.tools.ClusterSetup;
 import com.linkedin.helix.tools.ClusterStateVerifier;
@@ -65,7 +66,7 @@ public class TestStandAloneCMSessionExpiry extends ZkIntegrationTestBase
                                  instanceName,
                                  InstanceType.PARTICIPANT,
                                  ZK_ADDR);
-      participants[i] = new MockParticipant(manager, null, null);
+      participants[i] = new MockParticipant(manager, new MockMSModelFactory(), null);
       participants[i].syncStart();
     }
 

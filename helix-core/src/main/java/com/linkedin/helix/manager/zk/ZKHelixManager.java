@@ -109,7 +109,7 @@ public class ZKHelixManager implements HelixManager
   private final DefaultMessagingService        _messagingService;
   private ZKHelixAdmin                         _managementTool;
   private final String                         _version;
-  private final StateMachineEngine             _stateMachEngine;
+  private final HelixStateMachineEngine             _stateMachEngine;
   private int                                  _sessionTimeout;
   private PropertyStore<ZNRecord>              _propertyStore;
   private ZkHelixPropertyStore<ZNRecord>       _helixPropertyStore;

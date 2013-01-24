@@ -15,7 +15,6 @@
  */
 package com.linkedin.helix.participant;
 
-import com.linkedin.helix.messaging.handling.MessageHandlerFactory;
 import com.linkedin.helix.participant.statemachine.StateModel;
 import com.linkedin.helix.participant.statemachine.StateModelFactory;
 
@@ -23,7 +22,7 @@ import com.linkedin.helix.participant.statemachine.StateModelFactory;
  * Helix participant manager uses this class to register/remove state model factory
  * State model factory creates state model that handles state transition messages
  */
-public interface StateMachineEngine extends MessageHandlerFactory
+public interface StateMachineEngine // implements MessageHandlerFactory
 {
   /**
    * Register a default state model factory for a state model definition
@@ -64,4 +63,20 @@ public interface StateMachineEngine extends MessageHandlerFactory
    */
   public boolean removeStateModelFactory(String stateModelDef,
       StateModelFactory<? extends StateModel> factory, String factoryName);
+  
+  /**
+   * Get state model factory
+   * @param stateModelName
+   * @return
+   */
+  public StateModelFactory<? extends StateModel> getStateModelFactory(String stateModelName);
+
+  /**
+   * Get state model factory
+   * @param stateModelName
+   * @param factoryName
+   * @return
+   */
+  public StateModelFactory<? extends StateModel> getStateModelFactory(String stateModelName,
+                                                                      String factoryName);
 }

@@ -31,6 +31,7 @@ import com.linkedin.helix.mock.consumer.ConsumerAdapter;
 import com.linkedin.helix.mock.consumer.RelayConfig;
 import com.linkedin.helix.mock.consumer.RelayConsumer;
 import com.linkedin.helix.model.Message.MessageType;
+import com.linkedin.helix.participant.HelixStateMachineEngine;
 import com.linkedin.helix.participant.StateMachineEngine;
 
 class StorageAdapter
@@ -74,7 +75,7 @@ class StorageAdapter
                              zkConnectString);
     stateModelFactory = new StorageStateModelFactory(this);
 //    StateMachineEngine genericStateMachineHandler = new StateMachineEngine();
-    StateMachineEngine stateMach = storageHelixManager.getStateMachineEngine();
+    HelixStateMachineEngine stateMach = (HelixStateMachineEngine) storageHelixManager.getStateMachineEngine();
     stateMach.registerStateModelFactory("MasterSlave", stateModelFactory);
 
     storageHelixManager.getMessagingService()

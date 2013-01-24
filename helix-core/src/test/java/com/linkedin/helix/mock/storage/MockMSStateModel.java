@@ -26,8 +26,8 @@ public class MockMSStateModel extends StateModel {
 	@Transition(to = "SLAVE", from = "OFFLINE")
 	public void onBecomeSlaveFromOffline(Message message, NotificationContext context)
 	        throws InterruptedException {
-		// LOG.info("Become SLAVE from OFFLINE");
-		System.out.println("\tBecome SLAVE from OFFLINE, " + message.getPartitionName());
+		LOG.info("Become SLAVE from OFFLINE");
+		// System.out.println("\tBecome SLAVE from OFFLINE, " + message.getPartitionName());
 		if (_transition != null) {
 			_transition.doTransition(message, context);
 
@@ -37,8 +37,8 @@ public class MockMSStateModel extends StateModel {
 	@Transition(to = "MASTER", from = "SLAVE")
 	public void onBecomeMasterFromSlave(Message message, NotificationContext context)
 	        throws InterruptedException {
-		// LOG.info("Become MASTER from SLAVE");
-		System.out.println("\tBecome MASTER from SLAVE, " + message.getPartitionName());
+		LOG.info("Become MASTER from SLAVE");
+		// System.out.println("\tBecome MASTER from SLAVE, " + message.getPartitionName());
 
 		if (_transition != null) {
 			_transition.doTransition(message, context);
@@ -48,8 +48,8 @@ public class MockMSStateModel extends StateModel {
 	@Transition(to = "SLAVE", from = "MASTER")
 	public void onBecomeSlaveFromMaster(Message message, NotificationContext context)
 	        throws InterruptedException {
-		// LOG.info("Become SLAVE from MASTER");
-		System.out.println("\tBecome SLAVE from MASTER, " + message.getPartitionName());
+		LOG.info("Become SLAVE from MASTER");
+		// System.out.println("\tBecome SLAVE from MASTER, " + message.getPartitionName());
 
 		if (_transition != null) {
 			_transition.doTransition(message, context);

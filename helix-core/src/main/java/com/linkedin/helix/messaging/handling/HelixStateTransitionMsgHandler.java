@@ -42,7 +42,7 @@ import com.linkedin.helix.participant.statemachine.StateModelParser;
 import com.linkedin.helix.participant.statemachine.StateTransitionError;
 import com.linkedin.helix.util.StatusUpdateUtil;
 
-public class StateTransitionMsgHandler extends MessageHandler
+public class HelixStateTransitionMsgHandler extends MessageHandler
 {
   public static class HelixStateMismatchException extends Exception
   {
@@ -52,7 +52,7 @@ public class StateTransitionMsgHandler extends MessageHandler
     }
   }
   private static Logger          LOG     =
-                                                Logger.getLogger(StateTransitionMsgHandler.class);
+                                                Logger.getLogger(HelixStateTransitionMsgHandler.class);
   private final StateModel       _stateModel;
   StatusUpdateUtil               _statusUpdateUtil;
   private final StateModelParser _transitionMethodFinder;
@@ -60,7 +60,7 @@ public class StateTransitionMsgHandler extends MessageHandler
   volatile boolean               _isTimeout = false;
 //  private final HelixTaskExecutor              _executor;
 
-  public StateTransitionMsgHandler(StateModel stateModel,
+  public HelixStateTransitionMsgHandler(StateModel stateModel,
                                      Message message,
                                      NotificationContext context,
                                      CurrentState currentStateDelta)
@@ -90,7 +90,7 @@ public class StateTransitionMsgHandler extends MessageHandler
               + Arrays.toString(Message.Attributes.values());
 
       _statusUpdateUtil.logError(message,
-                                 StateTransitionMsgHandler.class,
+                                 HelixStateTransitionMsgHandler.class,
                                  errorMessage,
                                  manager.getHelixDataAccessor());
       LOG.error(errorMessage);
@@ -113,7 +113,7 @@ public class StateTransitionMsgHandler extends MessageHandler
               + ", to: " + message.getTgtName();
 
       _statusUpdateUtil.logError(message,
-                                 StateTransitionMsgHandler.class,
+                                 HelixStateTransitionMsgHandler.class,
                                  errorMessage,
                                  accessor);
       LOG.error(errorMessage);
@@ -250,7 +250,7 @@ public class StateTransitionMsgHandler extends MessageHandler
           new StateTransitionError(ErrorType.FRAMEWORK, ErrorCode.ERROR, e);
       _stateModel.rollbackOnError(message, _notificationContext, error);
       _statusUpdateUtil.logError(message,
-                                 StateTransitionMsgHandler.class,
+                                 HelixStateTransitionMsgHandler.class,
                                  e,
                                  "Error when update the state ",
                                  accessor);
@@ -267,7 +267,7 @@ public class StateTransitionMsgHandler extends MessageHandler
       HelixDataAccessor accessor = manager.getHelixDataAccessor();
 
       _statusUpdateUtil.logInfo(message,
-                                StateTransitionMsgHandler.class,
+                                HelixStateTransitionMsgHandler.class,
                                 "Message handling task begin execute",
                                 accessor);
       message.setExecuteStartTimeStamp(new Date().getTime());
@@ -300,7 +300,7 @@ public class StateTransitionMsgHandler extends MessageHandler
           e = (InterruptedException) e.getCause();
         }
         _statusUpdateUtil.logError(message,
-                                   StateTransitionMsgHandler.class,
+                                   HelixStateTransitionMsgHandler.class,
                                    e,
                                    errorMessage,
                                    accessor);
@@ -328,7 +328,7 @@ public class StateTransitionMsgHandler extends MessageHandler
       InterruptedException
   {
     _statusUpdateUtil.logInfo(message,
-                              StateTransitionMsgHandler.class,
+                              HelixStateTransitionMsgHandler.class,
                               "Message handling invoking",
                               accessor);
 
@@ -356,7 +356,7 @@ public class StateTransitionMsgHandler extends MessageHandler
       taskResult.setSuccess(false);
 
       _statusUpdateUtil.logError(message,
-                                 StateTransitionMsgHandler.class,
+                                 HelixStateTransitionMsgHandler.class,
                                  errorMessage,
                                  accessor);
     }

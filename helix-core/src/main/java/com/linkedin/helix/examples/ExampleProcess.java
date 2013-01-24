@@ -31,6 +31,7 @@ import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.HelixManagerFactory;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.model.Message.MessageType;
+import com.linkedin.helix.participant.HelixStateMachineEngine;
 import com.linkedin.helix.participant.StateMachineEngine;
 import com.linkedin.helix.participant.statemachine.StateModel;
 import com.linkedin.helix.participant.statemachine.StateModelFactory;
@@ -104,7 +105,7 @@ public class ExampleProcess
 //    genericStateMachineHandler = new StateMachineEngine();
 //    genericStateMachineHandler.registerStateModelFactory(stateModelType, stateModelFactory);
     
-    StateMachineEngine stateMach = manager.getStateMachineEngine();
+    HelixStateMachineEngine stateMach = (HelixStateMachineEngine) manager.getStateMachineEngine();
     stateMach.registerStateModelFactory(stateModelType, stateModelFactory);
     manager.connect();
     manager.getMessagingService().registerMessageHandlerFactory(

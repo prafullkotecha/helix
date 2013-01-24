@@ -26,7 +26,7 @@ import com.linkedin.helix.Mocks.MockStateModelAnnotated;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.messaging.handling.HelixTask;
 import com.linkedin.helix.messaging.handling.HelixTaskExecutor;
-import com.linkedin.helix.messaging.handling.StateTransitionMsgHandler;
+import com.linkedin.helix.messaging.handling.HelixStateTransitionMsgHandler;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.MessageType;
@@ -67,7 +67,7 @@ public class TestHelixTaskHandler
     CurrentState currentStateDelta = new CurrentState("TestDB");
     currentStateDelta.setState("TestDB_0", "OFFLINE");
 
-    StateTransitionMsgHandler stHandler = new StateTransitionMsgHandler(stateModel, message,
+    HelixStateTransitionMsgHandler stHandler = new HelixStateTransitionMsgHandler(stateModel, message,
         context, currentStateDelta);
     HelixTask handler;
     handler = new HelixTask(message, context, stHandler, executor);
@@ -114,7 +114,7 @@ public class TestHelixTaskHandler
     CurrentState currentStateDelta = new CurrentState("TestDB");
     currentStateDelta.setState("TestDB_0", "OFFLINE");
 
-    StateTransitionMsgHandler stHandler = new StateTransitionMsgHandler(stateModel, message,
+    HelixStateTransitionMsgHandler stHandler = new HelixStateTransitionMsgHandler(stateModel, message,
         context, currentStateDelta);
 
     HelixTask handler = new HelixTask(message, context, stHandler, executor);

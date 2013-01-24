@@ -54,7 +54,7 @@ public class TestAddStateModelFactoryAfterConnect extends ZkIntegrationTestBase
     {
       String instanceName = "localhost_" + (12918 + i);
 
-      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, null);
+      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, new MockMSModelFactory());
       participants[i].syncStart();
     }
 

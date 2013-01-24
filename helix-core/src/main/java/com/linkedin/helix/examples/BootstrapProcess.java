@@ -40,6 +40,7 @@ import com.linkedin.helix.messaging.handling.MessageHandler;
 import com.linkedin.helix.messaging.handling.MessageHandlerFactory;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.MessageType;
+import com.linkedin.helix.participant.HelixStateMachineEngine;
 import com.linkedin.helix.participant.StateMachineEngine;
 import com.linkedin.helix.participant.statemachine.StateModel;
 import com.linkedin.helix.participant.statemachine.StateModelFactory;
@@ -123,7 +124,7 @@ public class BootstrapProcess
 //    genericStateMachineHandler = new StateMachineEngine();
 //    genericStateMachineHandler.registerStateModelFactory("MasterSlave", stateModelFactory);
     
-    StateMachineEngine stateMach = manager.getStateMachineEngine();
+    HelixStateMachineEngine stateMach = (HelixStateMachineEngine) manager.getStateMachineEngine();
     stateMach.registerStateModelFactory("MasterSlave", stateModelFactory);
     
     manager.getMessagingService().registerMessageHandlerFactory(
