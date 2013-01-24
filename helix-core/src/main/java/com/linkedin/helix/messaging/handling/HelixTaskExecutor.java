@@ -375,11 +375,11 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
     List<Message> readMsgs = new ArrayList<Message>();
 
     String sessionId = manager.getSessionId();
-    List<String> curResourceNames =
-        accessor.getChildNames(keyBuilder.currentStates(instanceName, sessionId));
-    List<PropertyKey> createCurStateKeys = new ArrayList<PropertyKey>();
-    List<CurrentState> metaCurStates = new ArrayList<CurrentState>();
-    Set<String> createCurStateNames = new HashSet<String>();
+//    List<String> curResourceNames =
+//        accessor.getChildNames(keyBuilder.currentStates(instanceName, sessionId));
+//    List<PropertyKey> createCurStateKeys = new ArrayList<PropertyKey>();
+//    List<CurrentState> metaCurStates = new ArrayList<CurrentState>();
+//    Set<String> createCurStateNames = new HashSet<String>();
 
     for (Message message : messages)
     {
@@ -515,17 +515,17 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
     }
 
     // batch create curState meta
-    if (createCurStateKeys.size() > 0)
-    {
-      try
-      {
-        accessor.createChildren(createCurStateKeys, metaCurStates);
-      }
-      catch (Exception e)
-      {
-        LOG.error(e);
-      }
-    }
+//    if (createCurStateKeys.size() > 0)
+//    {
+//      try
+//      {
+//        accessor.createChildren(createCurStateKeys, metaCurStates);
+//      }
+//      catch (Exception e)
+//      {
+//        LOG.error(e);
+//      }
+//    }
 
     // update message state to READ in batch and schedule all read messages
     if (readMsgs.size() > 0)
