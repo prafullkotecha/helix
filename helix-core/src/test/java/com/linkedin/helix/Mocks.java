@@ -243,7 +243,7 @@ public class Mocks {
 		}
 
 		public boolean isDone(String taskId) {
-			Future<HelixTaskResult> future = _taskMap.get(taskId);
+			Future<HelixTaskResult> future = _taskMap.get(taskId).getFuture();
 			if (future != null) {
 				return future.isDone();
 			}

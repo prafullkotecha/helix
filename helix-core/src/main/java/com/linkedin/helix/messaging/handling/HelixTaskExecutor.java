@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -66,7 +67,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
   private static Logger LOG = Logger.getLogger(HelixTaskExecutor.class);
 
   // TODO: create per-task type threadpool with customizable pool size
-  protected final ConcurrentHashMap<String, Future<HelixTaskResult>>   _taskMap;
+  protected final ConcurrentHashMap<String, MessageTaskInfo>   _taskMap;
   private final Object                                   _lock;
   private final StatusUpdateUtil                         _statusUpdateUtil;
   private final ParticipantMonitor                       _monitor;
@@ -92,7 +93,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
 
   public HelixTaskExecutor()
   {
-    _taskMap = new ConcurrentHashMap<String, Future<HelixTaskResult>>();
+    _taskMap = new ConcurrentHashMap<String, MessageTaskInfo>();
 
     _lock = new Object();
     _statusUpdateUtil = new StatusUpdateUtil();
@@ -293,9 +294,22 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
         if (_activeTasks.add(taskId)) {
         	ExecutorService exeSvc = findExecutorServiceForMsg(message);
         	Future<HelixTaskResult> future = exeSvc.submit(task);
-        	_taskMap.put(taskId, future);
             LOG.info("Message: " + taskId + " handling task scheduled");
             
+            TimerTask timerTask = null;
+            if (message.getExecutionTimeout() > 0)
+            {
+              timerTask = new TimeoutCancelTask(this, task);
+              _timer.schedule(timerTask, message.getExecutionTimeout());
+              LOG.info("Message starts with timeout " + message.getExecutionTimeout()
+                  + " MsgId: " + task.getTaskId());
+            }
+            else
+            {
+              LOG.debug("Message does not have timeout. MsgId: " + task.getTaskId());
+            }
+        	_taskMap.put(taskId, new MessageTaskInfo(task, future, timerTask));
+
             return true;
         } else {
             _statusUpdateUtil.logWarning(message,
@@ -352,7 +366,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
       // if (_taskMap.containsKey(taskId))
       if (_activeTasks.remove(taskId))
       {
-          Future<HelixTaskResult> future = _taskMap.remove(taskId);
+          Future<HelixTaskResult> future = _taskMap.remove(taskId)._future;
 
         _statusUpdateUtil.logInfo(message,
                                   HelixTaskExecutor.class,
@@ -403,7 +417,10 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
       if (_activeTasks.remove(taskId)) 
       {
         // Future<HelixTaskResult> future = 
-        _taskMap.remove(taskId);
+          MessageTaskInfo info = _taskMap.remove(taskId);
+          if (info._timerTask != null) {
+        	  info._timerTask.cancel();
+          }
       }
       else
       {
@@ -443,9 +460,10 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
       // Cancel all scheduled future
       // synchronized (_lock)
       {
-        for (Future<HelixTaskResult> f : _taskMap.values())
+        for (MessageTaskInfo info : _taskMap.values())
         {
-          f.cancel(true);
+          Future<HelixTaskResult> future = info._future;
+          future.cancel(true);
         }
         _taskMap.clear();
       }

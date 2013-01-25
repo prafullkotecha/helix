@@ -77,4 +77,10 @@ public class HelixBatchMsgTask implements MessageTask { // implements
 		return _context;
 	}
 
+	@Override
+	public void onTimeout() {
+		// TODO: call onTimeout() on all handlers
+		// _handler.onTimeout();
+	}
+
 }

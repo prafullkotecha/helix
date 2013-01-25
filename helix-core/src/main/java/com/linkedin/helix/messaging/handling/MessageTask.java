@@ -11,4 +11,6 @@ public interface MessageTask extends Callable<HelixTaskResult>{
 	Message getMessage();
 	
 	NotificationContext getNotificationContext();
+	
+	void onTimeout();
 }
