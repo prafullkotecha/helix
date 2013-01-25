@@ -24,6 +24,7 @@ import com.linkedin.helix.Mocks.MockStateModel;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.messaging.handling.AsyncCallbackService;
 import com.linkedin.helix.messaging.handling.HelixStateTransitionMsgHandler;
+import com.linkedin.helix.messaging.handling.HelixTask;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.MessageType;
@@ -73,8 +74,9 @@ public class TestHelixTaskExecutor
                                         message,
                                         context,
                                         currentStateDelta);
-
-    executor.scheduleTask(message, handler, context);
+    
+    HelixTask task = new HelixTask(message, context, handler, executor);
+    executor.scheduleTask(task);
     while (!executor.isDone(msgId + "/" + message.getPartitionName()))
     {
       Thread.sleep(500);

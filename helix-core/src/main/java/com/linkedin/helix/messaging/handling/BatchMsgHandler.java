@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -25,14 +26,14 @@ public class BatchMsgHandler extends MessageHandler {
 
 	final MessageHandlerFactory _msgHandlerFty;
 	final BatchMsgWrapper _batchMsgWrapper;
-	final ExecutorService _executorSvc;
+	final TaskExecutor _executor;
 
 	public BatchMsgHandler(Message msg, NotificationContext context, MessageHandlerFactory fty,
-	        BatchMsgWrapper batchMsgWrapper, ExecutorService exeSvc) {
+	        BatchMsgWrapper batchMsgWrapper, TaskExecutor executor) {
 		super(msg, context);
 		_msgHandlerFty = fty;
 		_batchMsgWrapper = batchMsgWrapper;
-		_executorSvc = exeSvc;
+		_executor = executor;
 	}
 
 	public void preHandleMessage() {
@@ -72,7 +73,8 @@ public class BatchMsgHandler extends MessageHandler {
 			List<Message> subMsgs = new ArrayList<Message>();
 			List<String> partitionKeys = _message.getPartitionNames();
 			for (String partitionKey : partitionKeys) {
-				Message subMsg = new Message(_message.getRecord());
+				// assign a new message id, put batch-msg-id to parent-id field
+				Message subMsg = new Message(_message.getRecord(), UUID.randomUUID().toString());
 				subMsg.setPartitionName(partitionKey);
 				subMsg.setAttribute(Attributes.PARENT_MSG_ID, _message.getId());
 				subMsg.setGroupMessageMode(false);
@@ -83,15 +85,15 @@ public class BatchMsgHandler extends MessageHandler {
 			// System.err.println("create subMsgs: " + subMsgs);
 
 			int exeBatchSize = 1; // TODO: getExeBatchSize from msg
-			List<HelixBatchMsgTask> batchTasks = new ArrayList<HelixBatchMsgTask>();
+			List<MessageTask> batchTasks = new ArrayList<MessageTask>();
 			for (int i = 0; i < partitionKeys.size(); i += exeBatchSize) {
 				if (i + exeBatchSize <= partitionKeys.size()) {
-					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i
+					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(_message, subMsgs.subList(i, i
 					        + exeBatchSize), _notificationContext, _msgHandlerFty);
 					batchTasks.add(batchTask);
 
 				} else {
-					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(subMsgs.subList(i, i
+					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(_message, subMsgs.subList(i, i
 					        + partitionKeys.size()), _notificationContext, _msgHandlerFty);
 					batchTasks.add(batchTask);
 				}
@@ -100,7 +102,7 @@ public class BatchMsgHandler extends MessageHandler {
 			HelixTaskResult result = new HelixTaskResult();
 			try {
 				// invokeAll() is blocking call
-				List<Future<HelixTaskResult>> futures = _executorSvc.invokeAll(batchTasks);
+				List<Future<HelixTaskResult>> futures = _executor.invokeAllTasks(batchTasks);
 				for (Future<HelixTaskResult> future : futures) {
 					HelixTaskResult taskResult = future.get();
 

@@ -437,7 +437,10 @@ public class TestHelixTaskExecutor
     Thread.sleep(500);
     for(int i = 0; i < nMsgs2; i++)
     {
-      executor.cancelTask(msgListToCancel.get(i), changeContext);
+      HelixTask task = new HelixTask(msgListToCancel.get(i), changeContext, null, null);
+
+      // executor.cancelTask(msgListToCancel.get(i), changeContext);
+      executor.cancelTask(task);
     }
     Thread.sleep(1500);
 

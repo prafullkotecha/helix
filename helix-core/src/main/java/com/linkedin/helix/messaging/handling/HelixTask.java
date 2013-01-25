@@ -38,7 +38,7 @@ import com.linkedin.helix.monitoring.StateTransitionContext;
 import com.linkedin.helix.monitoring.StateTransitionDataPoint;
 import com.linkedin.helix.util.StatusUpdateUtil;
 
-public class HelixTask implements Callable<HelixTaskResult>
+public class HelixTask implements MessageTask // Callable<HelixTaskResult>
 {
   private static Logger             LOG     = Logger.getLogger(HelixTask.class);
   private final Message             _message;
@@ -52,17 +52,20 @@ public class HelixTask implements Callable<HelixTaskResult>
   // TODO: move TimeoutTask out use one timer in executor to handle all timeout-tasks
   public class TimeoutCancelTask extends TimerTask
   {
-    HelixTaskExecutor   _executor;
-    Message             _message;
-    NotificationContext _context;
+    final HelixTaskExecutor   _executor;
+//    Message             _message;
+//    NotificationContext _context;
+    final MessageTask _task;
 
     public TimeoutCancelTask(HelixTaskExecutor executor,
-                             Message message,
-                             NotificationContext context)
+    						   MessageTask task)
+//                             Message message,
+//                             NotificationContext context)
     {
       _executor = executor;
-      _message = message;
-      _context = context;
+      _task = task;
+//      _message = message;
+//      _context = context;
     }
 
     @Override
@@ -72,7 +75,8 @@ public class HelixTask implements Callable<HelixTaskResult>
       LOG.warn("Message time out, canceling. id:" + _message.getMsgId()
           + " timeout : " + _message.getExecutionTimeout());
       _handler.onTimeout();
-      _executor.cancelTask(_message, _context);
+      // _executor.cancelTask(_message, _context);
+      _executor.cancelTask(_task);
     }
 
   }
@@ -80,7 +84,7 @@ public class HelixTask implements Callable<HelixTaskResult>
   public HelixTask(Message message,
                    NotificationContext notificationContext,
                    MessageHandler handler,
-                   HelixTaskExecutor executor) throws Exception
+                   HelixTaskExecutor executor)
   {
     _notificationContext = notificationContext;
     _message = message;
@@ -99,7 +103,7 @@ public class HelixTask implements Callable<HelixTaskResult>
     if (_message.getExecutionTimeout() > 0)
     {
       timer = new Timer(true);
-      timer.schedule(new TimeoutCancelTask(_executor, _message, _notificationContext),
+      timer.schedule(new TimeoutCancelTask(_executor, this),
                      _message.getExecutionTimeout());
       LOG.info("Message starts with timeout " + _message.getExecutionTimeout()
           + " MsgId:" + _message.getMsgId());
@@ -200,7 +204,10 @@ public class HelixTask implements Callable<HelixTaskResult>
         if (retryCount > 0)
         {
           _message.setRetryCount(retryCount - 1);
-          _executor.scheduleTask(_message, _handler, _notificationContext);
+          
+          HelixTask task = new HelixTask(_message, _notificationContext, _handler, _executor);
+          // _executor.scheduleTask(_message, _handler, _notificationContext);
+          _executor.scheduleTask(task);
           return taskResult;
         }
       }
@@ -227,7 +234,8 @@ public class HelixTask implements Callable<HelixTaskResult>
             removeMessageFromZk(accessor, _message);
             reportMessageStat(_manager, _message, taskResult);
             sendReply(accessor, _message, taskResult);
-            _executor.finishTask(_message);
+            // _executor.finishTask(_message);
+            _executor.finishTask(this);
     	}
     }
     // TODO: capture errors and log here
@@ -353,4 +361,20 @@ public class HelixTask implements Callable<HelixTaskResult>
     }
   }
   
+  @Override
+  public String getTaskId()
+  {
+	  return _message.getId();
+  }
+  
+	@Override
+	public Message getMessage() {
+		return _message;
+	}
+
+	@Override
+	public 	NotificationContext getNotificationContext()
+	{
+		return _notificationContext;
+	}
 };

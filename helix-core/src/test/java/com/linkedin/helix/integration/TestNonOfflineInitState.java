@@ -9,6 +9,7 @@ import org.testng.annotations.Test;
 import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.controller.HelixControllerMain;
 import com.linkedin.helix.manager.zk.ZkClient;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockBootstrapModelFactory;
 import com.linkedin.helix.participant.StateMachineEngine;
@@ -48,7 +49,7 @@ public class TestNonOfflineInitState extends ZkIntegrationTestBase
     {
       String instanceName = "localhost_" + (12918 + i);
 
-      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, null);
+      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, new MockMSModelFactory());
 
       // add a state model with non-OFFLINE initial state
       StateMachineEngine stateMach = participants[i].getManager().getStateMachineEngine();

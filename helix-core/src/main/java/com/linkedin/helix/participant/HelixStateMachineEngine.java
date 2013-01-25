@@ -36,6 +36,7 @@ import com.linkedin.helix.messaging.handling.BatchMsgWrapper;
 import com.linkedin.helix.messaging.handling.MessageHandler;
 import com.linkedin.helix.messaging.handling.MessageHandlerFactory;
 import com.linkedin.helix.messaging.handling.HelixStateTransitionMsgHandler;
+import com.linkedin.helix.messaging.handling.TaskExecutor;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.MessageType;
@@ -280,13 +281,14 @@ public class HelixStateMachineEngine implements StateMachineEngine, MessageHandl
     	}
     	
     	// get executor-service for the message
-    	ExecutorService executorSvc = (ExecutorService) context.get(MapKey.MSG_EXECUTOR.toString());
-    	if (executorSvc == null)
+    	TaskExecutor executor = (TaskExecutor) context.get(MapKey.TASK_EXECUTOR.toString());
+    	if (executor == null)
     	{
     		LOG.error("fail to get executor-service for batch message: " + message.getId() 
     				+ ". msgType: " + message.getMsgType() + ", resource: " + message.getResourceName());
+    		return null;
     	}
-    	return new BatchMsgHandler(message, context, this, batchMsgWrapper, executorSvc);
+    	return new BatchMsgHandler(message, context, this, batchMsgWrapper, executor);
     }
   }
 

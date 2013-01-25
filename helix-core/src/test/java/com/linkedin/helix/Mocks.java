@@ -35,6 +35,7 @@ import com.linkedin.helix.messaging.AsyncCallback;
 import com.linkedin.helix.messaging.handling.HelixTaskExecutor;
 import com.linkedin.helix.messaging.handling.HelixTaskResult;
 import com.linkedin.helix.messaging.handling.MessageHandlerFactory;
+import com.linkedin.helix.messaging.handling.MessageTask;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.participant.StateMachineEngine;
 import com.linkedin.helix.participant.statemachine.StateModel;
@@ -236,8 +237,8 @@ public class Mocks {
 		boolean completionInvoked = false;
 
 		@Override
-		public void finishTask(Message message) {
-			System.out.println("Mocks.MockCMTaskExecutor.reportCompletion()");
+		public void finishTask(MessageTask task) {
+			System.out.println("Mocks.MockCMTaskExecutor.finishTask()");
 			completionInvoked = true;
 		}
 

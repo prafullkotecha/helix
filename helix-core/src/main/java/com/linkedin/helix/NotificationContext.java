@@ -22,7 +22,7 @@ public class NotificationContext {
 	// keys used for object map
 	// public static final String TASK_EXECUTOR_KEY = "TASK_EXECUTOR";
 	public enum MapKey {
-		MSG_EXECUTOR,
+		TASK_EXECUTOR,
 		CURRENT_STATE_UPDATE
 	}
 	
