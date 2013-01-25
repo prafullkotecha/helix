@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -85,6 +86,9 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
                                                                                         new ConcurrentHashMap<String, Integer>();
   
   final Set<String> _activeTasks;
+  
+  final Timer _timer;
+
 
   public HelixTaskExecutor()
   {
@@ -96,6 +100,8 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
     
     // thread-safe hash-set
     _activeTasks = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    _timer = new Timer(true);	// created as a daemon thread
+    
     startMonitorThread();
   }
 
@@ -659,7 +665,9 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
   public void shutdown()
   {
     LOG.info("shutting down TaskExecutor");
-    synchronized (_lock)
+    _timer.cancel();
+    
+//    synchronized (_lock)
     {
       for (String msgType : _threadpoolMap.keySet())
       {

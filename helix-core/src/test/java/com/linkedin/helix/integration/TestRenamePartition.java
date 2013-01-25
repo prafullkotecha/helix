@@ -29,6 +29,7 @@ import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.controller.HelixControllerMain;
 import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.model.IdealState;
 import com.linkedin.helix.tools.ClusterStateVerifier;
@@ -127,9 +128,8 @@ public class TestRenamePartition extends ZkIntegrationTestBase
     {
       String instanceName = "localhost_" + (12918 + i);
 
-      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, null);
+      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, new MockMSModelFactory());
       participants[i].syncStart();
-//      new Thread(participants[i]).start();
     }
 
     boolean result = ClusterStateVerifier.verifyByPolling(
