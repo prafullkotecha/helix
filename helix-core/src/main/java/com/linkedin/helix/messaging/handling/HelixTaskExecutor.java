@@ -240,7 +240,14 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
 		  }
 	  }
 	  
+	  // this is a blocking call
+	  // TODO: need a timeout
       List<Future<HelixTaskResult>> futures = exeSvc.invokeAll(tasks);
+      
+      // remove all taskId's
+      for (MessageTask task : tasks) {
+    	  _activeTasks.remove(task.getTaskId());
+      }
       return futures;
   }
 

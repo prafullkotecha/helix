@@ -12,6 +12,7 @@ import com.linkedin.helix.controller.HelixControllerMain;
 import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.mock.controller.ClusterController;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.model.LiveInstance;
 import com.linkedin.helix.tools.ClusterStateVerifier;
@@ -87,7 +88,7 @@ public class TestDistributedClusterController extends ZkIntegrationTestBase
     {
       String instanceName = "localhost0_" + (12918 + i);
       participants[i] =
-          new MockParticipant(firstClusterName, instanceName, ZK_ADDR, null);
+          new MockParticipant(firstClusterName, instanceName, ZK_ADDR, new MockMSModelFactory());
       participants[i].syncStart();
     }
 

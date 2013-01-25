@@ -10,6 +10,7 @@ import com.linkedin.helix.PropertyType;
 import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.mock.controller.ClusterController;
+import com.linkedin.helix.mock.storage.MockMSModelFactory;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.model.IdealState;
 import com.linkedin.helix.tools.ClusterStateVerifier;
@@ -54,7 +55,7 @@ public class TestNullReplica extends ZkIntegrationTestBase
     {
       String instanceName = "localhost_" + (12918 + i);
 
-      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, null);
+      participants[i] = new MockParticipant(clusterName, instanceName, ZK_ADDR, new MockMSModelFactory());
       participants[i].syncStart();
     }
 

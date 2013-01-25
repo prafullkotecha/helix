@@ -235,8 +235,8 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
             reportMessageStat(_manager, _message, taskResult);
             sendReply(accessor, _message, taskResult);
             // _executor.finishTask(_message);
-            _executor.finishTask(this);
     	}
+        _executor.finishTask(this);
     }
     // TODO: capture errors and log here
     catch (Exception e)

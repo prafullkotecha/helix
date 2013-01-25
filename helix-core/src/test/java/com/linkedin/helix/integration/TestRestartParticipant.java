@@ -83,7 +83,7 @@ public class TestRestartParticipant extends ZkIntegrationTestBase
             new MockParticipant(clusterName,
                                 instanceName,
                                 ZK_ADDR,
-                                null);
+                                new MockMSModelFactory());
 //        Thread.sleep(100);
       }
 
