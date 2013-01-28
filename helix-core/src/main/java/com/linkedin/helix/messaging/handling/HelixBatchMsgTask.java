@@ -6,13 +6,10 @@ import java.util.List;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.model.Message;
 
-public class HelixBatchMsgTask implements MessageTask { // implements
-	                                                    // Callable<HelixTaskResult>
-	                                                    // {
+public class HelixBatchMsgTask implements MessageTask {
 	final NotificationContext _context;
 	final Message _batchMsg;
 	final List<Message> _msgs;
-	// final MessageHandlerFactory _msgHandlerFty;
 	final List<MessageHandler> _handlers;
 
 	public HelixBatchMsgTask(Message batchMsg, List<Message> msgs, List<MessageHandler> handlers,
@@ -25,9 +22,7 @@ public class HelixBatchMsgTask implements MessageTask { // implements
 
 	@Override
 	public HelixTaskResult call() throws Exception {
-		// for (Message msg : _msgs) {
 		for (MessageHandler handler : _handlers) {
-			// MessageHandler handler = createMsgHandler(msg, _context);
 			if (handler != null) {
 				HelixTaskResult result = handler.handleMessage();
 				// if any fails, skip the remaining handlers and return fail
@@ -75,10 +70,4 @@ public class HelixBatchMsgTask implements MessageTask { // implements
 			}
 		}
 	}
-
-//	@Override
-//	public MessageTask clone() {
-//		return new HelixBatchMsgTask(_batchMsg, _msgs, _handlers, _context);
-//
-//	}
 }

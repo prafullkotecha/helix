@@ -23,7 +23,8 @@ public class NotificationContext {
 	// public static final String TASK_EXECUTOR_KEY = "TASK_EXECUTOR";
 	public enum MapKey {
 		TASK_EXECUTOR,
-		CURRENT_STATE_UPDATE
+		CURRENT_STATE_UPDATE,
+		HELIX_TASK_RESULT
 	}
 	
 	public enum Type {

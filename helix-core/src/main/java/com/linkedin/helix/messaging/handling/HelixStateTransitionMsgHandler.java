@@ -59,20 +59,17 @@ public class HelixStateTransitionMsgHandler extends MessageHandler
   private final StateModelParser _transitionMethodFinder;
   private final CurrentState     _currentStateDelta;
   volatile boolean               _isTimeout = false;
-//  private final HelixTaskExecutor              _executor;
 
   public HelixStateTransitionMsgHandler(StateModel stateModel,
                                      Message message,
                                      NotificationContext context,
                                      CurrentState currentStateDelta)
-//                                     ,HelixTaskExecutor executor)
   {
     super(message, context);
     _stateModel = stateModel;
     _statusUpdateUtil = new StatusUpdateUtil();
     _transitionMethodFinder = new StateModelParser();
     _currentStateDelta = currentStateDelta;
-//    _executor = executor;
   }
 
   void preHandleMessage() throws Exception
@@ -131,7 +128,7 @@ public class HelixStateTransitionMsgHandler extends MessageHandler
   {
 	Message message = _message;
 	HelixManager manager = _notificationContext.getManager();
-	HelixTaskResult taskResult = (HelixTaskResult) _notificationContext.get("HELIX_TASK_RESULT");
+	HelixTaskResult taskResult = (HelixTaskResult) _notificationContext.get(MapKey.HELIX_TASK_RESULT.toString());
 	Exception exception = taskResult.getException();
 	
     String partitionKey = message.getPartitionName();
@@ -259,9 +256,13 @@ public class HelixStateTransitionMsgHandler extends MessageHandler
     }
   }
 
-  public HelixTaskResult handleMessageInternal(Message message,
-                                               NotificationContext context)
+  @Override
+  public HelixTaskResult handleMessage()
+//  public HelixTaskResult handleMessageInternal(Message message,
+//                                               NotificationContext context)
   {
+	NotificationContext context = _notificationContext;
+	Message message = _message;
     synchronized (_stateModel)
     {
       HelixTaskResult taskResult = new HelixTaskResult();
@@ -274,7 +275,7 @@ public class HelixStateTransitionMsgHandler extends MessageHandler
                                 accessor);
       message.setExecuteStartTimeStamp(new Date().getTime());
 
-      Exception exception = null;
+      // Exception exception = null;
       try
       {
         // prepareMessageExecution(manager, message);
@@ -288,7 +289,7 @@ public class HelixStateTransitionMsgHandler extends MessageHandler
         taskResult.setSuccess(false);
         taskResult.setMessage(e.toString());
         taskResult.setException(e);
-        exception = e;
+        // exception = e;
         // return taskResult;
       }
       catch (Exception e)
@@ -310,11 +311,11 @@ public class HelixStateTransitionMsgHandler extends MessageHandler
         taskResult.setMessage(e.toString());
         taskResult.setException(e);
         taskResult.setInterrupted(e instanceof InterruptedException);
-        exception = e;
+        // exception = e;
       }
       
       // add task result to context
-      context.add("HELIX_TASK_RESULT", taskResult);
+      context.add(MapKey.HELIX_TASK_RESULT.toString(), taskResult);
       // postExecutionMessage(manager, message, context, taskResult, exception);
       postHandleMessage();
 
@@ -364,11 +365,11 @@ public class HelixStateTransitionMsgHandler extends MessageHandler
     }
   }
 
-  @Override
-  public HelixTaskResult handleMessage()
-  {
-    return handleMessageInternal(_message, _notificationContext);
-  }
+//  @Override
+//  public HelixTaskResult handleMessage()
+//  {
+//    return handleMessageInternal(_message, _notificationContext);
+//  }
 
   @Override
   public void onError(Exception e, ErrorCode code, ErrorType type)

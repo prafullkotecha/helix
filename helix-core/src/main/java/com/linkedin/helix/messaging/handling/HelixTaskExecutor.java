@@ -54,7 +54,6 @@ import com.linkedin.helix.monitoring.ParticipantMonitor;
 import com.linkedin.helix.participant.HelixStateMachineEngine;
 import com.linkedin.helix.util.StatusUpdateUtil;
 
-// TODO: abstract an interface for MessageExecutor
 public class HelixTaskExecutor implements MessageListener, TaskExecutor
 {
   // TODO: we need to further design how to throttle this.
@@ -67,7 +66,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
   // keep running task info (scheduled but not finished)
   protected final ConcurrentHashMap<String, MessageTaskInfo>   _taskMap;
   
-  // lock that protects ExecutorService.submit() task and put taskInfo into map is syn'ed
+  // lock that protects ExecutorService.submit() task and put taskInfo into map is sync'ed
   private final Object                                   _taskMapLock;
   private final StatusUpdateUtil                         _statusUpdateUtil;
   private final ParticipantMonitor                       _monitor;
@@ -84,14 +83,12 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
 
 //  final ConcurrentHashMap<String, ExecutorService>       _threadpoolMap             =
 //                                                                                        new ConcurrentHashMap<String, ExecutorService>();
-//  final ConcurrentHashMap<String, HelixTaskExecutorCompletionService> _completionSvcMap;
 
 
   Map<String, Integer>                                   _resourceThreadpoolSizeMap =
                                                                                         new ConcurrentHashMap<String, Integer>();
   
-//  final Set<String> _activeTasks;
-  
+  // timer for schedule timeout tasks
   final Timer _timer;
 
 
@@ -104,10 +101,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
     _statusUpdateUtil = new StatusUpdateUtil();
     _monitor = new ParticipantMonitor();
     
-    // thread-safe hash-set
-    // _activeTasks = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
-    
-    _timer = new Timer(true);	// created as a daemon timer thread to handle timeout
+    _timer = new Timer(true);	// created as a daemon timer thread to handle task timeout
     
     startMonitorThread();
   }
@@ -135,9 +129,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
       
       // _threadpoolMap.put(type, Executors.newFixedThreadPool(threadpoolSize));
       ExecutorService executorSvc = Executors.newFixedThreadPool(threadpoolSize);
-      // HelixTaskExecutorCompletionService completionSvc = new HelixTaskExecutorCompletionService(type, executorSvc);
       _executorMap.put(type, executorSvc);
-      // completionSvc.start();
       
       LOG.info("Adding msg factory for type " + type + " threadpool size "
           + threadpoolSize);
@@ -191,10 +183,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
         
         // _threadpoolMap.put(key, Executors.newFixedThreadPool(threadpoolSize));
         ExecutorService executorSvc = Executors.newFixedThreadPool(threadpoolSize);
-        // HelixTaskExecutorCompletionService completionSvc = new HelixTaskExecutorCompletionService(key, executorSvc);
         _executorMap.put(key, executorSvc);
-        // completionSvc.start();
-
 
         LOG.info("Adding per resource threadpool for resource " + resourceName
             + " with size " + threadpoolSize);
@@ -209,11 +198,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
    *
    */
   ExecutorService findExecutorServiceForMsg(Message message)
-  // CompletionService<HelixTaskResult> findExecutorServiceForMsg(Message message)
   {
-	// HelixTaskExecutorCompletionService completionSvc = _completionSvcMap.get(message.getMsgType());
-	
-	// CompletionService<HelixTaskResult> executorService = completionSvc.getCompletionService(); // 
 	ExecutorService executorSvc = _executorMap.get(message.getMsgType());
     if (message.getMsgType().equals(MessageType.STATE_TRANSITION.toString()))
     {
@@ -271,8 +256,6 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
       NotificationContext notificationContext = task.getNotificationContext();
 
 //    assert (handler != null);
-//    synchronized (_lock)
-    {
       try
       {
 
@@ -292,58 +275,40 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
 
         // HelixTask task = new HelixTask(message, notificationContext, handler, this);
         
-        // this sync guarantees that ExecutorService.submit() task and put taskInfo into map are syn'ed
+        // this sync guarantees that ExecutorService.submit() task and put taskInfo into map are sync'ed
         synchronized(_taskMapLock) {
-        	
-        if (!_taskMap.contains(taskId)) {
-        // if (_taskMap.putIfAbsent(taskId, taskInfo) == null) {
-        	ExecutorService exeSvc = findExecutorServiceForMsg(message);
-        	// CompletionService<HelixTaskResult> completionSvc = findExecutorServiceForMsg(message);
-        	Future<HelixTaskResult> future = exeSvc.submit(task);
-        	
-            TimerTask timerTask = null;
-            if (message.getExecutionTimeout() > 0)
-            {
-              timerTask = new MessageTimeoutTask(this, task);
-              _timer.schedule(timerTask, message.getExecutionTimeout());
-              LOG.info("Message starts with timeout " + message.getExecutionTimeout()
-                  + " MsgId: " + task.getTaskId());
+            	
+            if (!_taskMap.contains(taskId)) {
+            	ExecutorService exeSvc = findExecutorServiceForMsg(message);
+            	Future<HelixTaskResult> future = exeSvc.submit(task);
+            	
+                TimerTask timerTask = null;
+                if (message.getExecutionTimeout() > 0)
+                {
+                  timerTask = new MessageTimeoutTask(this, task);
+                  _timer.schedule(timerTask, message.getExecutionTimeout());
+                  LOG.info("Message starts with timeout " + message.getExecutionTimeout()
+                      + " MsgId: " + task.getTaskId());
+                }
+                else
+                {
+                  LOG.debug("Message does not have timeout. MsgId: " + task.getTaskId());
+                }
+    
+            	_taskMap.put(taskId, new MessageTaskInfo(task, future, timerTask));
+    
+                LOG.info("Message: " + taskId + " handling task scheduled");
+    
+                return true;
+            } else {
+                _statusUpdateUtil.logWarning(message,
+                        HelixTaskExecutor.class,
+                        "Message handling task already sheduled for "
+                            + taskId,
+                        notificationContext.getManager()
+                                           .getHelixDataAccessor());
             }
-            else
-            {
-              LOG.debug("Message does not have timeout. MsgId: " + task.getTaskId());
-            }
-
-        	_taskMap.put(taskId, new MessageTaskInfo(task, future, timerTask));
-
-            LOG.info("Message: " + taskId + " handling task scheduled");
-
-            return true;
-        } else {
-            _statusUpdateUtil.logWarning(message,
-                    HelixTaskExecutor.class,
-                    "Message handling task already sheduled for "
-                        + taskId,
-                    notificationContext.getManager()
-                                       .getHelixDataAccessor());
-        }
         
-//        if (!_taskMap.containsKey(taskId))
-//        {
-//          LOG.info("Message:" + taskId + " handling task scheduled");
-//          Future<HelixTaskResult> future =
-//              findExecutorServiceForMsg(message).submit(task);
-//          _taskMap.put(taskId, future);
-//        }
-//        else
-//        {
-//          _statusUpdateUtil.logWarning(message,
-//                                       HelixTaskExecutor.class,
-//                                       "Message handling task already sheduled for "
-//                                           + taskId,
-//                                       notificationContext.getManager()
-//                                                          .getHelixDataAccessor());
-//        }
         }
       }
       catch (Exception e)
@@ -357,7 +322,6 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
                                    notificationContext.getManager()
                                                       .getHelixDataAccessor());
       }
-    }
     
     return false;
   }
@@ -368,13 +332,10 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
   {
 	Message message = task.getMessage();
 	NotificationContext notificationContext = task.getNotificationContext();
-//    synchronized (_lock)
-    {
-      String taskId = task.getTaskId();   // message.getMsgId() + "/" + message.getPartitionName();
+    String taskId = task.getTaskId();   // message.getMsgId() + "/" + message.getPartitionName();
 
-      synchronized(_taskMapLock) {
-    	  
-      
+    synchronized(_taskMapLock) 
+    {
       if (_taskMap.containsKey(taskId))
       {
     	  MessageTaskInfo taskInfo = _taskMap.get(taskId);
@@ -390,15 +351,11 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
                                   HelixTaskExecutor.class,
                                   "Trying to cancel the future for " + taskId,
                                   notificationContext.getManager().getHelixDataAccessor());
-        // Future<HelixTaskResult> future = _taskMap.get(taskId);
 
         // If the thread is still running it will be interrupted if cancel(true)
         // is called. So state transition callbacks should implement logic to
         // return
         // if it is interrupted.
-        // TODO: if canceled, the HelixTask may get an InterruptedException which will be caught
-        // it is possible that HelixTask will still be running to end and call finishTask()
-        // logic needs to be cleaned here
         if (future.cancel(true))
         {
           _statusUpdateUtil.logInfo(message, HelixTaskExecutor.class, "Canceled "
@@ -423,8 +380,6 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
                                      notificationContext.getManager()
                                                         .getHelixDataAccessor());
       }
-      
-      }
     }
     
     return false;
@@ -434,16 +389,13 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
   public void finishTask(MessageTask task)
   {
 	Message message = task.getMessage();
-    // synchronized (_lock)
-    {
-      String taskId = task.getTaskId();	// message.getMsgId() + "/" + message.getPartitionName();
-      LOG.info("message finished: " + taskId + ", took "
+    String taskId = task.getTaskId();	// message.getMsgId() + "/" + message.getPartitionName();
+    LOG.info("message finished: " + taskId + ", took "
           + (new Date().getTime() - message.getExecuteStartTimeStamp()));
-      synchronized(_taskMapLock) 
-      {
+    synchronized(_taskMapLock) 
+    {
       if (_taskMap.containsKey(taskId))
       {
-        // Future<HelixTaskResult> future = 
           MessageTaskInfo info = _taskMap.remove(taskId);
           if (info._timerTask != null) {
         	  info._timerTask.cancel();
@@ -452,8 +404,6 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
       else
       {
         LOG.warn("message: " + taskId + " not found in task map");
-      }
-      
       }
     }
   }
@@ -487,12 +437,13 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
         factory.reset();
       }
       // Cancel all scheduled future
-      // synchronized (_lock)
+      synchronized (_taskMapLock)
       {
         for (MessageTaskInfo info : _taskMap.values())
         {
-          Future<HelixTaskResult> future = info._future;
-          future.cancel(true);
+          // Future<HelixTaskResult> future = info._future;
+          // future.cancel(true);
+          cancelTask(info._task);
         }
         _taskMap.clear();
       }
@@ -622,8 +573,6 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
 
       readMsgs.add(message);
 
-      // TODO refactor this: update cs should be done in msg-handler
-      // do we really need to update cs here instead of let it done by complete of first msg?
       // batch creation of all current state meta data
       // do it for non-controller and state transition messages only
       if (!message.isControllerMsg()
@@ -714,7 +663,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
     LOG.info("shutting down TaskExecutor");
     _timer.cancel();
     
-//    synchronized (_lock)
+    synchronized (_taskMapLock)
     {
       for (String msgType : _executorMap.keySet())
       {

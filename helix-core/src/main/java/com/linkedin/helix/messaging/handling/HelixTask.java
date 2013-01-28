@@ -49,38 +49,6 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
   final HelixTaskExecutor                 _executor;
   volatile boolean                  _isTimeout = false;
 
-//  // TODO: move TimeoutTask out use one timer in executor to handle all timeout-tasks
-//  public class TimeoutCancelTask extends TimerTask
-//  {
-//    final HelixTaskExecutor   _executor;
-////    Message             _message;
-////    NotificationContext _context;
-//    final MessageTask _task;
-//
-//    public TimeoutCancelTask(HelixTaskExecutor executor,
-//    						   MessageTask task)
-////                             Message message,
-////                             NotificationContext context)
-//    {
-//      _executor = executor;
-//      _task = task;
-////      _message = message;
-////      _context = context;
-//    }
-//
-//    @Override
-//    public void run()
-//    {
-//      _isTimeout = true;
-//      LOG.warn("Message time out, canceling. id:" + _message.getMsgId()
-//          + " timeout : " + _message.getExecutionTimeout());
-//      _handler.onTimeout();
-//      // _executor.cancelTask(_message, _context);
-//      _executor.cancelTask(_task);
-//    }
-//
-//  }
-
   public HelixTask(Message message,
                    NotificationContext notificationContext,
                    MessageHandler handler,
@@ -97,23 +65,6 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
   @Override
   public HelixTaskResult call()
   {
-//	// TODO: should be started by task-executor which manages all helix-tasks
-//    // Start the timeout TimerTask, if necessary
-//    Timer timer = null;
-//    if (_message.getExecutionTimeout() > 0)
-//    {
-//      timer = new Timer(true);
-//      timer.schedule(new TimeoutCancelTask(_executor, this),
-//                     _message.getExecutionTimeout());
-//      LOG.info("Message starts with timeout " + _message.getExecutionTimeout()
-//          + " MsgId:" + _message.getMsgId());
-//    }
-//    else
-//    {
-//      LOG.info("Message does not have timeout. MsgId:" + _message.getMsgId() + "/"
-//          + _message.getPartitionName());
-//    }
-
     HelixTaskResult taskResult = new HelixTaskResult();
     
     Exception exception = null;
@@ -167,13 +118,6 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
       exception = e;
     }
 
-    // Cancel the timer since the handling is done
-    // it is fine if the TimerTask for canceling is called already
-//    if (timer != null)
-//    {
-//      timer.cancel();
-//    }
-
     if (taskResult.isSucess())
     {
       _statusUpdateUtil.logInfo(_message,
@@ -184,10 +128,7 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
     }
     else if (taskResult.isInterrupted())
     {
-    	// TODO: clean the logic here:
-    	// if it is a timeout and retry > 0, basically we don't remove message and send reply
-    
-//      LOG.info("Message " + _message.getMsgId() + " is interrupted");
+      LOG.info("Message " + _message.getMsgId() + " is interrupted");
       code = _isTimeout ? ErrorCode.TIMEOUT : ErrorCode.CANCEL;
       if (_isTimeout)
       {
@@ -236,8 +177,8 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
             reportMessageStat(_manager, _message, taskResult);
             sendReply(accessor, _message, taskResult);
             // _executor.finishTask(_message);
+            _executor.finishTask(this);
     	}
-        _executor.finishTask(this);
     }
     // TODO: capture errors and log here
     catch (Exception e)
@@ -384,9 +325,4 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
 		_isTimeout = true;
 		_handler.onTimeout();
 	}
-
-//	@Override
-//	public MessageTask clone() {
-//		return new HelixTask(_message, _notificationContext, _handler, _executor);
-//	}
 };
