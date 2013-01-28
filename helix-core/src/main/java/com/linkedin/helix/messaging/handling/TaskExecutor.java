@@ -51,7 +51,7 @@ public interface TaskExecutor {
 	 * @param message
 	 * @param context
 	 */
-	public void cancelTask(MessageTask task);
+	public boolean cancelTask(MessageTask task);
 
 	/**
 	 * finish a message execution

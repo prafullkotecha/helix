@@ -115,7 +115,7 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
 //    }
 
     HelixTaskResult taskResult = new HelixTaskResult();
-
+    
     Exception exception = null;
     ErrorType type = ErrorType.INTERNAL;
     ErrorCode code = ErrorCode.ERROR;
@@ -147,7 +147,7 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
       _statusUpdateUtil.logError(_message,
                                  HelixTask.class,
                                  e,
-                                 "State transition interrupted, timeout:" + _isTimeout,
+                                 "State transition interrupted",	//, timeout:" + _isTimeout,
                                  accessor);
       LOG.info("Message " + _message.getMsgId() + " is interrupted");
       taskResult.setInterrupted(true);
@@ -184,7 +184,10 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
     }
     else if (taskResult.isInterrupted())
     {
-      LOG.info("Message " + _message.getMsgId() + " is interrupted");
+    	// TODO: clean the logic here:
+    	// if it is a timeout and retry > 0, basically we don't remove message and send reply
+    
+//      LOG.info("Message " + _message.getMsgId() + " is interrupted");
       code = _isTimeout ? ErrorCode.TIMEOUT : ErrorCode.CANCEL;
       if (_isTimeout)
       {
@@ -196,8 +199,6 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
                                   "Message handling task timeout, retryCount:"
                                       + retryCount,
                                   accessor);
-        // TODO: move retry logic to task-executor?
-        //
         // Notify the handler that timeout happens, and the number of retries left
         // In case timeout happens (time out and also interrupted)
         // we should retry the execution of the message by re-schedule it in
@@ -380,7 +381,12 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
 	
 	@Override
 	public void onTimeout() {
+		_isTimeout = true;
 		_handler.onTimeout();
 	}
 
+//	@Override
+//	public MessageTask clone() {
+//		return new HelixTask(_message, _notificationContext, _handler, _executor);
+//	}
 };

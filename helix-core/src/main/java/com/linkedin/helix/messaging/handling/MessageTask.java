@@ -5,7 +5,8 @@ import java.util.concurrent.Callable;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.model.Message;
 
-public interface MessageTask extends Callable<HelixTaskResult>{
+// clone is needed when MessageTask times out and a clone task needs to be scheduled
+public interface MessageTask extends Callable<HelixTaskResult> {
 	String getTaskId();
 	
 	Message getMessage();
@@ -13,4 +14,6 @@ public interface MessageTask extends Callable<HelixTaskResult>{
 	NotificationContext getNotificationContext();
 	
 	void onTimeout();
+
+//	MessageTask clone();
 }

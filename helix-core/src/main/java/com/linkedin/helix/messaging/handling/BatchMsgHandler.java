@@ -12,6 +12,7 @@ import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 
 import com.linkedin.helix.HelixDataAccessor;
+import com.linkedin.helix.HelixException;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.NotificationContext.MapKey;
@@ -31,10 +32,26 @@ public class BatchMsgHandler extends MessageHandler {
 	public BatchMsgHandler(Message msg, NotificationContext context, MessageHandlerFactory fty,
 	        BatchMsgWrapper batchMsgWrapper, TaskExecutor executor) {
 		super(msg, context);
+		
+		if (fty == null || executor == null) {
+			throw new HelixException("MessageHandlerFactory | TaskExecutor can't be null");
+		}
+		
 		_msgHandlerFty = fty;
 		_batchMsgWrapper = batchMsgWrapper;
 		_executor = executor;
 	}
+	
+	List<MessageHandler> createMsgHandlers(List<Message> msgs, NotificationContext context) {
+		
+		List<MessageHandler> handlers = new ArrayList<MessageHandler>();
+		for (Message msg : msgs) {
+			 MessageHandler handler = _msgHandlerFty.createHandler(msg, context);
+			 handlers.add(handler);
+		}
+		return handlers;
+	}
+
 
 	public void preHandleMessage() {
 		if (_message.getBatchMessageMode() == true && _batchMsgWrapper != null) {
@@ -53,14 +70,17 @@ public class BatchMsgHandler extends MessageHandler {
 		HelixDataAccessor accessor = manager.getHelixDataAccessor();
 		ConcurrentHashMap<String, CurrentStateUpdate> csUpdateMap = (ConcurrentHashMap<String, CurrentStateUpdate>) _notificationContext
 		        .get(MapKey.CURRENT_STATE_UPDATE.toString());
-		Map<PropertyKey, CurrentState> csUpdate = merge(csUpdateMap);
-
-		// TODO: change to use asyncSet
-		for (PropertyKey key : csUpdate.keySet()) {
-			// logger.info("updateCS: " + key);
-			// System.out.println("\tupdateCS: " + key.getPath() + ", " +
-			// curStateMap.get(key));
-			accessor.updateProperty(key, csUpdate.get(key));
+		
+		if (csUpdateMap != null) {
+    		Map<PropertyKey, CurrentState> csUpdate = mergeCurStateUpdate(csUpdateMap);
+    
+    		// TODO: change to use asyncSet
+    		for (PropertyKey key : csUpdate.keySet()) {
+    			// logger.info("updateCS: " + key);
+    			// System.out.println("\tupdateCS: " + key.getPath() + ", " +
+    			// curStateMap.get(key));
+    			accessor.updateProperty(key, csUpdate.get(key));
+    		}
 		}
 	}
 
@@ -88,13 +108,16 @@ public class BatchMsgHandler extends MessageHandler {
 			List<MessageTask> batchTasks = new ArrayList<MessageTask>();
 			for (int i = 0; i < partitionKeys.size(); i += exeBatchSize) {
 				if (i + exeBatchSize <= partitionKeys.size()) {
-					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(_message, subMsgs.subList(i, i
-					        + exeBatchSize), _notificationContext, _msgHandlerFty);
+					List<Message> msgs = subMsgs.subList(i, i + exeBatchSize);
+					List<MessageHandler> handlers = createMsgHandlers(msgs, _notificationContext);
+					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(_message, msgs, handlers, _notificationContext);
 					batchTasks.add(batchTask);
 
 				} else {
-					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(_message, subMsgs.subList(i, i
-					        + partitionKeys.size()), _notificationContext, _msgHandlerFty);
+					List<Message> msgs = subMsgs.subList(i, i + partitionKeys.size());
+					List<MessageHandler> handlers = createMsgHandlers(msgs, _notificationContext);
+
+					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(_message, msgs, handlers, _notificationContext);
 					batchTasks.add(batchTask);
 				}
 			}
@@ -134,7 +157,7 @@ public class BatchMsgHandler extends MessageHandler {
 
 	// TODO: optimize this based on the fact that each cs update is for a
 	// distinct partition
-	public Map<PropertyKey, CurrentState> merge(
+	private Map<PropertyKey, CurrentState> mergeCurStateUpdate(
 	        ConcurrentHashMap<String, CurrentStateUpdate> csUpdateMap) {
 		Map<String, CurrentStateUpdate> curStateUpdateMap = new HashMap<String, CurrentStateUpdate>();
 		for (CurrentStateUpdate update : csUpdateMap.values()) {

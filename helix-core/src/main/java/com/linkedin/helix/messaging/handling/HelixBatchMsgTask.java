@@ -7,36 +7,27 @@ import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.model.Message;
 
 public class HelixBatchMsgTask implements MessageTask { // implements
-														// Callable<HelixTaskResult>
-														// {
+	                                                    // Callable<HelixTaskResult>
+	                                                    // {
 	final NotificationContext _context;
 	final Message _batchMsg;
 	final List<Message> _msgs;
-	final MessageHandlerFactory _msgHandlerFty;
+	// final MessageHandlerFactory _msgHandlerFty;
+	final List<MessageHandler> _handlers;
 
-	public HelixBatchMsgTask(Message batchMsg, List<Message> msgs, NotificationContext context,
-	        MessageHandlerFactory msgHandlerFty) {
+	public HelixBatchMsgTask(Message batchMsg, List<Message> msgs, List<MessageHandler> handlers,
+	        NotificationContext context) {
 		_batchMsg = batchMsg;
 		_context = context;
 		_msgs = msgs;
-		_msgHandlerFty = msgHandlerFty;
-	}
-
-	MessageHandler createMsgHandler(Message msg, NotificationContext context) {
-		if (_msgHandlerFty == null) {
-			// LOG.warn("Fail to find message handler factory for type: " +
-			// msgType + " mid:"
-			// + message.getMsgId());
-			return null;
-		}
-
-		return _msgHandlerFty.createHandler(msg, context);
+		_handlers = handlers;
 	}
 
 	@Override
 	public HelixTaskResult call() throws Exception {
-		for (Message msg : _msgs) {
-			MessageHandler handler = createMsgHandler(msg, _context);
+		// for (Message msg : _msgs) {
+		for (MessageHandler handler : _handlers) {
+			// MessageHandler handler = createMsgHandler(msg, _context);
 			if (handler != null) {
 				HelixTaskResult result = handler.handleMessage();
 				// if any fails, skip the remaining handlers and return fail
@@ -70,17 +61,24 @@ public class HelixBatchMsgTask implements MessageTask { // implements
 	public Message getMessage() {
 		return _batchMsg;
 	}
-	
+
 	@Override
-	public NotificationContext getNotificationContext()
-	{
+	public NotificationContext getNotificationContext() {
 		return _context;
 	}
 
 	@Override
 	public void onTimeout() {
-		// TODO: call onTimeout() on all handlers
-		// _handler.onTimeout();
+		for (MessageHandler handler : _handlers) {
+			if (handler != null) {
+				handler.onTimeout();
+			}
+		}
 	}
 
+//	@Override
+//	public MessageTask clone() {
+//		return new HelixBatchMsgTask(_batchMsg, _msgs, _handlers, _context);
+//
+//	}
 }

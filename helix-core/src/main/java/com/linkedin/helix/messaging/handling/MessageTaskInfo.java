@@ -18,4 +18,5 @@ public class MessageTaskInfo {
 	public Future<HelixTaskResult> getFuture() {
 		return _future;
 	}
+	
 }

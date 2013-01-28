@@ -21,6 +21,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.testng.Assert;
 import org.testng.AssertJUnit;
 import org.testng.annotations.Test;
@@ -135,6 +137,8 @@ public class TestHelixTaskExecutor
         {
           sleepTimes = 10;
         }
+        
+        System.out.println("msg: " + _message.getId() + " using sleepTimes: " + sleepTimes);
         _processingMsgIds.put(_message.getMsgId(), _message.getMsgId());
         try
         {
@@ -508,13 +512,13 @@ public class TestHelixTaskExecutor
       NotificationContext changeContext = new NotificationContext(manager);
       executor.onMessage("some", msgList, changeContext);
       Thread.sleep(500);
-      for(ExecutorService svc : executor._threadpoolMap.values())
+      for(ExecutorService svc : executor._executorMap.values())
       {
         Assert.assertFalse(svc.isShutdown());
       }
       Assert.assertTrue(factory._processedMsgIds.size() > 0);
       executor.shutdown();
-      for(ExecutorService svc : executor._threadpoolMap.values())
+      for(ExecutorService svc : executor._executorMap.values())
       {
         Assert.assertTrue(svc.isShutdown());
       }
@@ -522,10 +526,10 @@ public class TestHelixTaskExecutor
   }
   
   @Test ()
-  public void testRetryCount() throws InterruptedException
+  public void testNoRetry() throws InterruptedException
   {
-    String p = "test_";
-    System.out.println(p.substring(p.lastIndexOf('_')+1));
+//    String p = "test_";
+//    System.out.println(p.substring(p.lastIndexOf('_')+1));
     HelixTaskExecutor executor = new HelixTaskExecutor();
     HelixManager manager = new MockClusterManager();
 
@@ -561,10 +565,29 @@ public class TestHelixTaskExecutor
         AssertJUnit.assertTrue(factory._timedOutMsgIds.containsKey(msgList.get(i).getId()));
       }
     }
-    factory.reset();
-    msgList.clear();
+  }
+  
+  @Test ()
+  public void testRetryOnce() throws InterruptedException
+  {
+	  Logger.getRootLogger().setLevel(Level.INFO);
+
+//    String p = "test_";
+//    System.out.println(p.substring(p.lastIndexOf('_')+1));
+    HelixTaskExecutor executor = new HelixTaskExecutor();
+    HelixManager manager = new MockClusterManager();
+
+    CancellableHandlerFactory factory = new CancellableHandlerFactory();
+    executor.registerMessageHandlerFactory(factory.getMessageType(), factory);
+
+    NotificationContext changeContext = new NotificationContext(manager);
+
+    List<Message> msgList = new ArrayList<Message>();
+
+//    factory.reset();
+//    msgList.clear();
     // Test the case that the message are executed for the second time
-    nMsgs2 = 4;
+    int nMsgs2 = 4;
     for(int i = 0; i < nMsgs2; i++)
     {
       Message msg = new Message(factory.getMessageType(), UUID.randomUUID().toString());
