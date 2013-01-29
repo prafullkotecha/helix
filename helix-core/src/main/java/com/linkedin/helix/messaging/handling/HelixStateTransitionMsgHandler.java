@@ -314,7 +314,7 @@ public class HelixStateTransitionMsgHandler extends MessageHandler
         // exception = e;
       }
       
-      // add task result to context
+      // add task result to context for postHandling
       context.add(MapKey.HELIX_TASK_RESULT.toString(), taskResult);
       // postExecutionMessage(manager, message, context, taskResult, exception);
       postHandleMessage();

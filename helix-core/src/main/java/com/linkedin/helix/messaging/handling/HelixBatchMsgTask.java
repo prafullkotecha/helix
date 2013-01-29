@@ -28,60 +28,40 @@ public class HelixBatchMsgTask implements MessageTask {
 
 	@Override
 	public HelixTaskResult call() throws Exception {
-	    HelixTaskResult taskResult = new HelixTaskResult();
+	    HelixTaskResult taskResult = null;
 	    
-	    Exception exception = null;
-	    ErrorType type = ErrorType.INTERNAL;
-	    ErrorCode code = ErrorCode.ERROR;
-
 	    long start = System.currentTimeMillis();
 	    LOG.info("taskId:" + getTaskId() + " handling task begin, at: " + start);
 
 	    try
 	    {
-
     		for (MessageHandler handler : _handlers) {
     			if (handler != null) {
     				taskResult = handler.handleMessage();
     				// if any fails, skip the remaining handlers and return fail
     				if (!taskResult.isSucess()) {
-    					// return result;
-    					break;
+    					return taskResult;
     				}
     			}
     		}
-	    }
-	    catch (InterruptedException e)
-	    {
-	      LOG.info("taskId: " + getTaskId() + " is interrupted");
-	      taskResult.setInterrupted(true);
-	      taskResult.setException(e);
-	      exception = e;
 	    }
 	    catch (Exception e)
 	    {
 	      String errorMessage =
 	          "Exception while executing a task. " + e + " taskId: " + getTaskId();
 	      LOG.error(errorMessage, e);
-	      taskResult.setSuccess(false);
+	      
+	      taskResult = new HelixTaskResult();
 	      taskResult.setException(e);
 	      taskResult.setMessage(e.getMessage());
-	      exception = e;
+	      
+	      return taskResult;
 	    }
 
-	    if (taskResult.isSucess())
-	    {
-	      LOG.info("task: " + getTaskId() + " completed.");
-	    }
-	    else if (taskResult.isInterrupted())
-	    {
-	      LOG.info("task: " + getTaskId() + " is interrupted");
-	    }
+	    LOG.info("task: " + getTaskId() + " completed sucessfully");
 	    
-        LOG.info("task:" + getTaskId() + " handling task completed, results:" + taskResult.isSucess());
-
-        taskResult.setErrcode(code);
-        taskResult.setErrType(type);
+	    taskResult = new HelixTaskResult();
+	    taskResult.setSuccess(true);
 		return taskResult;
 	}
 

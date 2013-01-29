@@ -29,24 +29,6 @@ public class HelixTaskResult
   private Map<String, String> _taskResultMap = new HashMap<String, String>();
   private boolean _interrupted = false;
   Exception _exception = null;
-  private ErrorCode _errCode;
-  private ErrorType _errType;
-  
-  public ErrorCode getErrCode() {
-	  return _errCode;
-  }
-  
-  public void setErrcode(ErrorCode errCode) {
-	  _errCode = errCode;
-  }
-  
-  public ErrorType getErrType() {
-	  return _errType;
-  }
-  
-  public void setErrType(ErrorType errType) {
-	  _errType = errType;
-  }
   
   public boolean isSucess()
   {

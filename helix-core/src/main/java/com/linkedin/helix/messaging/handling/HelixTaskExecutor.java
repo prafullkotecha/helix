@@ -244,6 +244,22 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
       return futures;
   }
 
+  @Override
+  public boolean cancelTimeoutTask(MessageTask task)
+  {
+	  synchronized(_taskMapLock) {
+		  String taskId = task.getTaskId();
+          if (_taskMap.contains(taskId)) {
+        	  MessageTaskInfo info = _taskMap.get(taskId);
+        	  if (info._timerTask != null) {
+        		  info._timerTask.cancel();
+        	  }
+        	  return true;
+          }
+          return false;
+	  }
+  }
+
 
   @Override
 //  public void scheduleTask(Message message,

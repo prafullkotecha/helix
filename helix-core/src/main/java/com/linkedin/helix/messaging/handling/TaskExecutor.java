@@ -54,6 +54,14 @@ public interface TaskExecutor {
 	public boolean cancelTask(MessageTask task);
 
 	/**
+	 * cancel the timeout for the given task
+	 * 
+	 * @param task
+	 * @return
+	 */
+	public boolean cancelTimeoutTask(MessageTask task);
+	
+	/**
 	 * finish a message execution
 	 * 
 	 * @param message
