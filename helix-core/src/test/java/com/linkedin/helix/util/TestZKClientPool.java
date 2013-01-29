@@ -34,6 +34,9 @@ public class TestZKClientPool
   @Test
   public void test() throws Exception
   {
+	final String zkAddr = "localhost:2179";
+	ZkServer zkServer = null;
+
 	try
 	{
 		
@@ -43,8 +46,7 @@ public class TestZKClientPool
     String testName = "TestZKClientPool";
     System.out.println("START " + testName + " at " + new Date(System.currentTimeMillis()));
 
-    String zkAddr = "localhost:2187";
-    ZkServer zkServer = TestHelper.startZkSever(zkAddr);
+    zkServer = TestHelper.startZkSever(zkAddr);
     ZKClientPool.reset();
     ZkClient zkClient = ZKClientPool.getZkClient(zkAddr);
     
@@ -80,6 +82,7 @@ public class TestZKClientPool
 	} catch (Exception e) {
 		e.printStackTrace();
 	} finally {
+	    TestHelper.stopZkServer(zkServer);
 	    Logger.getRootLogger().setLevel(Level.ERROR);
 	}
   }

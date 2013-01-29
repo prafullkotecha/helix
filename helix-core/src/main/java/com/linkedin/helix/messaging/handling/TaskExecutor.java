@@ -2,9 +2,7 @@ package com.linkedin.helix.messaging.handling;
 
 import java.util.List;
 import java.util.concurrent.Future;
-
-import com.linkedin.helix.NotificationContext;
-import com.linkedin.helix.model.Message;
+import java.util.concurrent.TimeUnit;
 
 public interface TaskExecutor {
 	public static final int DEFAULT_PARALLEL_TASKS = 40;
@@ -42,7 +40,7 @@ public interface TaskExecutor {
 	 * 
 	 * @param tasks
 	 */
-	public List<Future<HelixTaskResult>> invokeAllTasks(List<MessageTask> tasks)
+	public List<Future<HelixTaskResult>> invokeAllTasks(List<MessageTask> tasks, long timeout, TimeUnit unit)
 	        throws InterruptedException;
 
 	/**

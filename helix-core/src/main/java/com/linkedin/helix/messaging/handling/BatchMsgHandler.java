@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
@@ -130,7 +131,11 @@ public class BatchMsgHandler extends MessageHandler {
     			}
 
 				// invokeAll() is blocking call
-				List<Future<HelixTaskResult>> futures = _executor.invokeAllTasks(batchTasks);
+    			long timeout = _message.getExecutionTimeout();
+    			if (timeout == 0) {
+    				timeout = Long.MAX_VALUE;
+    			}
+				List<Future<HelixTaskResult>> futures = _executor.invokeAllTasks(batchTasks, timeout, TimeUnit.MILLISECONDS);
 				for (Future<HelixTaskResult> future : futures) {
 					HelixTaskResult subTaskResult = future.get();
 

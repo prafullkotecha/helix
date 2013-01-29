@@ -218,7 +218,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
   
   // ExecutorService impl's in JDK are thread-safe
   @Override
-  public List<Future<HelixTaskResult>> invokeAllTasks(List<MessageTask> tasks) throws InterruptedException
+  public List<Future<HelixTaskResult>> invokeAllTasks(List<MessageTask> tasks, long timeout, TimeUnit unit) throws InterruptedException
   {
 	  if (tasks == null || tasks.size() == 0) {
 		  return null;
@@ -239,7 +239,7 @@ public class HelixTaskExecutor implements MessageListener, TaskExecutor
 	  	  
 	  // this is a blocking call
 	  // TODO: need a timeout
-      List<Future<HelixTaskResult>> futures = exeSvc.invokeAll(tasks);
+      List<Future<HelixTaskResult>> futures = exeSvc.invokeAll(tasks, timeout, unit);
       
       return futures;
   }
