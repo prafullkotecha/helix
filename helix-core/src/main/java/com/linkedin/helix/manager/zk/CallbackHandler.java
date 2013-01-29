@@ -103,7 +103,6 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
       if (logger.isInfoEnabled())
       {
         logger.info(Thread.currentThread().getId() + " START:INVOKE "
-        // + changeContext.getPathChanged()
             + _path + " listener:" + _listener.getClass().getCanonicalName());
       }
 

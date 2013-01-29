@@ -132,7 +132,7 @@ public class BatchMsgHandler extends MessageHandler {
 
 				// invokeAll() is blocking call
     			long timeout = _message.getExecutionTimeout();
-    			if (timeout == 0) {
+    			if (timeout == -1) {
     				timeout = Long.MAX_VALUE;
     			}
 				List<Future<HelixTaskResult>> futures = _executor.invokeAllTasks(batchTasks, timeout, TimeUnit.MILLISECONDS);
