@@ -72,7 +72,7 @@ public class HelixTask implements MessageTask // Callable<HelixTaskResult>
     ErrorCode code = ErrorCode.ERROR;
 
     long start = System.currentTimeMillis();
-    LOG.info("msg:" + _message.getMsgId() + " handling task begin, at: " + start);
+    LOG.info("taskId:" + getTaskId() + " handling task begin, at: " + start);
     HelixDataAccessor accessor = _manager.getHelixDataAccessor();
     _statusUpdateUtil.logInfo(_message,
                               HelixTask.class,

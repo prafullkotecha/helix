@@ -3,10 +3,16 @@ package com.linkedin.helix.messaging.handling;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.linkedin.helix.NotificationContext;
+import com.linkedin.helix.messaging.handling.MessageHandler.ErrorCode;
+import com.linkedin.helix.messaging.handling.MessageHandler.ErrorType;
 import com.linkedin.helix.model.Message;
 
 public class HelixBatchMsgTask implements MessageTask {
+	private static Logger LOG = Logger.getLogger(HelixBatchMsgTask.class);
+
 	final NotificationContext _context;
 	final Message _batchMsg;
 	final List<Message> _msgs;
@@ -22,19 +28,61 @@ public class HelixBatchMsgTask implements MessageTask {
 
 	@Override
 	public HelixTaskResult call() throws Exception {
-		for (MessageHandler handler : _handlers) {
-			if (handler != null) {
-				HelixTaskResult result = handler.handleMessage();
-				// if any fails, skip the remaining handlers and return fail
-				if (!result.isSucess()) {
-					return result;
-				}
-			}
-		}
+	    HelixTaskResult taskResult = new HelixTaskResult();
+	    
+	    Exception exception = null;
+	    ErrorType type = ErrorType.INTERNAL;
+	    ErrorCode code = ErrorCode.ERROR;
 
-		HelixTaskResult result = new HelixTaskResult();
-		result.setSuccess(true);
-		return result;
+	    long start = System.currentTimeMillis();
+	    LOG.info("taskId:" + getTaskId() + " handling task begin, at: " + start);
+
+	    try
+	    {
+
+    		for (MessageHandler handler : _handlers) {
+    			if (handler != null) {
+    				taskResult = handler.handleMessage();
+    				// if any fails, skip the remaining handlers and return fail
+    				if (!taskResult.isSucess()) {
+    					// return result;
+    					break;
+    				}
+    			}
+    		}
+	    }
+	    catch (InterruptedException e)
+	    {
+	      LOG.info("taskId: " + getTaskId() + " is interrupted");
+	      taskResult.setInterrupted(true);
+	      taskResult.setException(e);
+	      exception = e;
+	    }
+	    catch (Exception e)
+	    {
+	      String errorMessage =
+	          "Exception while executing a task. " + e + " taskId: " + getTaskId();
+	      LOG.error(errorMessage, e);
+	      taskResult.setSuccess(false);
+	      taskResult.setException(e);
+	      taskResult.setMessage(e.getMessage());
+	      exception = e;
+	    }
+
+	    if (taskResult.isSucess())
+	    {
+	      LOG.info("task: " + getTaskId() + " completed.");
+	    }
+	    else if (taskResult.isInterrupted())
+	    {
+	      LOG.info("task: " + getTaskId() + " is interrupted");
+	    }
+	    
+        LOG.info("task:" + getTaskId() + " handling task completed, results:" + taskResult.isSucess());
+
+        taskResult.setErrcode(code);
+        taskResult.setErrType(type);
+		return taskResult;
 	}
 
 	@Override

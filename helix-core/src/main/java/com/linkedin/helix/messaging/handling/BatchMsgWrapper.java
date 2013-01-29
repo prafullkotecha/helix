@@ -11,11 +11,9 @@ public class BatchMsgWrapper
 {
 	public void start(Message batchMsg, NotificationContext context) 
 	{	
-		System.out.println("default batchMsg.start() invoked");
 	}
 	
 	public void end(Message batchMsg, NotificationContext context) 
 	{	
-		System.out.println("default batchMsg.end() invoked");
 	}
 }

@@ -28,6 +28,8 @@ public class BatchMsgHandler extends MessageHandler {
 	final MessageHandlerFactory _msgHandlerFty;
 	final BatchMsgWrapper _batchMsgWrapper;
 	final TaskExecutor _executor;
+	final List<Message> _subMessages;
+	final List<MessageHandler> _subMessageHandlers;
 
 	public BatchMsgHandler(Message msg, NotificationContext context, MessageHandlerFactory fty,
 	        BatchMsgWrapper batchMsgWrapper, TaskExecutor executor) {
@@ -40,6 +42,22 @@ public class BatchMsgHandler extends MessageHandler {
 		_msgHandlerFty = fty;
 		_batchMsgWrapper = batchMsgWrapper;
 		_executor = executor;
+
+		// create sub-messages
+		_subMessages = new ArrayList<Message>();
+		List<String> partitionKeys = _message.getPartitionNames();
+		for (String partitionKey : partitionKeys) {
+			// assign a new message id, put batch-msg-id to parent-id field
+			Message subMsg = new Message(_message.getRecord(), UUID.randomUUID().toString());
+			subMsg.setPartitionName(partitionKey);
+			subMsg.setAttribute(Attributes.PARENT_MSG_ID, _message.getId());
+			subMsg.setGroupMessageMode(false);
+
+			_subMessages.add(subMsg);
+		}
+
+		// create sub-message handlers
+		_subMessageHandlers = createMsgHandlers(_subMessages, context);
 	}
 	
 	List<MessageHandler> createMsgHandlers(List<Message> msgs, NotificationContext context) {
@@ -90,32 +108,22 @@ public class BatchMsgHandler extends MessageHandler {
 		synchronized (_batchMsgWrapper) {
 			preHandleMessage();
 
-			List<Message> subMsgs = new ArrayList<Message>();
-			List<String> partitionKeys = _message.getPartitionNames();
-			for (String partitionKey : partitionKeys) {
-				// assign a new message id, put batch-msg-id to parent-id field
-				Message subMsg = new Message(_message.getRecord(), UUID.randomUUID().toString());
-				subMsg.setPartitionName(partitionKey);
-				subMsg.setAttribute(Attributes.PARENT_MSG_ID, _message.getId());
-				subMsg.setGroupMessageMode(false);
-
-				subMsgs.add(subMsg);
-			}
 
 			// System.err.println("create subMsgs: " + subMsgs);
 
 			int exeBatchSize = 1; // TODO: getExeBatchSize from msg
 			List<MessageTask> batchTasks = new ArrayList<MessageTask>();
+			List<String> partitionKeys = _message.getPartitionNames();
 			for (int i = 0; i < partitionKeys.size(); i += exeBatchSize) {
 				if (i + exeBatchSize <= partitionKeys.size()) {
-					List<Message> msgs = subMsgs.subList(i, i + exeBatchSize);
-					List<MessageHandler> handlers = createMsgHandlers(msgs, _notificationContext);
+					List<Message> msgs = _subMessages.subList(i, i + exeBatchSize);
+					List<MessageHandler> handlers = _subMessageHandlers.subList(i, i + exeBatchSize);
 					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(_message, msgs, handlers, _notificationContext);
 					batchTasks.add(batchTask);
 
 				} else {
-					List<Message> msgs = subMsgs.subList(i, i + partitionKeys.size());
-					List<MessageHandler> handlers = createMsgHandlers(msgs, _notificationContext);
+					List<Message> msgs = _subMessages.subList(i, i + partitionKeys.size());
+					List<MessageHandler> handlers = _subMessageHandlers.subList(i, i + partitionKeys.size());
 
 					HelixBatchMsgTask batchTask = new HelixBatchMsgTask(_message, msgs, handlers, _notificationContext);
 					batchTasks.add(batchTask);
@@ -132,6 +140,7 @@ public class BatchMsgHandler extends MessageHandler {
 					// if any subMsg execution fails, skip postHandling() and
 					// return
 					if (!taskResult.isSucess()) {
+						onError(taskResult.getException(), taskResult.getErrCode(), taskResult.getErrType());
 						return taskResult;
 					}
 
@@ -152,7 +161,10 @@ public class BatchMsgHandler extends MessageHandler {
 
 	@Override
 	public void onError(Exception e, ErrorCode code, ErrorType type) {
-		// TODO: call onError on each subMsg handler
+		// if one sub-message execution fails, call onError on all sub-message handlers
+		for (MessageHandler handler : _subMessageHandlers) {
+			handler.onError(e, code, type);
+		}
 	}
 
 	// TODO: optimize this based on the fact that each cs update is for a
