@@ -48,8 +48,6 @@ public class HelixTask implements MessageTask
   final StatusUpdateUtil                  _statusUpdateUtil;
   final HelixTaskExecutor                 _executor;
   volatile boolean                  _isTimeout = false;
-//  final MessageTimeoutTask _timeoutTask;
-  
 
   public HelixTask(Message message,
                    NotificationContext notificationContext,

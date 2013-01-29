@@ -107,8 +107,7 @@ public class TestHelper
           }
           catch (Exception e)
           {
-            LOG.error("fail to deleteRecursive path:" + rootNamespace + "\nexception:"
-                + e);
+            LOG.error("fail to deleteRecursive path:" + rootNamespace, e);
           }
         }
       }
@@ -126,7 +125,7 @@ public class TestHelper
     if (zkServer != null)
     {
       zkServer.shutdown();
-      System.out.println("Shut down zookeeper at port " + zkServer.getPort()
+      System.out.println("Shutdown zookeeper at port " + zkServer.getPort()
           + " in thread " + Thread.currentThread().getName());
     }
   }

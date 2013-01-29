@@ -19,6 +19,8 @@ import java.util.Date;
 
 import org.I0Itec.zkclient.ZkServer;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -32,11 +34,18 @@ public class TestZKClientPool
   @Test
   public void test() throws Exception
   {
+	try
+	{
+		
+	
+    Logger.getRootLogger().setLevel(Level.INFO);
+
     String testName = "TestZKClientPool";
     System.out.println("START " + testName + " at " + new Date(System.currentTimeMillis()));
 
     String zkAddr = "localhost:2187";
     ZkServer zkServer = TestHelper.startZkSever(zkAddr);
+    ZKClientPool.reset();
     ZkClient zkClient = ZKClientPool.getZkClient(zkAddr);
     
     zkClient.createPersistent("/" + testName, new ZNRecord(testName));
@@ -67,5 +76,11 @@ public class TestZKClientPool
     zkClient.close();
     TestHelper.stopZkServer(zkServer);
     System.out.println("END " + testName + " at " + new Date(System.currentTimeMillis()));
+    
+	} catch (Exception e) {
+		e.printStackTrace();
+	} finally {
+	    Logger.getRootLogger().setLevel(Level.ERROR);
+	}
   }
 }
