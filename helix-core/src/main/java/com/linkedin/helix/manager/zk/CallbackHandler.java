@@ -24,6 +24,7 @@ import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.Watcher.Event.EventType;
 
+import com.linkedin.helix.BaseDataAccessor;
 import com.linkedin.helix.ConfigChangeListener;
 import com.linkedin.helix.ControllerChangeListener;
 import com.linkedin.helix.CurrentStateChangeListener;
@@ -41,6 +42,7 @@ import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyPathConfig;
 import com.linkedin.helix.ScopedConfigChangeListener;
+import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.model.CurrentState;
 import com.linkedin.helix.model.ExternalView;
 import com.linkedin.helix.model.HealthStat;
@@ -67,8 +69,9 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
   private final HelixManager _manager;
 
   private final PropertyKey _propertyKey;
+  private final BaseDataAccessor<ZNRecord> _baseAccessor;
   
-  public CallbackHandler(HelixManager manager, ZkClient client, PropertyKey propertyKey, // String path,
+  public CallbackHandler(HelixManager manager, ZkClient client, PropertyKey propertyKey,
                          Object listener, EventType[] eventTypes, ChangeType changeType)
   {
     this._manager = manager;
@@ -79,6 +82,7 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
     this._listener = listener;
     this._eventTypes = eventTypes;
     this._changeType = changeType;
+    _baseAccessor = new ZkBaseDataAccessor<ZNRecord>(client);
     
     lastNotificationTimeStamp = new AtomicLong(System.nanoTime());
     init();
@@ -160,12 +164,6 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
         currentStateChangeListener = (CurrentStateChangeListener) _listener;
         subscribeForChanges(changeContext, _path, true, true);
         String instanceName = PropertyPathConfig.getInstanceNameFromPath(_path);
-//        String[] pathParts = _path.split("/");
-
-        // TODO: fix this
-//        List<CurrentState> currentStates =
-//            _accessor.getChildValues(keyBuilder.currentStates(instanceName,
-//                                                              pathParts[pathParts.length - 1]));
         List<CurrentState> currentStates = _accessor.getChildValues(_propertyKey);
 
         currentStateChangeListener.onStateChange(instanceName,
@@ -243,61 +241,108 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
     }
   }
 
-  private void subscribeForChanges(NotificationContext context,
-                                   String path,
-                                   boolean watchParent,
-                                   boolean watchChild)
+  private void subscribeChildChange(String path, NotificationContext context)
   {
-    NotificationContext.Type type = context.getType();
-    if (watchParent)
-    {
+	  NotificationContext.Type type = context.getType();
       if (type == NotificationContext.Type.INIT || type == NotificationContext.Type.CALLBACK)
       {
         logger.info(_manager.getInstanceName() + " subscribe child change@" + path);
         _zkClient.subscribeChildChanges(path, this);
       }
-      else if (watchParent && type == NotificationContext.Type.FINALIZE)
+      else if (type == NotificationContext.Type.FINALIZE)
       {
         logger.info(_manager.getInstanceName() + " UNsubscribe child change@" + path);
         _zkClient.unsubscribeChildChanges(path, this);
       }
+  }
+  
+  private void subscribeDataChange(String path, NotificationContext context)
+  {
+    	NotificationContext.Type type = context.getType();
+        if (type == NotificationContext.Type.INIT
+            || type == NotificationContext.Type.CALLBACK)
+        {
+          if (logger.isDebugEnabled())
+          {
+            logger.debug(_manager.getInstanceName() + " subscribe data change@" + path);
+          }
+          _zkClient.subscribeDataChanges(path, this);
+
+        }
+        else if (type == NotificationContext.Type.FINALIZE)
+        {
+          logger.info(_manager.getInstanceName() + " UNsubscribe data change@" + path);
+          _zkClient.unsubscribeDataChanges(path, this);
+        }
+  }
+  
+  private void subscribeForChanges(NotificationContext context,
+                                   String path,
+                                   boolean watchParent,
+                                   boolean watchChild)
+  {
+    if (watchParent)
+    {
+    	subscribeChildChange(path, context);
     }
 
     if (watchChild)
     {
       try
       {
-        List<String> childNames = _zkClient.getChildren(path);
-        if (childNames == null || childNames.size() == 0)
+    	switch(_changeType)
+    	{
+        case CURRENT_STATE:
+        case IDEAL_STATE:
+        case EXTERNAL_VIEW:
         {
-          return;
-        }
+            // check if bucketized
+        	List<ZNRecord> records = _baseAccessor.getChildren(path, null, 0);
+        	for (ZNRecord record : records)
+        	{
+                HelixProperty property = new HelixProperty(record);
+            	String childPath = path + "/" + record.getId();
 
-        for (String childName : childNames)
+                int bucketSize = property.getBucketSize();
+                if (bucketSize > 0)
+                {
+                  subscribeChildChange(childPath, context);
+                  
+                  // subscribe data-change on bucketized child
+                  List<String> bucketizedChildNames = _zkClient.getChildren(childPath);
+                  if (bucketizedChildNames != null) 
+                  {
+                    for (String bucketizedChildName : bucketizedChildNames)
+                    {
+                       String bucketizedChildPath = childPath + "/" + bucketizedChildName;
+                       subscribeDataChange(bucketizedChildPath, context);
+                    }  
+                  }
+                } else
+                {
+                    subscribeDataChange(childPath, context);
+                }
+        	}
+        	break;
+        }
+        default:
         {
-          String childPath = path + "/" + childName;
-          if (type == NotificationContext.Type.INIT
-              || type == NotificationContext.Type.CALLBACK)
-          {
-            if (logger.isDebugEnabled())
+            List<String> childNames = _zkClient.getChildren(path);
+            if (childNames != null) 
             {
-              logger.debug(_manager.getInstanceName() + " subscribe data change@" + childPath);
+              for (String childName : childNames)
+              {
+                 String childPath = path + "/" + childName;
+                 subscribeDataChange(childPath, context);
+              }  
             }
-            _zkClient.subscribeDataChanges(childPath, this);
-
-          }
-          else if (type == NotificationContext.Type.FINALIZE)
-          {
-            logger.info(_manager.getInstanceName() + " UNsubscribe data change@" + childPath);
-            _zkClient.unsubscribeDataChanges(childPath, this);
-          }
-
-          subscribeForChanges(context, childPath, watchParent, watchChild);
+        	break;
         }
+    	}
       }
       catch (ZkNoNodeException e)
       {
-        logger.warn("fail to subscribe data change@" + path);
+        logger.warn("fail to subscribe child/data change@" + path, e);
       }
     }
 
