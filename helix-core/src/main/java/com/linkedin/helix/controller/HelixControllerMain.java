@@ -45,9 +45,7 @@ import org.apache.log4j.Logger;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.HelixManagerFactory;
 import com.linkedin.helix.InstanceType;
-import com.linkedin.helix.ZkHelixTestManager;
 import com.linkedin.helix.controller.restlet.ZKPropertyTransferServer;
-import com.linkedin.helix.manager.zk.ZKHelixManager;
 import com.linkedin.helix.participant.DistClusterControllerStateModelFactory;
 import com.linkedin.helix.participant.StateMachineEngine;
 
