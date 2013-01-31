@@ -23,8 +23,8 @@ import org.testng.annotations.Test;
 
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.TestHelper;
+import com.linkedin.helix.ZkHelixTestManager;
 import com.linkedin.helix.ZkTestHelper;
-import com.linkedin.helix.ZkTestHelper.TestZkHelixManager;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.tools.ClusterSetup;
 import com.linkedin.helix.tools.ClusterStateVerifier;
@@ -60,8 +60,8 @@ public class TestStandAloneCMSessionExpiry extends ZkIntegrationTestBase
     for (int i = 0; i < 5; i++)
     {
       String instanceName = "localhost_" + (12918 + i);
-      TestZkHelixManager manager =
-          new TestZkHelixManager(clusterName,
+      ZkHelixTestManager manager =
+          new ZkHelixTestManager(clusterName,
                                  instanceName,
                                  InstanceType.PARTICIPANT,
                                  ZK_ADDR);
@@ -69,8 +69,8 @@ public class TestStandAloneCMSessionExpiry extends ZkIntegrationTestBase
       participants[i].syncStart();
     }
 
-    TestZkHelixManager controller =
-        new TestZkHelixManager(clusterName,
+    ZkHelixTestManager controller =
+        new ZkHelixTestManager(clusterName,
                                "controller_0",
                                InstanceType.CONTROLLER,
                                ZK_ADDR);
@@ -83,7 +83,7 @@ public class TestStandAloneCMSessionExpiry extends ZkIntegrationTestBase
     Assert.assertTrue(result);
 
     // participant session expiry
-    TestZkHelixManager participantToExpire = (TestZkHelixManager)participants[1].getManager();
+    ZkHelixTestManager participantToExpire = (ZkHelixTestManager)participants[1].getManager();
 
     System.out.println("Expire participant session");
     String oldSessionId = participantToExpire.getSessionId();

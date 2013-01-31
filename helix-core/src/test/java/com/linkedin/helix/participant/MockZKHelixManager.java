@@ -35,6 +35,7 @@ import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.LiveInstanceChangeListener;
 import com.linkedin.helix.MessageListener;
 import com.linkedin.helix.PreConnectCallback;
+import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.ScopedConfigChangeListener;
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.healthcheck.ParticipantHealthReportCollector;
@@ -128,7 +129,7 @@ public class MockZKHelixManager implements HelixManager
   }
 
   @Override
-  public boolean removeListener(Object listener)
+  public boolean removeListener(PropertyKey key, Object listener)
   {
     // TODO Auto-generated method stub
     return false;

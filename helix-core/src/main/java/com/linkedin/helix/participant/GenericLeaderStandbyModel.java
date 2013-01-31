@@ -22,6 +22,7 @@ import org.apache.log4j.Logger;
 import com.linkedin.helix.HelixConstants.ChangeType;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.NotificationContext;
+import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.model.Message;
 import com.linkedin.helix.participant.statemachine.StateModel;
 import com.linkedin.helix.participant.statemachine.StateModelInfo;
@@ -85,7 +86,33 @@ public class GenericLeaderStandbyModel extends StateModel
   {
     LOG.info("Become STANDBY from LEADER");
     HelixManager manager = context.getManager();
-    manager.removeListener(_particHolder);    
+    // manager.removeListener(_particHolder);
+    if (manager == null)
+    {
+      throw new IllegalArgumentException("Require HelixManager in notification conext");
+    }
+    
+    Builder keyBuilder = new Builder(manager.getClusterName());
+    for (ChangeType notificationType : _notificationTypes)
+    {
+      if (notificationType == ChangeType.LIVE_INSTANCE)
+      {
+        manager.removeListener(keyBuilder.liveInstances(), _particHolder);
+      }
+      else if (notificationType == ChangeType.CONFIG)
+      {
+        manager.removeListener(keyBuilder.instanceConfigs(), _particHolder);
+      }
+      else if (notificationType == ChangeType.EXTERNAL_VIEW)
+      {
+        manager.removeListener(keyBuilder.externalViews(), _particHolder);
+      }
+      else
+      {
+        LOG.error("Unsupport notificationType:" + notificationType.toString());
+      }
+    }
+
   }
 
   @Transition(to="OFFLINE",from="STANDBY")

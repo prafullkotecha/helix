@@ -46,6 +46,7 @@ import com.linkedin.helix.LiveInstanceChangeListener;
 import com.linkedin.helix.MessageListener;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.PreConnectCallback;
+import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyType;
 import com.linkedin.helix.ScopedConfigChangeListener;
 import com.linkedin.helix.ZNRecord;
@@ -462,7 +463,7 @@ public class StaticFileHelixManager implements HelixManager
   }
 
   @Override
-  public boolean removeListener(Object listener)
+  public boolean removeListener(PropertyKey key, Object listener)
   {
     // TODO Auto-generated method stub
     return false;

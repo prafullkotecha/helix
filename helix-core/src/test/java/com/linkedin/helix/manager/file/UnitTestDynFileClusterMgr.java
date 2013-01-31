@@ -143,7 +143,7 @@ public class UnitTestDynFileClusterMgr
     }
     AssertJUnit.assertTrue(exceptionCaught);
 
-    AssertJUnit.assertFalse(controller.removeListener(controllerListener));
+    AssertJUnit.assertFalse(controller.removeListener(null, controllerListener));
 
     exceptionCaught = false;
     try

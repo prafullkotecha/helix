@@ -84,7 +84,7 @@ public class TestStaticFileCM
     AssertJUnit.assertNull(controller.getMessagingService());
 
     MockListener controllerListener = new MockListener();
-    AssertJUnit.assertFalse(controller.removeListener(controllerListener));
+    AssertJUnit.assertFalse(controller.removeListener(null, controllerListener));
     controllerListener.reset();
 
     controller.addIdealStateChangeListener(controllerListener);

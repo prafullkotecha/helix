@@ -174,7 +174,7 @@ public interface HelixManager
    * @param listener
    * @return
    */
-  boolean removeListener(Object listener);
+  boolean removeListener(PropertyKey key, Object listener);
 
   /**
    * Return the client to perform read/write operations on the cluster data

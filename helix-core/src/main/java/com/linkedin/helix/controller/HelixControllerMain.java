@@ -45,7 +45,9 @@ import org.apache.log4j.Logger;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.HelixManagerFactory;
 import com.linkedin.helix.InstanceType;
+import com.linkedin.helix.ZkHelixTestManager;
 import com.linkedin.helix.controller.restlet.ZKPropertyTransferServer;
+import com.linkedin.helix.manager.zk.ZKHelixManager;
 import com.linkedin.helix.participant.DistClusterControllerStateModelFactory;
 import com.linkedin.helix.participant.StateMachineEngine;
 
@@ -147,7 +149,7 @@ public class HelixControllerMain
       manager.addConfigChangeListener(controller);
       manager.addLiveInstanceChangeListener(controller);
       manager.addIdealStateChangeListener(controller);
-      manager.addExternalViewChangeListener(controller);
+      // manager.addExternalViewChangeListener(controller);
       manager.addControllerListener(controller);
     } catch (ZkInterruptedException e)
     {
@@ -168,13 +170,15 @@ public class HelixControllerMain
     {
       if (controllerMode.equalsIgnoreCase(STANDALONE))
       {
-        manager = HelixManagerFactory.getZKHelixManager(clusterName, controllerName,
-            InstanceType.CONTROLLER, zkConnectString);
+        manager = new ZkHelixTestManager(clusterName, controllerName, InstanceType.CONTROLLER, zkConnectString);
+//        	HelixManagerFactory.getZKHelixManager(clusterName, controllerName,
+//            InstanceType.CONTROLLER, zkConnectString);
         manager.connect();
       } else if (controllerMode.equalsIgnoreCase(DISTRIBUTED))
       {
-        manager = HelixManagerFactory.getZKHelixManager(clusterName, controllerName,
-            InstanceType.CONTROLLER_PARTICIPANT, zkConnectString);
+        manager = new ZkHelixTestManager(clusterName, controllerName, InstanceType.CONTROLLER_PARTICIPANT, zkConnectString);
+//        	HelixManagerFactory.getZKHelixManager(clusterName, controllerName,
+//            InstanceType.CONTROLLER_PARTICIPANT, zkConnectString);
 
         DistClusterControllerStateModelFactory stateModelFactory = new DistClusterControllerStateModelFactory(
             zkConnectString);

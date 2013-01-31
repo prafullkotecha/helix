@@ -10,8 +10,8 @@ import org.testng.Assert;
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.NotificationContext;
 import com.linkedin.helix.TestHelper;
+import com.linkedin.helix.ZkHelixTestManager;
 import com.linkedin.helix.ZkTestHelper;
-import com.linkedin.helix.ZkTestHelper.TestZkHelixManager;
 import com.linkedin.helix.mock.controller.ClusterController;
 import com.linkedin.helix.mock.storage.MockParticipant;
 import com.linkedin.helix.mock.storage.MockTransition;
@@ -29,7 +29,7 @@ public class TestSessionExpiryInTransition extends ZkIntegrationTestBase
     @Override
     public void doTransition(Message message, NotificationContext context)
     {
-      TestZkHelixManager manager = (TestZkHelixManager)context.getManager();
+      ZkHelixTestManager manager = (ZkHelixTestManager)context.getManager();
      
       String instance = message.getTgtName();
       String partition = message.getPartitionName();
@@ -85,8 +85,8 @@ public class TestSessionExpiryInTransition extends ZkIntegrationTestBase
     for (int i = 0; i < 5; i++)
     {
       String instanceName = "localhost_" + (12918 + i);
-      TestZkHelixManager manager =
-          new TestZkHelixManager(clusterName,
+      ZkHelixTestManager manager =
+          new ZkHelixTestManager(clusterName,
                                  instanceName,
                                  InstanceType.PARTICIPANT,
                                  ZK_ADDR);

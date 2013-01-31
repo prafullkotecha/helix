@@ -20,6 +20,7 @@ import org.testng.annotations.Test;
 
 import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.TestHelper.StartCMResult;
+import com.linkedin.helix.ZkHelixTestManager;
 import com.linkedin.helix.integration.ZkStandAloneCMTestBaseWithPropertyServerCheck;
 import com.linkedin.helix.tools.ClusterStateVerifier;
 
@@ -30,7 +31,7 @@ public class TestLiveInstanceBounce extends ZkStandAloneCMTestBaseWithPropertySe
   {
     String controllerName = CONTROLLER_PREFIX + "_0";
     StartCMResult controllerResult = _startCMResultMap.get(controllerName);
-    ZKHelixManager controller = (ZKHelixManager) controllerResult._manager;
+    ZkHelixTestManager controller = (ZkHelixTestManager) controllerResult._manager;
     int handlerSize = controller.getHandlers().size();
 
     for (int i = 0; i < 2; i++)

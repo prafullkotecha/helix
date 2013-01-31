@@ -46,6 +46,7 @@ import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.LiveInstanceChangeListener;
 import com.linkedin.helix.MessageListener;
 import com.linkedin.helix.PreConnectCallback;
+import com.linkedin.helix.PropertyKey;
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.PropertyPathConfig;
 import com.linkedin.helix.PropertyType;
@@ -320,7 +321,7 @@ public class DynamicFileHelixManager implements HelixManager
   }
 
   @Override
-  public boolean removeListener(Object listener)
+  public boolean removeListener(PropertyKey key, Object listener)
   {
     // TODO Auto-generated method stub
     return false;

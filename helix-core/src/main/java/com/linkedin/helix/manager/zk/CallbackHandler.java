@@ -52,9 +52,7 @@ import com.linkedin.helix.model.LiveInstance;
 import com.linkedin.helix.model.Message;
 
 public class CallbackHandler implements IZkChildListener, IZkDataListener
-
 {
-
   private static Logger logger = Logger.getLogger(CallbackHandler.class);
 
   private final String _path;
@@ -103,12 +101,10 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
     // This allows the listener to work with one change at a time
     synchronized (_manager)
     {
-//      Builder keyBuilder = _accessor.keyBuilder();
       long start = System.currentTimeMillis();
       if (logger.isInfoEnabled())
       {
         logger.info(Thread.currentThread().getId() + " START:INVOKE "
-        // + changeContext.getPathChanged()
             + _path + " listener:" + _listener.getClass().getCanonicalName());
       }
 
@@ -306,7 +302,10 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
                 int bucketSize = property.getBucketSize();
                 if (bucketSize > 0)
                 {
+                  // subscribe both data-change and child-change on bucketized parent
+                  // data-change gives a delete-callback which is used to remove watch
                   subscribeChildChange(childPath, context);
+                  subscribeDataChange(childPath, context);
                   
                   // subscribe data-change on bucketized child
                   List<String> bucketizedChildNames = _zkClient.getChildren(childPath);
@@ -400,10 +399,17 @@ public class CallbackHandler implements IZkChildListener, IZkDataListener
       updateNotificationTime(System.nanoTime());
       if (dataPath != null && dataPath.startsWith(_path))
       {
-        NotificationContext changeContext = new NotificationContext(_manager);
-        changeContext.setType(NotificationContext.Type.CALLBACK);
-        _zkClient.unsubscribeChildChanges(dataPath, this);
-        invoke(changeContext);
+          logger.info(_manager.getInstanceName() + " UNsubscribe data change@" + dataPath);
+          _zkClient.unsubscribeDataChanges(dataPath, this);
+
+          // only for bucketized parent. OK if we don't have child-change watch on the path
+          logger.info(_manager.getInstanceName() + " UNsubscribe child change@" + dataPath);
+          _zkClient.unsubscribeChildChanges(dataPath, this);
+
+          // No need to invoke() since this event will handled by child-change on parent-node
+//        NotificationContext changeContext = new NotificationContext(_manager);
+//        changeContext.setType(NotificationContext.Type.CALLBACK);
+// 		  invoke(changeContext);
       }
     }
     catch (Exception e)

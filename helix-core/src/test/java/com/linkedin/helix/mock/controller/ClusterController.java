@@ -7,7 +7,9 @@ import org.apache.log4j.Logger;
 import com.linkedin.helix.HelixManager;
 import com.linkedin.helix.HelixManagerFactory;
 import com.linkedin.helix.InstanceType;
+import com.linkedin.helix.ZkHelixTestManager;
 import com.linkedin.helix.controller.HelixControllerMain;
+import com.linkedin.helix.manager.zk.ZKHelixManager;
 import com.linkedin.helix.participant.DistClusterControllerStateModelFactory;
 import com.linkedin.helix.participant.StateMachineEngine;
 
@@ -22,7 +24,7 @@ public class ClusterController extends Thread
   private final String         _controllerMode;
   private final String         _zkAddr;
 
-  private HelixManager   _manager;
+  private ZkHelixTestManager   _manager;
 
   public ClusterController(String clusterName, String controllerName, String zkAddr) throws Exception
   {
@@ -39,19 +41,20 @@ public class ClusterController extends Thread
 
     if (_controllerMode.equals(HelixControllerMain.STANDALONE.toString()))
     {
-      _manager =
-          HelixManagerFactory.getZKHelixManager(clusterName,
-                                                controllerName,
-                                                InstanceType.CONTROLLER,
-                                                zkAddr);
+      _manager =  new ZkHelixTestManager(clusterName, controllerName, InstanceType.CONTROLLER, zkAddr);
+
+//          HelixManagerFactory.getZKHelixManager(clusterName,
+//                                                controllerName,
+//                                                InstanceType.CONTROLLER,
+//                                                zkAddr);
     }
     else if (_controllerMode.equals(HelixControllerMain.DISTRIBUTED.toString()))
     {
-      _manager =
-          HelixManagerFactory.getZKHelixManager(clusterName,
-                                                controllerName,
-                                                InstanceType.CONTROLLER_PARTICIPANT,
-                                                zkAddr);
+      _manager = new ZkHelixTestManager(clusterName, controllerName, InstanceType.CONTROLLER_PARTICIPANT, zkAddr);
+//          HelixManagerFactory.getZKHelixManager(clusterName,
+//                                                controllerName,
+//                                                InstanceType.CONTROLLER_PARTICIPANT,
+//                                                zkAddr);
 
     }
     else
@@ -61,7 +64,7 @@ public class ClusterController extends Thread
     }
   }
 
-  public HelixManager getManager()
+  public ZkHelixTestManager getManager()
   {
     return _manager;
   }

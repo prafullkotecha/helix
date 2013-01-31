@@ -17,11 +17,15 @@ package com.linkedin.helix.controller;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
 
@@ -88,8 +92,7 @@ public class GenericHelixController implements
     ControllerChangeListener,
     HealthStateChangeListener
 {
-  private static final Logger    logger =
-                                            Logger.getLogger(GenericHelixController.class.getName());
+  private static final Logger    LOG = Logger.getLogger(GenericHelixController.class.getName());
   volatile boolean               init   = false;
   private final PipelineRegistry _registry;
 
@@ -98,12 +101,16 @@ public class GenericHelixController implements
    * the current states that the ClusterController is observing. this set contains all the
    * session ids that we add currentState listener
    */
-  private final Set<String>      _instanceCurrentStateChangeSubscriptionSessionIds;
+//  private final Set<String>      _instanceCurrentStateChangeSubscriptionSessionIds;
 
   /**
    * this set contains all the instance names that we add message listener
    */
-  private final Set<String>      _instanceSubscriptionNames;
+//  private final Set<String>      _instanceSubscriptionNames;
+  
+  final AtomicReference<Map<String, LiveInstance>>	_lastSeenInstances;
+  final AtomicReference<Map<String, LiveInstance>>	_lastSeenSessions;
+
 
   ClusterStatusMonitor           _clusterStatusMonitor;
   
@@ -163,7 +170,7 @@ public class GenericHelixController implements
    */
   void startRebalancingTimer(int period, HelixManager manager)
   {
-    logger.info("Controller starting timer at period " + period);
+    LOG.info("Controller starting timer at period " + period);
     if(period < _timerPeriod)
     {
       if(_rebalanceTimer != null)
@@ -176,7 +183,7 @@ public class GenericHelixController implements
     }
     else
     {
-      logger.info("Controller already has timer at period " + _timerPeriod);
+      LOG.info("Controller already has timer at period " + _timerPeriod);
     }
   }
   
@@ -195,7 +202,7 @@ public class GenericHelixController implements
   
   private static PipelineRegistry createDefaultRegistry()
   {
-    logger.info("createDefaultRegistry");
+    LOG.info("createDefaultRegistry");
     synchronized (GenericHelixController.class)
     {
       PipelineRegistry registry = new PipelineRegistry();
@@ -256,10 +263,13 @@ public class GenericHelixController implements
   {
     _paused = false;
     _registry = registry;
-    _instanceCurrentStateChangeSubscriptionSessionIds =
-        new ConcurrentSkipListSet<String>();
-    _instanceSubscriptionNames = new ConcurrentSkipListSet<String>();
+//    _instanceCurrentStateChangeSubscriptionSessionIds =
+//        new ConcurrentSkipListSet<String>();
+//    _instanceSubscriptionNames = new ConcurrentSkipListSet<String>();
     // _externalViewGenerator = new ExternalViewGenerator();
+    
+    _lastSeenInstances = new AtomicReference<Map<String, LiveInstance>>();
+    _lastSeenSessions = new AtomicReference<Map<String,LiveInstance>>();
   }
 
   /**
@@ -273,20 +283,20 @@ public class GenericHelixController implements
     HelixManager manager = event.getAttribute("helixmanager");
     if (manager == null)
     {
-      logger.error("No cluster manager in event:" + event.getName());
+      LOG.error("No cluster manager in event:" + event.getName());
       return;
     }
 
     if (!manager.isLeader())
     {
-      logger.error("Cluster manager: " + manager.getInstanceName()
+      LOG.error("Cluster manager: " + manager.getInstanceName()
           + " is not leader. Pipeline will not be invoked");
       return;
     }
 
     if (_paused)
     {
-      logger.info("Cluster is paused. Ignoring the event:" + event.getName());
+      LOG.info("Cluster is paused. Ignoring the event:" + event.getName());
       return;
     }
 
@@ -308,7 +318,7 @@ public class GenericHelixController implements
         }
         
         stopRebalancingTimer();
-        logger.info("Get FINALIZE notification, skip the pipeline. Event :" + event.getName());
+        LOG.info("Get FINALIZE notification, skip the pipeline. Event :" + event.getName());
         return;
       }
       else
@@ -325,7 +335,7 @@ public class GenericHelixController implements
     List<Pipeline> pipelines = _registry.getPipelinesForEvent(event.getName());
     if (pipelines == null || pipelines.size() == 0)
     {
-      logger.info("No pipeline to run for event:" + event.getName());
+      LOG.info("No pipeline to run for event:" + event.getName());
       return;
     }
 
@@ -338,7 +348,7 @@ public class GenericHelixController implements
       }
       catch (Exception e)
       {
-        logger.error("Exception while executing pipeline: " + pipeline
+        LOG.error("Exception while executing pipeline: " + pipeline
             + ". Will not continue to next pipeline", e);
         break;
       }
@@ -366,14 +376,14 @@ public class GenericHelixController implements
                             List<CurrentState> statesInfo,
                             NotificationContext changeContext)
   {
-    logger.info("START: GenericClusterController.onStateChange()");
+    LOG.info("START: GenericClusterController.onStateChange()");
     ClusterEvent event = new ClusterEvent("currentStateChange");
     event.addAttribute("helixmanager", changeContext.getManager());
     event.addAttribute("instanceName", instanceName);
     event.addAttribute("changeContext", changeContext);
     event.addAttribute("eventData", statesInfo);
     handleEvent(event);
-    logger.info("END: GenericClusterController.onStateChange()");
+    LOG.info("END: GenericClusterController.onStateChange()");
   }
 
   @Override
@@ -393,7 +403,7 @@ public class GenericHelixController implements
                         List<Message> messages,
                         NotificationContext changeContext)
   {
-    logger.info("START: GenericClusterController.onMessage()");
+    LOG.info("START: GenericClusterController.onMessage()");
     
     ClusterEvent event = new ClusterEvent("messageChange");
     event.addAttribute("helixmanager", changeContext.getManager());
@@ -407,14 +417,14 @@ public class GenericHelixController implements
       _clusterStatusMonitor.addMessageQueueSize(instanceName, messages.size());
     }
         
-    logger.info("END: GenericClusterController.onMessage()");
+    LOG.info("END: GenericClusterController.onMessage()");
   }
 
   @Override
   public void onLiveInstanceChange(List<LiveInstance> liveInstances,
                                    NotificationContext changeContext)
   {
-    logger.info("START: Generic GenericClusterController.onLiveInstanceChange()");
+    LOG.info("START: Generic GenericClusterController.onLiveInstanceChange()");
     if (liveInstances == null)
     {
       liveInstances = Collections.emptyList();
@@ -432,14 +442,14 @@ public class GenericHelixController implements
     event.addAttribute("changeContext", changeContext);
     event.addAttribute("eventData", liveInstances);
     handleEvent(event);
-    logger.info("END: Generic GenericClusterController.onLiveInstanceChange()");
+    LOG.info("END: Generic GenericClusterController.onLiveInstanceChange()");
   }
   
   void checkRebalancingTimer(HelixManager manager, List<IdealState> idealStates)
   {
     if (manager.getConfigAccessor() == null)
     {
-      logger.warn(manager.getInstanceName() + " config accessor doesn't exist. should be in file-based mode.");
+      LOG.warn(manager.getInstanceName() + " config accessor doesn't exist. should be in file-based mode.");
       return;
     }
     
@@ -457,7 +467,7 @@ public class GenericHelixController implements
   public void onIdealStateChange(List<IdealState> idealStates,
                                  NotificationContext changeContext)
   {
-    logger.info("START: Generic GenericClusterController.onIdealStateChange()");
+    LOG.info("START: Generic GenericClusterController.onIdealStateChange()");
     ClusterEvent event = new ClusterEvent("idealStateChange");
     event.addAttribute("helixmanager", changeContext.getManager());
     event.addAttribute("changeContext", changeContext);
@@ -469,26 +479,26 @@ public class GenericHelixController implements
       checkRebalancingTimer(changeContext.getManager(), idealStates);
     }
     
-    logger.info("END: Generic GenericClusterController.onIdealStateChange()");
+    LOG.info("END: Generic GenericClusterController.onIdealStateChange()");
   }
 
   @Override
   public void onConfigChange(List<InstanceConfig> configs,
                              NotificationContext changeContext)
   {
-    logger.info("START: GenericClusterController.onConfigChange()");
+    LOG.info("START: GenericClusterController.onConfigChange()");
     ClusterEvent event = new ClusterEvent("configChange");
     event.addAttribute("changeContext", changeContext);
     event.addAttribute("helixmanager", changeContext.getManager());
     event.addAttribute("eventData", configs);
     handleEvent(event);
-    logger.info("END: GenericClusterController.onConfigChange()");
+    LOG.info("END: GenericClusterController.onConfigChange()");
   }
 
   @Override
   public void onControllerChange(NotificationContext changeContext)
   {
-    logger.info("START: GenericClusterController.onControllerChange()");
+    LOG.info("START: GenericClusterController.onControllerChange()");
     HelixDataAccessor accessor = changeContext.getManager().getHelixDataAccessor();
 
     // double check if this controller is the leader
@@ -497,7 +507,7 @@ public class GenericHelixController implements
         accessor.getProperty(keyBuilder.controllerLeader());
     if (leader == null)
     {
-      logger.warn("No controller exists for cluster:"
+      LOG.warn("No controller exists for cluster:"
           + changeContext.getManager().getClusterName());
       return;
     }
@@ -508,7 +518,7 @@ public class GenericHelixController implements
       String instanceName = changeContext.getManager().getInstanceName();
       if (leaderName == null || !leaderName.equals(instanceName))
       {
-        logger.warn("leader name does NOT match, my name: " + instanceName + ", leader: "
+        LOG.warn("leader name does NOT match, my name: " + instanceName + ", leader: "
             + leader);
         return;
       }
@@ -518,14 +528,14 @@ public class GenericHelixController implements
     if (pauseSignal != null)
     {
       _paused = true;
-      logger.info("controller is now paused");
+      LOG.info("controller is now paused");
     }
     else
     {
       if (_paused)
       {
         // it currently paused
-        logger.info("controller is now resumed");
+        LOG.info("controller is now resumed");
         _paused = false;
         ClusterEvent event = new ClusterEvent("resume");
         event.addAttribute("changeContext", changeContext);
@@ -538,7 +548,7 @@ public class GenericHelixController implements
         _paused = false;
       }
     }
-    logger.info("END: GenericClusterController.onControllerChange()");
+    LOG.info("END: GenericClusterController.onControllerChange()");
   }
 
   /**
@@ -550,46 +560,111 @@ public class GenericHelixController implements
   protected void checkLiveInstancesObservation(List<LiveInstance> liveInstances,
                                                NotificationContext changeContext)
   {
-    for (LiveInstance instance : liveInstances)
-    {
-      String instanceName = instance.getId();
-      String clientSessionId = instance.getSessionId();
-      HelixManager manager = changeContext.getManager();
+	  
+	// construct maps for current live-instances
+	Map<String, LiveInstance> curInstances = new HashMap<String, LiveInstance>();
+	Map<String, LiveInstance> curSessions = new HashMap<String, LiveInstance>();
+	for(LiveInstance liveInstance : liveInstances) {
+		curInstances.put(liveInstance.getInstanceName(), liveInstance);
+		curSessions.put(liveInstance.getSessionId(), liveInstance);
+	}
+	  
+	Map<String, LiveInstance> lastInstances = _lastSeenInstances.get();
+	Map<String, LiveInstance> lastSessions = _lastSeenSessions.get();
+	
+    HelixManager manager = changeContext.getManager();
+    Builder keyBuilder = new Builder(manager.getClusterName());
+    if (lastSessions != null) {
+    	for (String session : lastSessions.keySet()) {
+    		if (!curSessions.containsKey(session)) {
+    			// remove current-state listener for expired session
+    		    String instanceName = lastSessions.get(session).getInstanceName();
+    			manager.removeListener(keyBuilder.currentStates(instanceName, session), this); 
+    		}
+    	}
+    }
+    
+    if (lastInstances != null) {
+    	for (String instance : lastInstances.keySet()) {
+    		if (!curInstances.containsKey(instance)) {
+    			// remove message listener for disconnected instances
+    			manager.removeListener(keyBuilder.messages(instance), this);
+    		}
+    	}
+    }
+    
+	for (String session : curSessions.keySet()) {
+		if (lastSessions == null || !lastSessions.containsKey(session)) {
+	      String instanceName = curSessions.get(session).getInstanceName();
+          try {
+            // add current-state listeners for new sessions
+	        manager.addCurrentStateChangeListener(this, instanceName, session);
+	        LOG.info("Succeed in addling current state listener for instance: " + instanceName + " with session: " + session);
 
-      // _instanceCurrentStateChangeSubscriptionSessionIds contains all the sessionIds
-      // that we've added a currentState listener
-      if (!_instanceCurrentStateChangeSubscriptionSessionIds.contains(clientSessionId))
-      {
-        try
-        {
-          manager.addCurrentStateChangeListener(this, instanceName, clientSessionId);
-          _instanceCurrentStateChangeSubscriptionSessionIds.add(clientSessionId);
-          logger.info("Observing client session id: " + clientSessionId);
-        }
-        catch (Exception e)
-        {
-          logger.error("Exception adding current state and message listener for instance:"
-                           + instanceName,
-                       e);
-        }
-      }
-
-      // _instanceSubscriptionNames contains all the instanceNames that we've added a
-      // message listener
-      if (!_instanceSubscriptionNames.contains(instanceName))
-      {
-        try
-        {
-          logger.info("Adding message listener for " + instanceName);
-          manager.addMessageListener(this, instanceName);
-          _instanceSubscriptionNames.add(instanceName);
-        }
-        catch (Exception e)
-        {
-          logger.error("Exception adding message listener for instance:" + instanceName,
-                       e);
-        }
-      }
+          } catch (Exception e) {
+        	  LOG.error("Fail to add current state listener for instance: "
+        		  + instanceName + " with session: " + session, e);
+          }
+		}
+	}
+	
+	for (String instance : curInstances.keySet()) {
+		if (lastInstances == null || !lastInstances.containsKey(instance)) {
+	        try {
+	          // add message listeners for new sessions
+	          manager.addMessageListener(this, instance);
+	          LOG.info("Succeed in adding message listener for " + instance);
+	        }
+	        catch (Exception e)
+	        {
+	          LOG.error("Fail to add message listener for instance:" + instance, e);
+	        }
+		}
+	}
+	
+	// update last-seen
+	_lastSeenInstances.set(curInstances);
+	_lastSeenSessions.set(curSessions);
+	
+//    for (LiveInstance instance : liveInstances)
+//    {
+//      String instanceName = instance.getId();
+//      String clientSessionId = instance.getSessionId();
+//      
+//      // _instanceCurrentStateChangeSubscriptionSessionIds contains all the sessionIds
+//      // that we've added a currentState listener
+//      if (!_instanceCurrentStateChangeSubscriptionSessionIds.contains(clientSessionId))
+//      {
+//        try
+//        {
+//          manager.addCurrentStateChangeListener(this, instanceName, clientSessionId);
+//          _instanceCurrentStateChangeSubscriptionSessionIds.add(clientSessionId);
+//          logger.info("Observing client session id: " + clientSessionId);
+//        }
+//        catch (Exception e)
+//        {
+//          logger.error("Exception adding current state and message listener for instance:"
+//                           + instanceName,
+//                       e);
+//        }
+//      }
+//
+//      // _instanceSubscriptionNames contains all the instanceNames that we've added a
+//      // message listener
+//      if (!_instanceSubscriptionNames.contains(instanceName))
+//      {
+//        try
+//        {
+//          logger.info("Adding message listener for " + instanceName);
+//          manager.addMessageListener(this, instanceName);
+//          _instanceSubscriptionNames.add(instanceName);
+//        }
+//        catch (Exception e)
+//        {
+//          logger.error("Exception adding message listener for instance:" + instanceName,
+//                       e);
+//        }
+//      }
 
       // TODO we need to remove currentState listeners and message listeners
       // when a session or an instance no longer exists. This may happen
@@ -598,7 +673,7 @@ public class GenericHelixController implements
 
       // TODO shi should call removeListener on the previous session id;
       // but the removeListener with that functionality is not implemented yet
-    }
+//    }
   }
 
 }

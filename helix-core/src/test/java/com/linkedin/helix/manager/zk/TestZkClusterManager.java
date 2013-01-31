@@ -28,6 +28,7 @@ import com.linkedin.helix.ConfigScopeBuilder;
 import com.linkedin.helix.HelixAdmin;
 import com.linkedin.helix.HelixException;
 import com.linkedin.helix.InstanceType;
+import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.TestHelper;
 import com.linkedin.helix.ZNRecord;
 import com.linkedin.helix.ZkUnitTestBase;
@@ -81,9 +82,10 @@ public class TestZkClusterManager extends ZkUnitTestBase
       // OK
     }
 
+    Builder keyBuilder = new Builder(controller.getClusterName());
     controller.addControllerListener(listener);
     AssertJUnit.assertTrue(listener.isControllerChangeListenerInvoked);
-    controller.removeListener(listener);
+    controller.removeListener(keyBuilder.controller(), listener);
 
     PropertyStore<ZNRecord> store = controller.getPropertyStore();
     ZNRecord record = new ZNRecord("node_1");
