@@ -24,7 +24,6 @@ import org.apache.zookeeper.ZooKeeper.States;
 
 import com.linkedin.helix.PropertyKey.Builder;
 import com.linkedin.helix.manager.zk.ZKHelixDataAccessor;
-import com.linkedin.helix.manager.zk.ZKHelixManager;
 import com.linkedin.helix.manager.zk.ZkBaseDataAccessor;
 import com.linkedin.helix.manager.zk.ZkClient;
 import com.linkedin.helix.model.ExternalView;
@@ -38,26 +37,65 @@ public class ZkTestHelper
     // Logger.getRootLogger().setLevel(Level.DEBUG);
   }
 
-  // zkClusterManager that exposes zkclient
-//  public static class TestZkHelixManager extends ZKHelixManager
-//  {
-//
-//    public TestZkHelixManager(String clusterName,
-//                              String instanceName,
-//                              InstanceType instanceType,
-//                              String zkConnectString) throws Exception
-//    {
-//      super(clusterName, instanceName, instanceType, zkConnectString);
-//      // TODO Auto-generated constructor stub
-//    }
-//
-//    public ZkClient getZkClient()
-//    {
-//      return _zkClient;
-//    }
-//
-//  }
+  public static void disconnectSession(final ZkClient zkClient) throws Exception
+  {
+    IZkStateListener listener = new IZkStateListener()
+    {
+      @Override
+      public void handleStateChanged(KeeperState state) throws Exception
+      {
+//         System.err.println("disconnectSession handleStateChanged. state: " + state);
+      }
 
+      @Override
+      public void handleNewSession() throws Exception
+      {
+        // make sure zkclient is connected again
+        zkClient.waitUntilConnected();
+
+        ZkConnection connection = ((ZkConnection) zkClient.getConnection());
+        ZooKeeper curZookeeper = connection.getZookeeper();
+
+        LOG.info("handleNewSession. sessionId: "
+            + Long.toHexString(curZookeeper.getSessionId()));
+      }
+    };
+
+    zkClient.subscribeStateChanges(listener);
+    ZkConnection connection = ((ZkConnection) zkClient.getConnection());
+    ZooKeeper curZookeeper = connection.getZookeeper();
+    LOG.info("Before expiry. sessionId: " + Long.toHexString(curZookeeper.getSessionId()));
+
+    Watcher watcher = new Watcher()
+    {
+      @Override
+      public void process(WatchedEvent event)
+      {
+        LOG.info("Process watchEvent: " + event);
+      }
+    };
+
+    final ZooKeeper dupZookeeper =
+        new ZooKeeper(connection.getServers(),
+                      curZookeeper.getSessionTimeout(),
+                      watcher,
+                      curZookeeper.getSessionId(),
+                      curZookeeper.getSessionPasswd());
+    // wait until connected, then close
+    while (dupZookeeper.getState() != States.CONNECTED)
+    {
+      Thread.sleep(10);
+    }
+    dupZookeeper.close();
+
+    connection = (ZkConnection) zkClient.getConnection();
+    curZookeeper = connection.getZookeeper();
+    zkClient.unsubscribeStateChanges(listener);
+
+    // System.err.println("zk: " + oldZookeeper);
+    LOG.info("After expiry. sessionId: " + Long.toHexString(curZookeeper.getSessionId()));
+  }
+  
   public static void expireSession(final ZkClient zkClient) throws Exception
   {
     final CountDownLatch waitExpire = new CountDownLatch(1);
@@ -288,9 +326,4 @@ public class ZkTestHelper
 	  return convertMap;
   }
   
-  public static void main(String[] args) throws Exception {
-	Map<String, Set<String>> map = getListeners("localhost:2185");
-	System.out.println(map);
-//	System.out.println(convertListenersMap(map));
-  }
 }

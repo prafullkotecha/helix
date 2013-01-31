@@ -96,24 +96,12 @@ public class GenericHelixController implements
   volatile boolean               init   = false;
   private final PipelineRegistry _registry;
 
-  /**
-   * Since instance current state is per-session-id, we need to track the session-ids of
-   * the current states that the ClusterController is observing. this set contains all the
-   * session ids that we add currentState listener
-   */
-//  private final Set<String>      _instanceCurrentStateChangeSubscriptionSessionIds;
-
-  /**
-   * this set contains all the instance names that we add message listener
-   */
-//  private final Set<String>      _instanceSubscriptionNames;
-  
+  // keep track of last-seen live-instance list index by instanceName and sessionId respectively
+  // so we can figure out which instance/session is no longer valid when on-live-instance change comes
   final AtomicReference<Map<String, LiveInstance>>	_lastSeenInstances;
   final AtomicReference<Map<String, LiveInstance>>	_lastSeenSessions;
 
-
   ClusterStatusMonitor           _clusterStatusMonitor;
-  
 
   /**
    * The _paused flag is checked by function handleEvent(), while if the flag is set
@@ -263,10 +251,6 @@ public class GenericHelixController implements
   {
     _paused = false;
     _registry = registry;
-//    _instanceCurrentStateChangeSubscriptionSessionIds =
-//        new ConcurrentSkipListSet<String>();
-//    _instanceSubscriptionNames = new ConcurrentSkipListSet<String>();
-    // _externalViewGenerator = new ExternalViewGenerator();
     
     _lastSeenInstances = new AtomicReference<Map<String, LiveInstance>>();
     _lastSeenSessions = new AtomicReference<Map<String,LiveInstance>>();
@@ -499,6 +483,11 @@ public class GenericHelixController implements
   public void onControllerChange(NotificationContext changeContext)
   {
     LOG.info("START: GenericClusterController.onControllerChange()");
+    if (changeContext!= null && changeContext.getType() == Type.FINALIZE)
+    {
+      LOG.info("GenericClusterController.onControllerChange() FINALIZE");
+      return;
+    }
     HelixDataAccessor accessor = changeContext.getManager().getHelixDataAccessor();
 
     // double check if this controller is the leader
@@ -560,7 +549,6 @@ public class GenericHelixController implements
   protected void checkLiveInstancesObservation(List<LiveInstance> liveInstances,
                                                NotificationContext changeContext)
   {
-	  
 	// construct maps for current live-instances
 	Map<String, LiveInstance> curInstances = new HashMap<String, LiveInstance>();
 	Map<String, LiveInstance> curSessions = new HashMap<String, LiveInstance>();
@@ -625,55 +613,6 @@ public class GenericHelixController implements
 	// update last-seen
 	_lastSeenInstances.set(curInstances);
 	_lastSeenSessions.set(curSessions);
-	
-//    for (LiveInstance instance : liveInstances)
-//    {
-//      String instanceName = instance.getId();
-//      String clientSessionId = instance.getSessionId();
-//      
-//      // _instanceCurrentStateChangeSubscriptionSessionIds contains all the sessionIds
-//      // that we've added a currentState listener
-//      if (!_instanceCurrentStateChangeSubscriptionSessionIds.contains(clientSessionId))
-//      {
-//        try
-//        {
-//          manager.addCurrentStateChangeListener(this, instanceName, clientSessionId);
-//          _instanceCurrentStateChangeSubscriptionSessionIds.add(clientSessionId);
-//          logger.info("Observing client session id: " + clientSessionId);
-//        }
-//        catch (Exception e)
-//        {
-//          logger.error("Exception adding current state and message listener for instance:"
-//                           + instanceName,
-//                       e);
-//        }
-//      }
-//
-//      // _instanceSubscriptionNames contains all the instanceNames that we've added a
-//      // message listener
-//      if (!_instanceSubscriptionNames.contains(instanceName))
-//      {
-//        try
-//        {
-//          logger.info("Adding message listener for " + instanceName);
-//          manager.addMessageListener(this, instanceName);
-//          _instanceSubscriptionNames.add(instanceName);
-//        }
-//        catch (Exception e)
-//        {
-//          logger.error("Exception adding message listener for instance:" + instanceName,
-//                       e);
-//        }
-//      }
-
-      // TODO we need to remove currentState listeners and message listeners
-      // when a session or an instance no longer exists. This may happen
-      // in case of session expiry, participant rebound, participant goes and new
-      // participant comes
-
-      // TODO shi should call removeListener on the previous session id;
-      // but the removeListener with that functionality is not implemented yet
-//    }
   }
 
 }

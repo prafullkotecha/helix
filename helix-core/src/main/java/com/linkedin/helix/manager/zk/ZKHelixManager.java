@@ -115,6 +115,10 @@ public class ZKHelixManager implements HelixManager
   List<PreConnectCallback>                     _preConnectCallbacks    =
                                                                            new LinkedList<PreConnectCallback>();
   ZKPropertyTransferServer                     _transferServer         = null;
+  int                                          _flappingTimeWindowMs; 
+  int                                          _maxDisconnectThreshold;
+  public static final int                      FLAPPING_TIME_WINDIOW   = 300000; // Default to 300 sec
+  public static final int                      MAX_DISCONNECT_THRESHOLD = 5;
 
   public ZKHelixManager(String clusterName,
                         String instanceName,
@@ -124,6 +128,30 @@ public class ZKHelixManager implements HelixManager
     logger.info("Create a zk-based cluster manager. clusterName:" + clusterName
         + ", instanceName:" + instanceName + ", type:" + instanceType + ", zkSvr:"
         + zkConnectString);
+    _flappingTimeWindowMs = FLAPPING_TIME_WINDIOW;
+    try
+    {
+      _flappingTimeWindowMs =
+          Integer.parseInt(System.getProperty("helixmanager.flappingTimeWindow", ""
+              + FLAPPING_TIME_WINDIOW));
+    }
+    catch (NumberFormatException e)
+    {
+      logger.warn("Exception while parsing helixmanager.flappingTimeWindow: "
+          + System.getProperty("helixmanager.flappingTimeWindow", "" + FLAPPING_TIME_WINDIOW));
+    }
+    _maxDisconnectThreshold = MAX_DISCONNECT_THRESHOLD;
+    try
+    {
+      _maxDisconnectThreshold =
+          Integer.parseInt(System.getProperty("helixmanager.maxDisconnectThreshold", ""
+              + MAX_DISCONNECT_THRESHOLD));
+    }
+    catch (NumberFormatException e)
+    {
+      logger.warn("Exception while parsing helixmanager.flappingTimeWindow: "
+          + System.getProperty("helixmanager.maxDisconnectThreshold", "" + MAX_DISCONNECT_THRESHOLD));
+    }
     int sessionTimeoutInt = -1;
     try
     {
@@ -165,7 +193,7 @@ public class ZKHelixManager implements HelixManager
     _instanceName = instanceName;
     _instanceType = instanceType;
     _zkConnectString = zkConnectString;
-    _zkStateChangeListener = new ZkStateChangeListener(this);
+    _zkStateChangeListener = new ZkStateChangeListener(this, _flappingTimeWindowMs, _maxDisconnectThreshold);
     _timer = null;
 
     // _handlers = new ArrayList<CallbackHandler>();
@@ -374,13 +402,19 @@ public class ZKHelixManager implements HelixManager
   @Override
   public void disconnect()
   {
-
     if (!isConnected())
     {
       logger.warn("ClusterManager " + _instanceName + " already disconnected");
       return;
     }
-
+    disconnectInternal();
+  }
+  
+  void disconnectInternal()
+  {
+    // This function can be called when the connection are in bad state(e.g. flapping), 
+    // in which isConnected() could be false and we want to disconnect from cluster.
+    
     logger.info("disconnect " + _instanceName + "(" + _instanceType + ") from "
         + _clusterName);
 
