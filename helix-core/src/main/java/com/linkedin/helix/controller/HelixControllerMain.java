@@ -170,15 +170,13 @@ public class HelixControllerMain
     {
       if (controllerMode.equalsIgnoreCase(STANDALONE))
       {
-        manager = new ZkHelixTestManager(clusterName, controllerName, InstanceType.CONTROLLER, zkConnectString);
-//        	HelixManagerFactory.getZKHelixManager(clusterName, controllerName,
-//            InstanceType.CONTROLLER, zkConnectString);
+        manager = HelixManagerFactory.getZKHelixManager(clusterName, controllerName,
+            InstanceType.CONTROLLER, zkConnectString);
         manager.connect();
       } else if (controllerMode.equalsIgnoreCase(DISTRIBUTED))
       {
-        manager = new ZkHelixTestManager(clusterName, controllerName, InstanceType.CONTROLLER_PARTICIPANT, zkConnectString);
-//        	HelixManagerFactory.getZKHelixManager(clusterName, controllerName,
-//            InstanceType.CONTROLLER_PARTICIPANT, zkConnectString);
+        manager = HelixManagerFactory.getZKHelixManager(clusterName, controllerName,
+            InstanceType.CONTROLLER_PARTICIPANT, zkConnectString);
 
         DistClusterControllerStateModelFactory stateModelFactory = new DistClusterControllerStateModelFactory(
             zkConnectString);

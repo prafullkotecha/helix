@@ -7,8 +7,8 @@ import org.testng.annotations.Test;
 
 import com.linkedin.helix.InstanceType;
 import com.linkedin.helix.TestHelper;
+import com.linkedin.helix.ZkHelixTestManager;
 import com.linkedin.helix.ZkTestHelper;
-import com.linkedin.helix.ZkTestHelper.TestZkHelixManager;
 import com.linkedin.helix.integration.ZkIntegrationTestBase;
 
 public class TestZkManagerFlappingDetection extends ZkIntegrationTestBase
@@ -32,8 +32,8 @@ public class TestZkManagerFlappingDetection extends ZkIntegrationTestBase
     
     
       String instanceName = "localhost_" + (12918 + 0);
-      TestZkHelixManager manager =
-          new TestZkHelixManager(clusterName,
+      ZkHelixTestManager manager =
+          new ZkHelixTestManager(clusterName,
                                  instanceName,
                                  InstanceType.PARTICIPANT,
                                  ZK_ADDR);
@@ -99,8 +99,8 @@ public class TestZkManagerFlappingDetection extends ZkIntegrationTestBase
       // flapping time window to 5 sec
       System.setProperty("helixmanager.flappingTimeWindow", "10000");
       System.setProperty("helixmanager.maxDisconnectThreshold", "7");
-      TestZkHelixManager manager2 =
-          new TestZkHelixManager(clusterName,
+      ZkHelixTestManager manager2 =
+          new ZkHelixTestManager(clusterName,
                                  instanceName,
                                  type,
                                  ZK_ADDR);
@@ -150,8 +150,8 @@ public class TestZkManagerFlappingDetection extends ZkIntegrationTestBase
       // flapping time window to 5 sec
       System.setProperty("helixmanager.flappingTimeWindow", "5000");
       System.setProperty("helixmanager.maxDisconnectThreshold", "3");
-      TestZkHelixManager manager2 =
-          new TestZkHelixManager(clusterName,
+      ZkHelixTestManager manager2 =
+          new ZkHelixTestManager(clusterName,
                                  null,
                                  InstanceType.CONTROLLER,
                                  ZK_ADDR);

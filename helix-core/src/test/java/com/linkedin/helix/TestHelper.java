@@ -59,6 +59,8 @@ import com.linkedin.helix.model.Message;
 import com.linkedin.helix.model.Message.MessageType;
 import com.linkedin.helix.model.StateModelDefinition;
 import com.linkedin.helix.model.StateModelDefinition.StateModelDefinitionProperty;
+import com.linkedin.helix.participant.DistClusterControllerStateModelFactory;
+import com.linkedin.helix.participant.StateMachineEngine;
 import com.linkedin.helix.store.file.FilePropertyStore;
 import com.linkedin.helix.store.zk.ZNode;
 import com.linkedin.helix.tools.ClusterSetup;
@@ -150,6 +152,45 @@ public class TestHelper
     return result;
   }
 
+  private static HelixManager startHelixController(final String zkConnectString,
+      final String clusterName, final String controllerName, final String controllerMode)
+  {
+    HelixManager manager = null;
+    try
+    {
+      if (controllerMode.equalsIgnoreCase(HelixControllerMain.STANDALONE))
+      {
+        manager = new ZkHelixTestManager(clusterName, controllerName, InstanceType.CONTROLLER, zkConnectString);
+        manager.connect();
+      } else if (controllerMode.equalsIgnoreCase(HelixControllerMain.DISTRIBUTED))
+      {
+        manager = new ZkHelixTestManager(clusterName, controllerName, InstanceType.CONTROLLER_PARTICIPANT, zkConnectString);
+
+        DistClusterControllerStateModelFactory stateModelFactory = new DistClusterControllerStateModelFactory(
+            zkConnectString);
+
+        // StateMachineEngine genericStateMachineHandler = new
+        // StateMachineEngine();
+        StateMachineEngine stateMach = manager.getStateMachineEngine();
+        stateMach.registerStateModelFactory("LeaderStandby", stateModelFactory);
+        // manager.getMessagingService().registerMessageHandlerFactory(MessageType.STATE_TRANSITION.toString(),
+        // genericStateMachineHandler);
+        manager.connect();
+      } else
+      {
+        LOG.error("cluster controller mode:" + controllerMode + " NOT supported");
+        // throw new
+        // IllegalArgumentException("Unsupported cluster controller mode:" +
+        // controllerMode);
+      }
+    } catch (Exception e)
+    {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+
+    return manager;
+  }
   // TODO refactor this
   public static StartCMResult startController(final String clusterName,
                                               final String controllerName,
@@ -158,7 +199,7 @@ public class TestHelper
   {
     final StartCMResult result = new StartCMResult();
     final HelixManager manager =
-        HelixControllerMain.startHelixController(zkConnectString,
+        TestHelper.startHelixController(zkConnectString,
                                                  clusterName,
                                                  controllerName,
                                                  controllerMode);
